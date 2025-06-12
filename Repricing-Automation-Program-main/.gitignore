@@ -1,0 +1,56 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.python-version
+
+# VS Code and JetBrains IDE settings
+.vscode/
+.idea/
+
+# Logs and audit files
+*.log
+audit_log.csv
+repricing_log.log
+merge_log.log
+bg_disruption.log
+sharx_lbl.log
+epls_lbl.log
+openmdf_bg.log
+openmdf_tier.log
+tier_disruption.log
+
+# Excel output and temp files
+~$*.xlsx
+*.bak.xlsx
+*_backup.xlsx
+LBL for Disruption.xlsx
+merged_file.xlsx
+merged_file_with_OR.xlsx
+*_Claim Detail.csv
+
+# Windows metadata
+Thumbs.db
+Desktop.ini
+
+# Python env files
+*.env
+*.DS_Store
+
+# Temporary files
+*.tmp
+*.swp
