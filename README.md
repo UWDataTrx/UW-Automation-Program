@@ -119,12 +119,12 @@ This project includes a `.gitignore` to exclude:
 
 ## 📌 Owners
 
-**Damion Morrison**
+**Damion Morrison**  
 **Mitchell Frederick**
 
 ## 📌 Author
 
-**Damion Morrison**  
+**Damion Morrison**
 
 ## 📌 Contributor
 
@@ -132,9 +132,9 @@ This project includes a `.gitignore` to exclude:
 
 ## 📌 Members
 
-**Mitchell Frederick**
-**Danny Bushnell**
-**Brett Bauer**
+**Mitchell Frederick**  
+**Danny Bushnell**  
+**Brett Bauer**  
 **Brendan Reamer**
 
 ---
