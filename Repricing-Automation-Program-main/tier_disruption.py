@@ -103,7 +103,7 @@ def process_data():
     exclusions = df[df['Exclusive Tier'] == 'Nonformulary']
     ex_pt = exclusions.pivot_table(
         values=['Rxs', 'MemberID'],
-        index=['Product Name'],
+        index=['Product Name', 'Alternative'],
         aggfunc={'Rxs': 'sum', 'MemberID': pd.Series.nunique}
     )
     ex_pt.to_excel(writer, sheet_name='Exclusions')
