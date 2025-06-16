@@ -186,8 +186,8 @@ def process_data():
     network_df = df[df['pharmacy_is_excluded'].isna()]
     filter_phrases = ['CVS', 'Walgreens', 'Kroger', 'Walmart', 'Rite Aid',
                       'Optum', 'Express Scripts', 'DMR', 'Williams Bro', 'Publix']
-    pattern = '|'.join([f"\b{phrase}\b" for phrase in filter_phrases])
-    network_df = network_df[~network_df['Pharmacy Name'].str.contains(pattern, case=False, regex=True)]
+    regex_pattern = '|'.join([f"\\b{phrase}\\b" for phrase in filter_phrases])
+    network_df = network_df[~network_df['Pharmacy Name'].str.contains(regex_pattern, case=False, regex=True)]
     if {'PHARMACYNPI', 'NABP', 'Pharmacy Name'}.issubset(network_df.columns):
         pivot = pd.pivot_table(
             network_df,
