@@ -183,7 +183,7 @@ def process_data():
         writer.sheets[sheet_name].write('F1', f'Total Members: {members}')
 
     # Network summary for non-excluded pharmacies
-    network_df = df[df['pharmacy_is_excluded'].isna()]
+    network_df = df[df['pharmacy_is_excluded'] == True]
     filter_phrases = ['CVS', 'Walgreens', 'Kroger', 'Walmart', 'Rite Aid',
                       'Optum', 'Express Scripts', 'DMR', 'Williams Bro', 'Publix']
     regex_pattern = '|'.join([f"\\b{phrase}\\b" for phrase in filter_phrases])
@@ -207,7 +207,7 @@ def process_data():
             ws = sheets.pop(sum_idx)
             sheets.insert(data_idx + 1, ws)
 
-    writer._save()
+    writer.close()
 
 if __name__ == '__main__':
     process_data()

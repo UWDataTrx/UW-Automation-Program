@@ -80,6 +80,7 @@ def drop_duplicates_df(df):
     Returns:
         pd.DataFrame: Deduplicated DataFrame.
     """
+    df = df.drop_duplicates()
     return df.drop_duplicates()
 
 def clean_logic_and_tier(df, logic_col='Logic', tier_col='FormularyTier'):

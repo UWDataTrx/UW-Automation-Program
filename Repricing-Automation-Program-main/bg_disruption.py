@@ -272,24 +272,19 @@ def process_data():
 
     # 16. Build the "Network" sheet exactly as File 0 did:
     #     Filter out rows where 'pharmacy_is_excluded' is NaN, then remove pharmacies matching certain phrases
-    network_df = df[df["pharmacy_is_excluded"].isna()]
-
-    #     Exclude rows whose Pharmacy Name matches any of the phrases (case-insensitive)
-    exclude_phrases = [
-        "CVS", "Walgreens", "Kroger", "Walmart", "Rite Aid", "Optum",
-        "Express Scripts", "DMR", "Williams Bro", "Publix"
-    ]
-    pattern = "|".join([fr"\b{phrase}\b" for phrase in exclude_phrases])
-    network_df = network_df[~network_df["Pharmacy Name"].str.contains(pattern, case=False, regex=True)]
-
-    if {"pharmacy_id", "Pharmacy Name"}.issubset(network_df.columns):
-        network_pivot = pd.pivot_table(
+        network_df = df[df['pharmacy_is_excluded'] == True]
+        filter_phrases = ['CVS', 'Walgreens', 'Kroger', 'Walmart', 'Rite Aid',
+                      'Optum', 'Express Scripts', 'DMR', 'Williams Bro', 'Publix']
+    regex_pattern = '|'.join([f"\\b{phrase}\\b" for phrase in filter_phrases])
+    network_df = network_df[~network_df['Pharmacy Name'].str.contains(regex_pattern, case=False, regex=True)]
+    if {'PHARMACYNPI', 'NABP', 'Pharmacy Name'}.issubset(network_df.columns):
+        pivot = pd.pivot_table(
             network_df,
-            values=["Rxs", "MemberID"],
-            index=["pharmacy_id", "Pharmacy Name"],
-            aggfunc={"Rxs": "sum", "MemberID": pd.Series.nunique}
+            values=['Rxs', 'MemberID'],
+            index=['PHARMACYNPI', 'NABP', 'Pharmacy Name'],
+            aggfunc={'Rxs': 'sum', 'MemberID': pd.Series.nunique}
         )
-        network_pivot.to_excel(writer, sheet_name="Network")
+        pivot.to_excel(writer, sheet_name='Network')
 
     # 17. Finalize and save
     writer.close()
