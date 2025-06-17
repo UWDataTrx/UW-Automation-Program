@@ -85,18 +85,22 @@ def drop_duplicates_df(df):
 
 def clean_logic_and_tier(df, logic_col='Logic', tier_col='FormularyTier'):
     """
-    Coerces the 'Logic' and 'FormularyTier' columns to numeric, coercing errors to NaN.
-
-    Args:
-        df (pd.DataFrame): DataFrame with logic/tier columns.
-        logic_col (str): Name of the logic column.
-        tier_col (str): Name of the tier column.
-
-    Returns:
-        pd.DataFrame: DataFrame with numeric logic and tier columns.
+    Cleans 'Logic' as numeric.
+    Cleans 'FormularyTier':
+        - If all entries are numeric-like, coerces to numeric
+        - Otherwise, strips and uppercases text for brand/generic disruptions
     """
     df[logic_col] = pd.to_numeric(df[logic_col], errors='coerce')
-    df[tier_col] = pd.to_numeric(df[tier_col], errors='coerce')
+
+    # Inspect tier values
+    sample = df[tier_col].dropna().astype(str).head(10)
+    numeric_like = sample.str.replace('.', '', regex=False).str.isnumeric().all()
+
+    if numeric_like:
+        df[tier_col] = pd.to_numeric(df[tier_col], errors='coerce')
+    else:
+        df[tier_col] = df[tier_col].astype(str).str.strip().str.upper()
+
     return df
 
 def filter_recent_date(df, date_col='DATEFILLED'):
