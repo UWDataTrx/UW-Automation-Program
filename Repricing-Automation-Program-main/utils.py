@@ -1,23 +1,33 @@
-# utils.py
 import pandas as pd
 import json
 import logging
+import os
+from pathlib import Path
 
 def load_file_paths(json_file='file_paths.json'):
     """
-    Loads a JSON file mapping named keys to file paths.
-
-    Args:
-        json_file (str): Path to the JSON configuration file.
-
-    Returns:
-        dict: Mapping of keys to file paths.
+    Loads a JSON config file, replacing %OneDrive% with the user's OneDrive path.
+    Returns a dictionary mapping keys to resolved absolute file paths.
     """
     try:
         with open(json_file, 'r') as f:
-            return json.load(f)
+            paths = json.load(f)
+
+        # Resolve the user's OneDrive path
+        onedrive_path = os.environ.get('OneDrive')
+        if not onedrive_path:
+            raise EnvironmentError("OneDrive environment variable not found. Please ensure OneDrive is set up.")
+
+        resolved_paths = {}
+        for key, path in paths.items():
+            if path.startswith('%OneDrive%'):
+                path = path.replace('%OneDrive%', onedrive_path)
+            resolved_paths[key] = str(Path(path).resolve())
+
+        return resolved_paths
+
     except Exception:
-        logging.exception(f"Failed to load file paths from {json_file}")
+        logging.exception(f"Failed to load or resolve file paths from {json_file}")
         raise
 
 def standardize_pharmacy_ids(df):
