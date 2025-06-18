@@ -1,27 +1,31 @@
-import pandas as pd
 import json
 import logging
 import os
 from pathlib import Path
 
-def load_file_paths(json_file='file_paths.json'):
+import pandas as pd
+
+
+def load_file_paths(json_file="file_paths.json"):
     """
     Loads a JSON config file, replacing %OneDrive% with the user's OneDrive path.
     Returns a dictionary mapping keys to resolved absolute file paths.
     """
     try:
-        with open(json_file, 'r') as f:
+        with open(json_file, "r") as f:
             paths = json.load(f)
 
         # Resolve the user's OneDrive path
-        onedrive_path = os.environ.get('OneDrive')
+        onedrive_path = os.environ.get("OneDrive")
         if not onedrive_path:
-            raise EnvironmentError("OneDrive environment variable not found. Please ensure OneDrive is set up.")
+            raise EnvironmentError(
+                "OneDrive environment variable not found. Please ensure OneDrive is set up."
+            )
 
         resolved_paths = {}
         for key, path in paths.items():
-            if path.startswith('%OneDrive%'):
-                path = path.replace('%OneDrive%', onedrive_path)
+            if path.startswith("%OneDrive%"):
+                path = path.replace("%OneDrive%", onedrive_path)
             resolved_paths[key] = str(Path(path).resolve())
 
         return resolved_paths
@@ -29,6 +33,7 @@ def load_file_paths(json_file='file_paths.json'):
     except Exception:
         logging.exception(f"Failed to load or resolve file paths from {json_file}")
         raise
+
 
 def standardize_pharmacy_ids(df):
     """
@@ -40,11 +45,12 @@ def standardize_pharmacy_ids(df):
     Returns:
         pd.DataFrame: Updated DataFrame with padded ID columns.
     """
-    if 'PHARMACYNPI' in df.columns:
-        df['PHARMACYNPI'] = df['PHARMACYNPI'].astype(str).str.zfill(10)
-    if 'NABP' in df.columns:
-        df['NABP'] = df['NABP'].astype(str).str.zfill(7)
+    if "PHARMACYNPI" in df.columns:
+        df["PHARMACYNPI"] = df["PHARMACYNPI"].astype(str).str.zfill(10)
+    if "NABP" in df.columns:
+        df["NABP"] = df["NABP"].astype(str).str.zfill(7)
     return df
+
 
 def standardize_network_ids(network):
     """
@@ -56,11 +62,12 @@ def standardize_network_ids(network):
     Returns:
         pd.DataFrame: Updated network DataFrame with padded ID columns.
     """
-    if 'pharmacy_npi' in network.columns:
-        network['pharmacy_npi'] = network['pharmacy_npi'].astype(str).str.zfill(10)
-    if 'pharmacy_nabp' in network.columns:
-        network['pharmacy_nabp'] = network['pharmacy_nabp'].astype(str).str.zfill(7)
+    if "pharmacy_npi" in network.columns:
+        network["pharmacy_npi"] = network["pharmacy_npi"].astype(str).str.zfill(10)
+    if "pharmacy_nabp" in network.columns:
+        network["pharmacy_nabp"] = network["pharmacy_nabp"].astype(str).str.zfill(7)
     return network
+
 
 def merge_with_network(df, network):
     """
@@ -75,10 +82,11 @@ def merge_with_network(df, network):
     """
     return df.merge(
         network,
-        left_on=['PHARMACYNPI', 'NABP'],
-        right_on=['pharmacy_npi', 'pharmacy_nabp'],
-        how='left'
+        left_on=["PHARMACYNPI", "NABP"],
+        right_on=["pharmacy_npi", "pharmacy_nabp"],
+        how="left",
     )
+
 
 def drop_duplicates_df(df):
     """
@@ -93,27 +101,29 @@ def drop_duplicates_df(df):
     df = df.drop_duplicates()
     return df.drop_duplicates()
 
-def clean_logic_and_tier(df, logic_col='Logic', tier_col='FormularyTier'):
+
+def clean_logic_and_tier(df, logic_col="Logic", tier_col="FormularyTier"):
     """
     Cleans 'Logic' as numeric.
     Cleans 'FormularyTier':
         - If all entries are numeric-like, coerces to numeric
         - Otherwise, strips and uppercases text for brand/generic disruptions
     """
-    df[logic_col] = pd.to_numeric(df[logic_col], errors='coerce')
+    df[logic_col] = pd.to_numeric(df[logic_col], errors="coerce")
 
     # Inspect tier values
     sample = df[tier_col].dropna().astype(str).head(10)
-    numeric_like = sample.str.replace('.', '', regex=False).str.isnumeric().all()
+    numeric_like = sample.str.replace(".", "", regex=False).str.isnumeric().all()
 
     if numeric_like:
-        df[tier_col] = pd.to_numeric(df[tier_col], errors='coerce')
+        df[tier_col] = pd.to_numeric(df[tier_col], errors="coerce")
     else:
         df[tier_col] = df[tier_col].astype(str).str.strip().str.upper()
 
     return df
 
-def filter_recent_date(df, date_col='DATEFILLED'):
+
+def filter_recent_date(df, date_col="DATEFILLED"):
     """
     Keeps only rows where date_col falls in the last 6 months (inclusive).
 
@@ -128,12 +138,9 @@ def filter_recent_date(df, date_col='DATEFILLED'):
     start = latest - pd.DateOffset(months=6) + pd.DateOffset(days=1)
     return df[(df[date_col] >= start) & (df[date_col] <= latest)]
 
+
 def filter_logic_and_maintenance(
-    df,
-    logic_col='Logic',
-    min_logic=5,
-    max_logic=10,
-    maint_col='Maint Drug?'
+    df, logic_col="Logic", min_logic=5, max_logic=10, maint_col="Maint Drug?"
 ):
     """
     Filters rows where min_logic ≤ Logic ≤ max_logic and 'Maint Drug?' == 'Y'.
@@ -149,15 +156,14 @@ def filter_logic_and_maintenance(
         pd.DataFrame: Filtered DataFrame.
     """
     return df[
-        (df[logic_col] >= min_logic) &
-        (df[logic_col] <= max_logic) &
-        (df[maint_col] == 'Y')
+        (df[logic_col] >= min_logic)
+        & (df[logic_col] <= max_logic)
+        & (df[maint_col] == "Y")
     ]
 
+
 def filter_products_and_alternative(
-    df,
-    product_col='Product Name',
-    alternative_col='Alternative'
+    df, product_col="Product Name", alternative_col="Alternative"
 ):
     """
     Excludes rows where 'Product Name' contains albuterol, ventolin, epinephrine,
@@ -174,6 +180,9 @@ def filter_products_and_alternative(
     exclude_pats = [r"\balbuterol\b", r"\bventolin\b", r"\bepinephrine\b"]
     for pat in exclude_pats:
         df = df[~df[product_col].str.contains(pat, case=False, na=False)]
-    df = df[~df[alternative_col].astype(str)
-        .str.contains(r'Covered|Use different NDC', case=False, regex=True, na=False)]
+    df = df[
+        ~df[alternative_col]
+        .astype(str)
+        .str.contains(r"Covered|Use different NDC", case=False, regex=True, na=False)
+    ]
     return df

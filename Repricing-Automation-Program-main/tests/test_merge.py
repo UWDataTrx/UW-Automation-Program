@@ -1,6 +1,9 @@
-import pytest
 from pathlib import Path
+
+import pytest
+
 from merge import merge_files
+
 
 def test_merge_files(tmp_path):
     file1 = tmp_path / "f1.csv"

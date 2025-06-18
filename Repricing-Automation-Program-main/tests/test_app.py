@@ -1,10 +1,11 @@
-import os
 import json
-import pytest
-import pandas as pd
+import os
 import tkinter as tk
 
-from app import ConfigManager, App
+import pandas as pd
+import pytest
+
+from app import App, ConfigManager
 
 
 @pytest.fixture
@@ -39,21 +40,25 @@ def test_load_existing_config(tmp_work_dir):
         json.dump(custom, f)
 
     cm = ConfigManager()
-    assert cm.config == custom, "ConfigManager did not load the existing config.json correctly."
+    assert (
+        cm.config == custom
+    ), "ConfigManager did not load the existing config.json correctly."
 
 
 def test_filter_template_columns_extracts_correct_range():
     # Build a sample DataFrame where columns go: ['A','B','Client Name','X','Y','Logic','Z','W']
-    df = pd.DataFrame({
-        "A": [1],
-        "B": [2],
-        "Client Name": ["foo"],
-        "X": [3],
-        "Y": [4],
-        "Logic": [5],
-        "Z": [6],
-        "W": [7],
-    })
+    df = pd.DataFrame(
+        {
+            "A": [1],
+            "B": [2],
+            "Client Name": ["foo"],
+            "X": [3],
+            "Y": [4],
+            "Logic": [5],
+            "Z": [6],
+            "W": [7],
+        }
+    )
 
     # We only expect columns from 'Client Name' up through 'Logic' (inclusive).
     root = tk.Tk()
@@ -62,17 +67,17 @@ def test_filter_template_columns_extracts_correct_range():
     filtered = app.filter_template_columns(df)
     root.destroy()
 
-    assert list(filtered.columns) == ["Client Name", "X", "Y", "Logic"], (
-        f"Expected columns from 'Client Name' to 'Logic', got {list(filtered.columns)}"
-    )
+    assert list(filtered.columns) == [
+        "Client Name",
+        "X",
+        "Y",
+        "Logic",
+    ], f"Expected columns from 'Client Name' to 'Logic', got {list(filtered.columns)}"
 
 
 def test_filter_template_columns_fallback_to_full_df_if_missing_logic():
     # If 'Client Name' or 'Logic' aren't found, it should return the full DataFrame unmodified
-    df = pd.DataFrame({
-        "Foo": [1, 2],
-        "Bar": [3, 4]
-    })
+    df = pd.DataFrame({"Foo": [1, 2], "Bar": [3, 4]})
 
     root = tk.Tk()
     root.withdraw()
@@ -87,10 +92,15 @@ def test_filter_template_columns_fallback_to_full_df_if_missing_logic():
 
 def test_format_dataframe_converts_datetimes_and_handles_na():
     # Build a DataFrame with one datetime column and one column containing a None
-    orig = pd.DataFrame({
-        "dt1": [pd.to_datetime("2020-12-31 13:45:00"), pd.to_datetime("2021-01-01 00:00:00")],
-        "value": [10, None]
-    })
+    orig = pd.DataFrame(
+        {
+            "dt1": [
+                pd.to_datetime("2020-12-31 13:45:00"),
+                pd.to_datetime("2021-01-01 00:00:00"),
+            ],
+            "value": [10, None],
+        }
+    )
 
     root = tk.Tk()
     root.withdraw()

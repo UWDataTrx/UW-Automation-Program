@@ -1,25 +1,33 @@
-
+import logging
 import sys
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import NamedStyle
-import logging
 
 # Configure logging
 logging.basicConfig(
-    filename='merge_log.log',
+    filename="merge_log.log",
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
 MERGED_FILENAME = "merged_file.xlsx"
 REQUIRED_COLUMNS = [
-    'DATEFILLED', 'SOURCERECORDID', 'QUANTITY', 'DAYSUPPLY', 'NDC',
-    'MemberID', 'Drug Name', 'Pharmacy Name', 'Total AWP (Historical)'
+    "DATEFILLED",
+    "SOURCERECORDID",
+    "QUANTITY",
+    "DAYSUPPLY",
+    "NDC",
+    "MemberID",
+    "Drug Name",
+    "Pharmacy Name",
+    "Total AWP (Historical)",
 ]
+
 
 def merge_files(file1_path, file2_path):
     try:
@@ -36,18 +44,20 @@ def merge_files(file1_path, file2_path):
             return
 
         # Load data
-        df1 = pd.read_csv(file1, parse_dates=['DATEFILLED'], dayfirst=False)
+        df1 = pd.read_csv(file1, parse_dates=["DATEFILLED"], dayfirst=False)
         df2 = pd.read_csv(file2) if file2.suffix == ".csv" else pd.read_excel(file2)
 
         # Clean up and standardize column names
         df2.columns = [col.strip() for col in df2.columns]
-        if 'Source Record ID' in df2.columns:
+        if "Source Record ID" in df2.columns:
             df2.rename(columns={"Source Record ID": "SOURCERECORDID"}, inplace=True)
 
         # Merge
         df_merged = pd.merge(df1, df2, on="SOURCERECORDID", how="outer")
-        df_merged['Total AWP (Historical)'] = pd.to_numeric(df_merged.get('Total AWP (Historical)', 0), errors='coerce').round(2)
-        df_merged['MemberID'] = df_merged['MemberID'].fillna(0)
+        df_merged["Total AWP (Historical)"] = pd.to_numeric(
+            df_merged.get("Total AWP (Historical)", 0), errors="coerce"
+        ).round(2)
+        df_merged["MemberID"] = df_merged["MemberID"].fillna(0)
 
         # Log missing required columns
         for col in REQUIRED_COLUMNS:
@@ -62,11 +72,11 @@ def merge_files(file1_path, file2_path):
         try:
             wb = load_workbook(merged_path)
             ws = wb.active
-            date_style = NamedStyle(name="date_style", number_format='MM/DD/YYYY')
+            date_style = NamedStyle(name="date_style", number_format="MM/DD/YYYY")
 
             header = [cell.value for cell in ws[1]]
-            if 'DATEFILLED' in header:
-                date_col_index = header.index('DATEFILLED') + 1
+            if "DATEFILLED" in header:
+                date_col_index = header.index("DATEFILLED") + 1
                 for row in range(2, ws.max_row + 1):
                     ws.cell(row=row, column=date_col_index).style = date_style
                 wb.save(merged_path)
@@ -80,6 +90,7 @@ def merge_files(file1_path, file2_path):
     except Exception as e:
         logger.exception(f"Merge failed: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

@@ -1,6 +1,8 @@
+import os
+
 import pytest
 from openpyxl import Workbook
-import os
+
 
 @pytest.fixture(scope="session", autouse=True)
 def create_dummy_excel():
@@ -9,7 +11,9 @@ def create_dummy_excel():
         wb = Workbook()
         ws = wb.active
         ws.title = "Claims Table"
-        ws.append(["pharmacy_npi", "pharmacy_nabp", "pharmacy_id"])  # add columns as needed
+        ws.append(
+            ["pharmacy_npi", "pharmacy_nabp", "pharmacy_id"]
+        )  # add columns as needed
         ws.append([1234567890, "NABP123", "123"])  # add dummy data as needed
         wb.save(filename)
     yield
