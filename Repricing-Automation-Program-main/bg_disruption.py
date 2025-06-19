@@ -10,6 +10,7 @@ from utils import (
     drop_duplicates_df,
     clean_logic_and_tier,
     filter_recent_date,
+    write_shared_log,
 )
 
 # Logging setup
