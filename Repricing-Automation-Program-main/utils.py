@@ -4,6 +4,28 @@ import logging
 import os
 from pathlib import Path
 
+Log_Path = os.path.expandvars(r"%OneDrive%/True Community - Data Analyst/Python Repricing Automation Program/audit_log.csv")
+
+def write_shared_log(script_name, message, status="INFO"):
+    """
+    Appends a log entry to the shared audit log in OneDrive.
+    """
+    try:
+        username = getpass.getuser()
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = [timestamp, username, script_name, message, status]
+
+        write_header = not os.path.exists(SHARED_LOG_PATH)
+        os.makedirs(os.path.dirname(SHARED_LOG_PATH), exist_ok=True)
+
+        with open(SHARED_LOG_PATH, mode='a', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            if write_header:
+                writer.writerow(['Timestamp', 'User', 'Script', 'Message', 'Status'])
+            writer.writerow(log_entry)
+    except Exception as e:
+        print(f"[Shared Log] Error: {e}")
+        
 def load_file_paths(json_file='file_paths.json'):
     """
     Loads a JSON config file, replacing %OneDrive% with the user's OneDrive path.
