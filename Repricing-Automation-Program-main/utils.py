@@ -4,7 +4,7 @@ import logging
 import os
 from pathlib import Path
 
-Log_Path = os.path.expandvars(r"%OneDrive%/True Community - Data Analyst/Python Repricing Automation Program/audit_log.csv")
+shared_log_path = os.path.expandvars(r"%OneDrive%/True Community - Data Analyst/Python Repricing Automation Program/audit_log.csv")
 
 def write_shared_log(script_name, message, status="INFO"):
     """
