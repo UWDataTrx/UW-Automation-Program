@@ -10,6 +10,7 @@ from utils import (
     filter_recent_date,
     filter_logic_and_maintenance,
     filter_products_and_alternative,
+    write_shared_log,
 )
 
 # Logging setup
