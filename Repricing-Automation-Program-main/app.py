@@ -4,6 +4,7 @@ from tkinter import filedialog, messagebox, scrolledtext
 import subprocess
 import os
 import shutil
+from utils import write_shared_log
 import logging
 import threading
 import multiprocessing
@@ -111,6 +112,42 @@ class App:
             self.template_file_path = str(default_template)
         else:
             self.template_file_path = None
+
+    def show_shared_log_viewer(self):
+    import csv
+    SHARED_LOG_PATH = os.path.expandvars(r"%OneDrive%\Shared Logs\audit_log.csv")
+
+    log_win = tk.Toplevel(self.root)
+    log_win.title("Shared Audit Log Viewer")
+    log_win.geometry("1000x600")
+
+    filter_frame = tk.Frame(log_win)
+    filter_frame.pack(fill='x')
+    tk.Label(filter_frame, text="Search:").pack(side='left', padx=5)
+    filter_entry = tk.Entry(filter_frame)
+    filter_entry.pack(side='left', fill='x', expand=True, padx=5)
+
+    text_area = scrolledtext.ScrolledText(log_win, width=150, height=30)
+    text_area.pack(fill='both', expand=True)
+
+    def refresh():
+        try:
+            with open(SHARED_LOG_PATH, 'r', newline='', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                rows = list(reader)
+
+            search_term = filter_entry.get().lower()
+            filtered = [row for row in rows if any(search_term in str(cell).lower() for cell in row)] if search_term else rows
+
+            text_area.delete(1.0, tk.END)
+            for row in filtered:
+                text_area.insert(tk.END, ' | '.join(row) + '\n')
+        except Exception as e:
+            text_area.insert(tk.END, f"[ERROR] Could not read shared log:\n{e}")
+
+        log_win.after(5000, refresh)
+
+    refresh()
 
     def _build_ui(self):
         # Title
