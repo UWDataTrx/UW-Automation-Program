@@ -221,6 +221,19 @@ class App:
         )
         self.logs_button.grid(row=4, column=1, pady=10, padx=10, sticky='ew')
 
+        # Shared Log Button
+        self.shared_log_button = ctk.CTkButton(
+            self.button_frame,
+            text="Shared Audit Log",
+            command=self.show_shared_log_viewer,
+            font=font_select,
+            height=40,
+            fg_color=LIGHT_COLORS["mint"],
+            text_color="#000000"
+        )
+        self.shared_log_button.grid(row=6, column=1, pady=10, padx=10, sticky='ew')
+
+
         # Toggle Dark Mode button
         self.toggle_theme_button = ctk.CTkButton(
             self.button_frame,
