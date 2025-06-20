@@ -527,17 +527,29 @@ class App:
     def start_process(self):
         threading.Thread(target=self._start_process_internal).start()
         
+    def validate_merge_inputs(self):
+        # Check if both file paths are set and files exist
+        if not self.file1_path or not self.file2_path:
+            messagebox.showerror("Error", "Both input files must be selected.")
+            return False
+        if not os.path.isfile(self.file1_path):
+            messagebox.showerror("Error", f"File not found: {self.file1_path}")
+            return False
+        if not os.path.isfile(self.file2_path):
+            messagebox.showerror("Error", f"File not found: {self.file2_path}")
+            return False
+        return True
+
     def  _start_process_internal(self):
         self.start_time = time.time()
         self.update_progress(0.05)
+
         if not self.file1_path or not self.file2_path:
             messagebox.showerror("Error", "Please select both files before proceeding.")
             self.update_progress(0)
             return
 
-        result = messagebox.askyesno("Confirmation", "Are you sure you want to start the repricing process?")
-        if not result:
-            messagebox.showinfo("Cancelled", "Repricing process has been cancelled.")
+        if not self.validate_merge_inputs():
             self.update_progress(0)
             return
 
