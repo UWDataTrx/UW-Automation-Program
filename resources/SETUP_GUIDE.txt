@@ -1,0 +1,89 @@
+# Repricing Automation Program – Setup Guide (Internal Users)
+
+This guide helps internal users install, configure, and run the Repricing Automation Program on a Windows-based system. All steps are streamlined for non-developers.
+
+---
+
+## ✅ 1. System Requirements
+
+| Requirement          | Description                              |
+|----------------------|------------------------------------------|
+| OS                   | Windows 10 or later                      |
+| Python               | Version 3.13.5 (64-bit)                  |
+| Excel                | Microsoft Excel (macros enabled)         |
+| OneDrive             | Sync enabled and signed in               |
+
+---
+
+## 🧩 2. Software Installation
+
+### A. Install Python (if not installed)
+1. Visit: https://www.python.org/downloads/windows/
+2. Download **Python 3.13.5 (64-bit)**.
+3. During installation, check **“Add Python to PATH”**.
+4. Complete the installation.
+
+### B. Install Required Python Packages
+1. Open **Command Prompt** as Administrator.
+2. Run the following command (copy and paste as one line):
+
+    ```bash
+    pip install pandas openpyxl xlsxwriter plyer numba pywin32 customtkinter xlwings pyarrow
+    ```
+
+   > If you see errors, ensure you are using the correct version of Python and have internet access.
+
+---
+
+## 🗂 3. Folder Setup
+
+- Place all program files in a single folder (e.g., `C:\Users\<YourName>\RepricingAutomation`).
+- Ensure you have write access to this folder.
+- Make sure your OneDrive is running and synced.
+
+---
+
+## 📝 4. Configuration
+
+- **File Paths:**  
+  Edit `file_paths.json` if you need to customize where input/output files are stored.
+- **Excel Templates:**  
+  Keep the template file named `_Rx Repricing_wf.xlsx` unless instructed otherwise.
+
+---
+
+## 🚦 5. Running the Program
+
+1. Double-click or run `app.py`:
+    - Open Command Prompt in the program folder.
+    - Run:
+      ```bash
+      python app.py
+      ```
+2. Use the GUI to import files, select disruption type, and start processing.
+
+---
+
+## 🛠 6. Troubleshooting
+
+- **Excel Errors:**  
+  - Close all open Excel windows before running the program.
+  - Ensure macros are enabled in Excel.
+- **Python Not Found:**  
+  - Reboot your computer after installing Python.
+  - Make sure Python is added to your PATH.
+- **OneDrive Issues:**  
+  - Confirm you are signed in and syncing.
+  - Check that logs are being written to the correct OneDrive folder.
+
+---
+
+## 🔒 7. Support
+
+- For help, contact your IT department or the program maintainer.
+- Provide screenshots and any error messages for faster support.
+
+---
+
+If you need more advanced configuration or want to run performance profiling, see the main walkthrough documentation.
+

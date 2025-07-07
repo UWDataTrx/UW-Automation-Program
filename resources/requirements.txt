@@ -1,0 +1,12 @@
+pandas
+numpy
+openpyxl
+xlwings
+xlsxwriter
+customtkinter
+plyer
+pywin32
+numba
+pyarrow
+pyjokes
+emoji
