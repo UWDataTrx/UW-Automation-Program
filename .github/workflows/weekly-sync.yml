@@ -3,6 +3,7 @@ name: Weekly File Sync
 on:
   schedule:
     - cron: '0 10 * * 5'  # Every Friday at 10:00 AM UTC (6:00 AM ET)
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   sync-specific-files:
@@ -14,9 +15,13 @@ jobs:
 
       - name: Add upstream (source repo)
         run: |
+          echo "Adding upstream repository..."
           git remote add upstream https://github.com/UWDataTrx/UW-Automation-Program.git
+          echo "Fetching from upstream..."
           git fetch upstream
-          echo "Upstream repository added and fetched"
+          echo "Upstream repository added and fetched successfully"
+          echo "Available remotes:"
+          git remote -v
 
       - name: Check which files exist in upstream
         run: |
