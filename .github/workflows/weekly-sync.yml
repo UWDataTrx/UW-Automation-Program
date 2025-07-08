@@ -14,7 +14,7 @@ jobs:
 
       - name: Add upstream (source repo)
         run: |
-          git remote add upstream https://github.com/UWDataTrx/GitHub.git
+          git remote add upstream https://github.com/UWDataTrx/UW-Automation-Program.git
           git fetch upstream
 
       - name: Sync specific files
