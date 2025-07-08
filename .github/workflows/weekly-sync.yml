@@ -26,39 +26,35 @@ jobs:
       - name: Sync specific files
         continue-on-error: false
         run: |
-          echo "Starting file sync..."
+          echo "Starting file and directory sync..."
           
-          # List of files to sync (only the ones we know exist)
-          declare -a files=(
-            "app.py"
-            "tier_disruption.py" 
-            "openmdf_bg.py"
-            "openmdf_tier.py"
-            "bg_disruption.py"
-            "epls_lbl.py"
-            "merge.py"
-            "sharx_lbl.py"
+          # Sync root-level app.py file
+          echo "Syncing app.py..."
+          if git show upstream/main:app.py >/dev/null 2>&1; then
+            git checkout upstream/main -- app.py && echo "✓ Synced: app.py" || echo "✗ Failed to sync: app.py"
+          else
+            echo "⚠ app.py not found in upstream"
+          fi
+          
+          # Sync entire directories
+          declare -a directories=(
+            "config"
+            "modules"
+            "utils"
           )
           
-          # Sync each file individually with error handling
-          for file in "${files[@]}"; do
-            echo "Attempting to sync: $file"
-            if git show upstream/main:$file >/dev/null 2>&1; then
-              git checkout upstream/main -- $file && echo "✓ Synced: $file" || echo "✗ Failed to sync: $file"
+          for dir in "${directories[@]}"; do
+            echo "Syncing ${dir}/ directory..."
+            if git show upstream/main:${dir} >/dev/null 2>&1; then
+              # Remove local directory first to ensure clean sync
+              rm -rf ${dir}
+              git checkout upstream/main -- ${dir}/ && echo "✓ Synced directory: ${dir}/" || echo "✗ Failed to sync directory: ${dir}/"
             else
-              echo "⚠ File not found in upstream: $file"
+              echo "⚠ ${dir}/ directory not found in upstream"
             fi
           done
           
-          # Try to sync utils directory files
-          echo "Syncing utils directory..."
-          git checkout upstream/main -- utils/ 2>/dev/null || echo "⚠ utils/ directory not found in upstream"
-          
-          # Try to sync config directory files  
-          echo "Syncing config directory..."
-          git checkout upstream/main -- config/ 2>/dev/null || echo "⚠ config/ directory not found in upstream"
-          
-          echo "File sync completed."
+          echo "File and directory sync completed."
 
       - name: Commit and push changes
         continue-on-error: true
