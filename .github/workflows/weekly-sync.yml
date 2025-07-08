@@ -16,18 +16,48 @@ jobs:
         run: |
           git remote add upstream https://github.com/UWDataTrx/UW-Automation-Program.git
           git fetch upstream
+          echo "Upstream repository added and fetched"
+
+      - name: Check which files exist in upstream
+        run: |
+          echo "Files available in upstream/main:"
+          git ls-tree -r --name-only upstream/main | head -20
 
       - name: Sync specific files
         run: |
-          FILES="app.py tier_disruption.py openmdf_bg.py openmdf_tier.py bg_disruption.py epls_lbl.py merge.py sharx_lbl.py utils.py"
-          for file in $FILES; do
-            git checkout upstream/main -- $file
+          # Core application files
+          FILES="app.py tier_disruption.py openmdf_bg.py openmdf_tier.py bg_disruption.py epls_lbl.py merge.py sharx_lbl.py"
+          
+          # Utility files
+          UTIL_FILES="utils/utils.py utils/excel_utils.py utils/__init__.py"
+          
+          # Configuration files
+          CONFIG_FILES="config/config.json config/config_loader.py config/file_paths.json config/__init__.py"
+          
+          # Module files (if they exist)
+          MODULE_FILES="modules/__init__.py modules/tier_disruption.py modules/openmdf_bg.py modules/openmdf_tier.py modules/bg_disruption.py modules/epls_lbl.py modules/merge.py modules/sharx_lbl.py modules/audit_helper.py modules/mp_helpers.py modules/profile_runner.py"
+          
+          # Sync all files
+          for file in $FILES $UTIL_FILES $CONFIG_FILES $MODULE_FILES; do
+            if git cat-file -e upstream/main:$file 2>/dev/null; then
+              git checkout upstream/main -- $file
+              echo "Synced: $file"
+            else
+              echo "File not found in upstream: $file"
+            fi
           done
 
       - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "Weekly sync of specific files"
-          git push origin main
-        continue-on-error: true  # Don't fail if no changes
+          
+          # Check if there are any changes to commit
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "Weekly sync of specific files from upstream"
+            git push origin main
+            echo "Changes committed and pushed successfully"
+          else
+            echo "No changes to commit"
+          fi
