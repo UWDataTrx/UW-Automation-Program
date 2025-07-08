@@ -24,38 +24,56 @@ jobs:
           git ls-tree -r --name-only upstream/main | head -20
 
       - name: Sync specific files
+        continue-on-error: false
         run: |
-          # Core application files
-          FILES="app.py tier_disruption.py openmdf_bg.py openmdf_tier.py bg_disruption.py epls_lbl.py merge.py sharx_lbl.py"
+          echo "Starting file sync..."
           
-          # Utility files
-          UTIL_FILES="utils/utils.py utils/excel_utils.py utils/__init__.py"
+          # List of files to sync (only the ones we know exist)
+          declare -a files=(
+            "app.py"
+            "tier_disruption.py" 
+            "openmdf_bg.py"
+            "openmdf_tier.py"
+            "bg_disruption.py"
+            "epls_lbl.py"
+            "merge.py"
+            "sharx_lbl.py"
+          )
           
-          # Configuration files
-          CONFIG_FILES="config/config.json config/config_loader.py config/file_paths.json config/__init__.py"
-          
-          # Module files (if they exist)
-          MODULE_FILES="modules/__init__.py modules/tier_disruption.py modules/openmdf_bg.py modules/openmdf_tier.py modules/bg_disruption.py modules/epls_lbl.py modules/merge.py modules/sharx_lbl.py modules/audit_helper.py modules/mp_helpers.py modules/profile_runner.py"
-          
-          # Sync all files
-          for file in $FILES $UTIL_FILES $CONFIG_FILES $MODULE_FILES; do
-            if git cat-file -e upstream/main:$file 2>/dev/null; then
-              git checkout upstream/main -- $file
-              echo "Synced: $file"
+          # Sync each file individually with error handling
+          for file in "${files[@]}"; do
+            echo "Attempting to sync: $file"
+            if git show upstream/main:$file >/dev/null 2>&1; then
+              git checkout upstream/main -- $file && echo "✓ Synced: $file" || echo "✗ Failed to sync: $file"
             else
-              echo "File not found in upstream: $file"
+              echo "⚠ File not found in upstream: $file"
             fi
           done
+          
+          # Try to sync utils directory files
+          echo "Syncing utils directory..."
+          git checkout upstream/main -- utils/ 2>/dev/null || echo "⚠ utils/ directory not found in upstream"
+          
+          # Try to sync config directory files  
+          echo "Syncing config directory..."
+          git checkout upstream/main -- config/ 2>/dev/null || echo "⚠ config/ directory not found in upstream"
+          
+          echo "File sync completed."
 
       - name: Commit and push changes
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
+          echo "Checking for changes..."
+          git status
+          
           # Check if there are any changes to commit
           if [ -n "$(git status --porcelain)" ]; then
-            git add .
-            git commit -m "Weekly sync of specific files from upstream"
+            echo "Changes detected, committing..."
+            git add -A
+            git commit -m "Weekly sync of specific files from upstream - $(date)"
             git push origin main
             echo "Changes committed and pushed successfully"
           else
