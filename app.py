@@ -247,6 +247,18 @@ class App:
         """Show log viewer using log manager."""
         self.log_manager.show_log_viewer()
 
+    def show_shared_log_viewer(self):
+        """Show shared log viewer using log manager."""
+        self.log_manager.show_shared_log_viewer()
+
+    def sharx_lbl(self):
+        """Generate SHARx LBL using process manager."""
+        self.process_manager.sharx_lbl()
+
+    def epls_lbl(self):
+        """Generate EPLS LBL using process manager."""
+        self.process_manager.epls_lbl()
+
     # Disruption and process methods
     # Removed select_disruption_type method since disruption_type_combobox does not exist.
 
