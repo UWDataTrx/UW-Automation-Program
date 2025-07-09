@@ -1,0 +1,39 @@
+name: Notify Teams on Main Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify_teams:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Teams notification
+        run: |
+          MESSAGE=$(jq -n --arg repo "${{ github.repository }}" \
+            --arg actor "${{ github.actor }}" \
+            --arg message "${{ github.event.head_commit.message }}" \
+            --arg url "${{ github.event.head_commit.url }}" \
+            '{
+              "@type": "MessageCard",
+              "@context": "http://schema.org/extensions",
+              "summary": "Push to Main",
+              "themeColor": "0072C6",
+              "title": "🚀 Push to Main Branch",
+              "sections": [
+                {
+                  "activityTitle": "A new push was made to the **main** branch!",
+                  "activitySubtitle": "Repository: \($repo)",
+                  "facts": [
+                    {"name": "Pushed by", "value": $actor},
+                    {"name": "Commit message", "value": $message},
+                    {"name": "Commit URL", "value": "[View Commit](" + $url + ")"}
+                  ],
+                  "markdown": true
+                }
+              ]
+            }')
+          curl -H "Content-Type: application/json" -d "$MESSAGE" ${{ secrets.TEAMS_WEBHOOK_URL }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
