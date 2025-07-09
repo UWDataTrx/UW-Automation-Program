@@ -2,8 +2,11 @@ import logging
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox
+import os
+import sys
 
 import pandas as pd
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.excel_utils import write_df_to_template
 from utils.utils import load_file_paths, write_shared_log
 
@@ -37,7 +40,9 @@ def main():
     write_shared_log("sharx_lbl.py", "Processing started.")
 
     try:
-        paths = load_file_paths()
+        # Get the config file path relative to the project root
+        config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+        paths = load_file_paths(str(config_path))
         # Fallback to file dialogs if required keys are missing
         if "reprice" not in paths:
             from tkinter import filedialog

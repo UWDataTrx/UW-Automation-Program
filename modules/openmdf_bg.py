@@ -1,5 +1,9 @@
 import pandas as pd
 import logging
+import os
+import sys
+from pathlib import Path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import (
     load_file_paths,
     standardize_pharmacy_ids,
@@ -46,7 +50,9 @@ def process_data():
 
     import sys
 
-    paths = load_file_paths()
+    # Get the config file path relative to the project root
+    config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+    paths = load_file_paths(str(config_path))
 
     if "reprice" not in paths or not paths["reprice"]:
         logger.warning("No reprice/template file provided.")
@@ -280,14 +286,55 @@ def process_data():
 
         if not na_pharmacies.empty:
             output_file_path = paths["pharmacy_validation"]
-            writer = pd.ExcelWriter(output_file_path, engine="openpyxl")
-
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
-            na_pharmacies_output.to_excel(
-                writer, sheet_name="Validations", index=False, engine="openpyxl"
-            )
-            writer.close()
-            logger.info(f"NA pharmacies written to '{output_file_path}' sheet.")
+            
+            # Update existing template or create new file
+            try:
+                from openpyxl import load_workbook
+                import os
+                
+                # Check if template exists
+                if os.path.exists(output_file_path):
+                    # Load existing workbook
+                    wb = load_workbook(output_file_path)
+                    logger.info(f"Loading existing template: {output_file_path}")
+                else:
+                    # Create new workbook
+                    from openpyxl import Workbook
+                    wb = Workbook()
+                    logger.info(f"Creating new validation file: {output_file_path}")
+                
+                # Check if Validations sheet exists, if not create it
+                if "Validations" in wb.sheetnames:
+                    ws = wb["Validations"]
+                    # Clear existing data
+                    ws.delete_rows(1, ws.max_row)
+                else:
+                    ws = wb.create_sheet("Validations")
+                    # Remove default sheet if it exists and is empty
+                    if "Sheet" in wb.sheetnames and len(wb.sheetnames) > 1:
+                        wb.remove(wb["Sheet"])
+                
+                # Write headers
+                ws.append(["PHARMACYNPI", "NABP"])
+                
+                # Write data
+                for _, row in na_pharmacies_output.iterrows():
+                    ws.append([row["PHARMACYNPI"], row["NABP"]])
+                
+                # Save the workbook
+                wb.save(output_file_path)
+                logger.info(f"NA pharmacies written to '{output_file_path}' Validations sheet.")
+                
+            except Exception as e:
+                logger.error(f"Error updating pharmacy validation file: {e}")
+                # Fallback to original method
+                writer = pd.ExcelWriter(output_file_path, engine="openpyxl")
+                na_pharmacies_output.to_excel(
+                    writer, sheet_name="Validations", index=False, engine="openpyxl"
+                )
+                writer.close()
+                logger.info(f"NA pharmacies written to '{output_file_path}' sheet (fallback).")
 
     summary = pd.DataFrame(
         {

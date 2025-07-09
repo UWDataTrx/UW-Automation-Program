@@ -4,6 +4,8 @@ from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.styles import NamedStyle
 import logging
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import write_shared_log
 
 # Configure logging

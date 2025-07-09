@@ -1,5 +1,9 @@
 import pandas as pd
 import logging
+import os
+import sys
+from pathlib import Path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import (
     load_file_paths,
     filter_logic_and_maintenance,
@@ -23,23 +27,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def process_data():
-    write_shared_log("bg_disruption.py", "Processing started.")
-    import sys
-
-    output_filename = "LBL for Disruption.xlsx"
-    if len(sys.argv) > 1:
-        output_filename = sys.argv[1]
-    file_paths = load_file_paths()
-    if "reprice" not in file_paths or not file_paths["reprice"]:
-        write_shared_log(
-            "bg_disruption.py", "No reprice/template file provided.", status="ERROR"
-        )
-        print("Error: No reprice/template file provided.")
-        return
-
-    import re
-
+def load_data_files(file_paths):
+    """Load and return all required data files."""
+    logger.info("Loading data files...")
+    
+    # Load claims data
     try:
         claims = pd.read_excel(
             file_paths["reprice"],
@@ -65,30 +57,46 @@ def process_data():
             "bg_disruption.py", f"Claims Table fallback: {e}", status="WARNING"
         )
         claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
+    
     logger.info(f"claims shape: {claims.shape}")
     claims.info()
 
+    # Load other data files
     medi = pd.read_excel(file_paths["medi_span"])[
         ["NDC", "Maint Drug?", "Product Name"]
     ]
     logger.info(f"medi shape: {medi.shape}")
+    
     uni = pd.read_excel(file_paths["u_disrupt"], sheet_name="Universal NDC")[
         ["NDC", "Tier"]
     ]
     logger.info(f"uni shape: {uni.shape}")
+    
     exl = pd.read_excel(file_paths["e_disrupt"], sheet_name="Alternatives NDC")[
         ["NDC", "Tier", "Alternative"]
     ]
     logger.info(f"exl shape: {exl.shape}")
+    
     network = pd.read_excel(file_paths["n_disrupt"])[
         ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
     ]
     logger.info(f"network shape: {network.shape}")
+    
+    return claims, medi, uni, exl, network
 
+
+def merge_data_files(claims, reference_data, network):
+    """Merge all data files into a single DataFrame."""
+    logger.info("Merging data files...")
+    
+    medi, uni, exl = reference_data
+    
     df = claims.merge(medi, on="NDC", how="left")
     logger.info(f"After merge with medi: {df.shape}")
+    
     df = df.merge(uni.rename(columns={"Tier": "Universal Tier"}), on="NDC", how="left")
     logger.info(f"After merge with uni: {df.shape}")
+    
     df = df.merge(exl.rename(columns={"Tier": "Exclusive Tier"}), on="NDC", how="left")
     logger.info(f"After merge with exl: {df.shape}")
 
@@ -99,24 +107,43 @@ def process_data():
     logger.info(f"After standardize_network_ids: {network.shape}")
     df = merge_with_network(df, network)
     logger.info(f"After merge_with_network: {df.shape}")
+    
+    return df
 
+
+def process_and_filter_data(df):
+    """Process and filter the merged data."""
+    logger.info("Processing and filtering data...")
+    
     # Date parsing, deduplication, type cleaning, and filters
     df["DATEFILLED"] = pd.to_datetime(df["DATEFILLED"], errors="coerce")
     logger.info(f"After DATEFILLED to_datetime: {df.shape}")
+    
     df = drop_duplicates_df(df)
     logger.info(f"After drop_duplicates_df: {df.shape}")
+    
     df = clean_logic_and_tier(df)
     logger.info(f"After clean_logic_and_tier: {df.shape}")
+    
     df = filter_recent_date(df)
     logger.info(f"After filter_recent_date: {df.shape}")
+    
     df = filter_logic_and_maintenance(df)
     logger.info(f"After filter_logic_and_maintenance: {df.shape}")
+    
     df = filter_products_and_alternative(df)
     logger.info(f"After filter_products_and_alternative: {df.shape}")
 
     df["FormularyTier"] = df["FormularyTier"].astype(str).str.strip().str.upper()
     df["Alternative"] = df["Alternative"].astype(str)
+    
+    return df
 
+
+def handle_pharmacy_exclusions(df, file_paths):
+    """Handle pharmacy exclusions and validation."""
+    logger.info("Handling pharmacy exclusions...")
+    
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
         df["pharmacy_is_excluded"] = (
@@ -130,6 +157,7 @@ def process_data():
         logger.info(
             f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
         )
+        
         # Identify rows where pharmacy_is_excluded is "NA"
         na_pharmacies = df[df["pharmacy_is_excluded"].isna()]
         logger.info(f"NA pharmacies count: {na_pharmacies.shape[0]}")
@@ -137,32 +165,91 @@ def process_data():
         if not na_pharmacies.empty:
             # Define the writer before using it
             output_file_path = file_paths["pharmacy_validation"]
-            writer = pd.ExcelWriter(output_file_path, engine="openpyxl")
-
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
-            na_pharmacies_output.to_excel(
-                writer, sheet_name="Validations", index=False, engine="openpyxl"
-            )
-            writer.close()
-            logger.info(f"NA pharmacies written to '{output_file_path}' sheet.")
+            
+            # Update existing template or create new file
+            try:
+                from openpyxl import load_workbook
+                import os
+                
+                # Check if template exists
+                if os.path.exists(output_file_path):
+                    # Load existing workbook
+                    wb = load_workbook(output_file_path)
+                    logger.info(f"Loading existing template: {output_file_path}")
+                else:
+                    # Create new workbook
+                    from openpyxl import Workbook
+                    wb = Workbook()
+                    logger.info(f"Creating new validation file: {output_file_path}")
+                
+                # Check if Validations sheet exists, if not create it
+                if "Validations" in wb.sheetnames:
+                    ws = wb["Validations"]
+                    # Clear existing data
+                    ws.delete_rows(1, ws.max_row)
+                else:
+                    ws = wb.create_sheet("Validations")
+                    # Remove default sheet if it exists and is empty
+                    if "Sheet" in wb.sheetnames and len(wb.sheetnames) > 1:
+                        wb.remove(wb["Sheet"])
+                
+                # Write headers
+                ws.append(["PHARMACYNPI", "NABP"])
+                
+                # Write data
+                for _, row in na_pharmacies_output.iterrows():
+                    ws.append([row["PHARMACYNPI"], row["NABP"]])
+                
+                # Save the workbook
+                wb.save(output_file_path)
+                logger.info(f"NA pharmacies written to '{output_file_path}' Validations sheet.")
+                
+            except Exception as e:
+                logger.error(f"Error updating pharmacy validation file: {e}")
+                # Fallback to original method
+                writer = pd.ExcelWriter(output_file_path, engine="openpyxl")
+                na_pharmacies_output.to_excel(
+                    writer, sheet_name="Validations", index=False, engine="openpyxl"
+                )
+                writer.close()
+                logger.info(f"NA pharmacies written to '{output_file_path}' sheet (fallback).")
+    
+    return df
 
-    # Define filters
+
+def create_data_filters(df):
+    """Create filtered datasets for different scenarios."""
+    logger.info("Creating data filters...")
+    
     uni_pos = df[(df["Universal Tier"] == 1) & df["FormularyTier"].isin(["B", "BRAND"])]
     logger.info(f"uni_pos shape: {uni_pos.shape}")
+    
     uni_neg = df[
         df["Universal Tier"].isin([2, 3]) & df["FormularyTier"].isin(["G", "GENERIC"])
     ]
     logger.info(f"uni_neg shape: {uni_neg.shape}")
+    
     ex_pos = df[(df["Exclusive Tier"] == 1) & df["FormularyTier"].isin(["B", "BRAND"])]
     logger.info(f"ex_pos shape: {ex_pos.shape}")
+    
     ex_neg = df[
         df["Exclusive Tier"].isin([2, 3]) & df["FormularyTier"].isin(["G", "GENERIC"])
     ]
     logger.info(f"ex_neg shape: {ex_neg.shape}")
+    
     ex_ex = df[df["Exclusive Tier"] == "Nonformulary"]
     logger.info(f"ex_ex shape: {ex_ex.shape}")
+    
+    return uni_pos, uni_neg, ex_pos, ex_neg, ex_ex
 
-    # Build pivots with renamed columns
+
+def create_pivot_tables(filtered_data):
+    """Create pivot tables and calculate member counts."""
+    logger.info("Creating pivot tables...")
+    
+    uni_pos, uni_neg, ex_pos, ex_neg, ex_ex = filtered_data
+    
     def pivot(d, include_alternative=False):
         index_cols = ["Product Name"]
         if include_alternative and "Alternative" in d.columns:
@@ -186,7 +273,14 @@ def process_data():
         "Exclusive_Negative": (ex_neg, pivot(ex_neg), count(ex_neg)),
         "Exclusions": (ex_ex, pivot(ex_ex, include_alternative=True), count(ex_ex)),
     }
+    
+    return tabs
 
+
+def create_summary_data(df, tabs):
+    """Create summary data for the report."""
+    logger.info("Creating summary data...")
+    
     total_members = df["MemberID"].nunique()
     total_claims = df["Rxs"].sum()
 
@@ -215,15 +309,16 @@ def process_data():
             ],
         }
     )
+    
+    return summary
 
-    writer = pd.ExcelWriter(output_filename, engine="xlsxwriter")
-    df.to_excel(writer, sheet_name="Data", index=False)
-    summary.to_excel(writer, sheet_name="Summary", index=False)
 
-    for sheet, (_, pt, mems) in tabs.items():
-        pt.to_excel(writer, sheet_name=sheet)
-        writer.sheets[sheet].write("F1", f"Total Members: {mems}")
-
+def create_network_data(df):
+    """Create network data for excluded pharmacies."""
+    logger.info("Creating network data...")
+    
+    import re
+    
     # Network summary for excluded pharmacies (pharmacy_is_excluded=True)
     network_df = df[df["pharmacy_is_excluded"]]
     filter_phrases = [
@@ -238,6 +333,7 @@ def process_data():
         "Williams Bro",
         "Publix",
     ]
+    
     # Regex safety: escape and lower-case all phrases and names
     filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
     regex_pattern = "|".join([f"\\b{p}\\b" for p in filter_phrases_escaped])
@@ -247,6 +343,8 @@ def process_data():
         .str.contains(regex_pattern, case=False, regex=True, na=False)
     ]
     logger.info(f"network_df shape after exclusion: {network_df.shape}")
+    
+    network_pivot = None
     if {"PHARMACYNPI", "NABP", "Pharmacy Name"}.issubset(network_df.columns):
         network_df["PHARMACYNPI"] = network_df["PHARMACYNPI"].fillna("N/A")
         network_df["NABP"] = network_df["NABP"].fillna("N/A")
@@ -259,8 +357,7 @@ def process_data():
         network_pivot = network_pivot.rename(
             columns={"Rxs": "Total Rxs", "MemberID": "Unique Members"}
         )
-        network_pivot.to_excel(writer, sheet_name="Network")
-
+    
     # Log debug info to verify the filtering
     logger.info(f"Total pharmacies in dataset: {df.shape[0]}")
     logger.info(
@@ -272,6 +369,26 @@ def process_data():
     logger.info(
         f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
     )
+    
+    return network_pivot
+
+
+def write_excel_report(report_data, output_filename):
+    """Write the final Excel report."""
+    logger.info("Writing Excel report...")
+    
+    df, summary, tabs, network_pivot = report_data
+    
+    writer = pd.ExcelWriter(output_filename, engine="xlsxwriter")
+    df.to_excel(writer, sheet_name="Data", index=False)
+    summary.to_excel(writer, sheet_name="Summary", index=False)
+
+    for sheet, (_, pt, mems) in tabs.items():
+        pt.to_excel(writer, sheet_name=sheet)
+        writer.sheets[sheet].write("F1", f"Total Members: {mems}")
+
+    if network_pivot is not None:
+        network_pivot.to_excel(writer, sheet_name="Network")
 
     # Reorder sheets so Summary follows Data
     sheets = writer.sheets  # This is a dict: {sheet_name: worksheet_object}
@@ -288,10 +405,10 @@ def process_data():
             writer.sheets.update(dict(items))
 
     writer.close()
-    write_shared_log("bg_disruption.py", "Processing complete.")
-    print("Processing complete")
 
-    # Pop-up notification for processing complete
+
+def show_completion_notification():
+    """Show completion notification popup."""
     try:
         import tkinter as tk
         from tkinter import messagebox
@@ -302,6 +419,62 @@ def process_data():
         root.destroy()
     except Exception as e:
         logger.warning(f"Popup notification failed: {e}")
+
+
+def process_data():
+    """Main processing function - coordinates all data processing steps."""
+    write_shared_log("bg_disruption.py", "Processing started.")
+    import sys
+
+    output_filename = "LBL for Disruption.xlsx"
+    if len(sys.argv) > 1:
+        output_filename = sys.argv[1]
+    
+    # Get the config file path relative to the project root
+    config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+    file_paths = load_file_paths(str(config_path))
+    if "reprice" not in file_paths or not file_paths["reprice"]:
+        write_shared_log(
+            "bg_disruption.py", "No reprice/template file provided.", status="ERROR"
+        )
+        print("Error: No reprice/template file provided.")
+        return
+
+    # Load all data files
+    claims, medi, uni, exl, network = load_data_files(file_paths)
+    
+    # Merge all data files
+    reference_data = (medi, uni, exl)
+    df = merge_data_files(claims, reference_data, network)
+    
+    # Process and filter data
+    df = process_and_filter_data(df)
+    
+    # Handle pharmacy exclusions
+    df = handle_pharmacy_exclusions(df, file_paths)
+    
+    # Create filtered datasets
+    uni_pos, uni_neg, ex_pos, ex_neg, ex_ex = create_data_filters(df)
+    
+    # Create pivot tables
+    filtered_data = (uni_pos, uni_neg, ex_pos, ex_neg, ex_ex)
+    tabs = create_pivot_tables(filtered_data)
+    
+    # Create summary data
+    summary = create_summary_data(df, tabs)
+    
+    # Create network data
+    network_pivot = create_network_data(df)
+    
+    # Write Excel report
+    report_data = (df, summary, tabs, network_pivot)
+    write_excel_report(report_data, output_filename)
+    
+    write_shared_log("bg_disruption.py", "Processing complete.")
+    print("Processing complete")
+    
+    # Show completion notification
+    show_completion_notification()
 
 
 if __name__ == "__main__":

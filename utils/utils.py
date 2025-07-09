@@ -6,10 +6,20 @@ import csv
 from pathlib import Path
 import getpass
 from datetime import datetime
+from dataclasses import dataclass
 
 shared_log_path = os.path.expandvars(
     r"%OneDrive%/True Community - Data Analyst/Python Repricing Automation Program/Logs/audit_log.csv"
 )
+
+
+@dataclass
+class LogicMaintenanceConfig:
+    """Configuration for logic and maintenance filtering."""
+    logic_col: str = "Logic"
+    min_logic: int = 5
+    max_logic: int = 10
+    maint_col: str = "Maint Drug?"
 
 
 def ensure_directory_exists(path):
@@ -201,26 +211,25 @@ def filter_recent_date(df, date_col="DATEFILLED"):
     return df[(df[date_col] >= start) & (df[date_col] <= latest)]
 
 
-def filter_logic_and_maintenance(
-    df, logic_col="Logic", min_logic=5, max_logic=10, maint_col="Maint Drug?"
-):
+def filter_logic_and_maintenance(df, config=None):
     """
     Filters rows where min_logic ≤ Logic ≤ max_logic and 'Maint Drug?' == 'Y'.
 
     Args:
         df (pd.DataFrame): DataFrame with logic and maintenance columns.
-        logic_col (str): Name of the logic column.
-        min_logic (int): Minimum logic threshold.
-        max_logic (int): Maximum logic threshold.
-        maint_col (str): Name of the maintenance column.
+        config (LogicMaintenanceConfig, optional): Configuration object with filtering parameters.
+                                                 If None, uses default configuration.
 
     Returns:
         pd.DataFrame: Filtered DataFrame.
     """
+    if config is None:
+        config = LogicMaintenanceConfig()
+    
     return df[
-        (df[logic_col] >= min_logic)
-        & (df[logic_col] <= max_logic)
-        & (df[maint_col] == "Y")
+        (df[config.logic_col] >= config.min_logic)
+        & (df[config.logic_col] <= config.max_logic)
+        & (df[config.maint_col] == "Y")
     ]
 
 
