@@ -76,9 +76,12 @@ class ProcessManager:
     def _run_merge_process(self):
         """Run the merge.py script with file inputs."""
         try:
+            # Get the correct path to merge.py
+            merge_script_path = os.path.join(os.path.dirname(__file__), "merge.py")
             subprocess.run(
-                ["python", "merge.py", self.app.file1_path, self.app.file2_path], 
-                check=True
+                ["python", merge_script_path, self.app.file1_path, self.app.file2_path], 
+                check=True,
+                cwd=os.path.dirname(os.path.dirname(__file__))  # Set working directory to project root
             )
         except subprocess.CalledProcessError as e:
             logging.error(f"Merge process failed: {e}")
@@ -99,12 +102,14 @@ class ProcessManager:
     def _execute_disruption_process(self, disruption_type, program_file):
         """Execute the disruption process with error handling."""
         try:
-            args = ["python", program_file]
+            # Get the correct path to the program file
+            script_path = os.path.join(os.path.dirname(__file__), program_file)
+            args = ["python", script_path]
             if self.app.template_file_path:
                 args.append(str(self.app.template_file_path))
             
             # Use subprocess to run the disruption script
-            subprocess.Popen(args)
+            subprocess.Popen(args, cwd=os.path.dirname(os.path.dirname(__file__)))
             messagebox.showinfo(
                 "Success",
                 f"{disruption_type} disruption started in a separate process.",
@@ -118,7 +123,12 @@ class ProcessManager:
         """Run label generation scripts (SHARx or EPLS)."""
         try:
             script_name = f"{label_type.lower()}_lbl.py"
-            subprocess.run(["python", script_name], check=True)
+            script_path = os.path.join(os.path.dirname(__file__), script_name)
+            subprocess.run(
+                ["python", script_path], 
+                check=True,
+                cwd=os.path.dirname(os.path.dirname(__file__))
+            )
             write_shared_log("ProcessManager", f"{label_type} LBL generation completed")
             
         except subprocess.CalledProcessError as e:

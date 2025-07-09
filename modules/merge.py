@@ -185,4 +185,6 @@ if __name__ == "__main__":
         print("Usage: python merge.py <file1_path> <file2_path>")
         sys.exit(1)
 
-    merge_files(sys.argv[1], sys.argv[2])
+    success = merge_files(sys.argv[1], sys.argv[2])
+    if not success:
+        sys.exit(2)  # Exit with code 2 to indicate merge failure
