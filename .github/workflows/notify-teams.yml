@@ -20,11 +20,12 @@ jobs:
               "@context": "http://schema.org/extensions",
               "summary": "Push to Main",
               "themeColor": "0072C6",
-              "title": "🚀 Push to Main Branch",
+              "title": "🚨 Push to Main Branch",
               "sections": [
                 {
                   "activityTitle": "A new push was made to the **main** branch!",
                   "activitySubtitle": "Repository: \($repo)",
+                  "text": "**Please pull from origin to ensure your local repository is up to date.**",
                   "facts": [
                     {"name": "Pushed by", "value": $actor},
                     {"name": "Commit message", "value": $message},
@@ -35,5 +36,3 @@ jobs:
               ]
             }')
           curl -H "Content-Type: application/json" -d "$MESSAGE" ${{ secrets.TEAMS_WEBHOOK_URL }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
