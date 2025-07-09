@@ -1,0 +1,35 @@
+name: Notify team to pull from origin on main push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  send_email_notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send email notification via Outlook
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.office365.com
+          server_port: 587
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "🚨 Push to Main: Pull from origin required"
+          body: |
+            Hello Team,
+
+            A new push has been made to the 'main' branch of ${{ github.repository }} by ${{ github.actor }}.
+
+            **Please pull from origin to ensure your local repository is up to date.**
+
+            Latest commit:
+            - Message: ${{ github.event.head_commit.message }}
+            - Commit URL: ${{ github.event.head_commit.url }}
+
+            Thank you,
+            GitHub Actions
+          to: dannyb@truerx.com,brettb@truerx.com,Brendan.reamer@truerx.com
+          from: ${{ secrets.SMTP_FROM }}
+          secure: true
