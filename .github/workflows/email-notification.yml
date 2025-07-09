@@ -32,4 +32,4 @@ jobs:
             GitHub Actions
           to: dannyb@truerx.com,brettb@truerx.com,Brendan.reamer@truerx.com
           from: ${{ secrets.SMTP_FROM }}
-          secure: true
+          secure: false
