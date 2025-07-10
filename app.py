@@ -252,12 +252,12 @@ class App:
         self.log_manager.show_shared_log_viewer()
 
     def sharx_lbl(self):
-        """Generate SHARx LBL using process manager."""
-        self.process_manager.sharx_lbl()
+        """Generate SHARx LBL (method not implemented in ProcessManager)."""
+        messagebox.showerror("Not Implemented", "SHARx LBL functionality is not available.")
 
     def epls_lbl(self):
-        """Generate EPLS LBL using process manager."""
-        self.process_manager.epls_lbl()
+        """Generate EPLS LBL (method not implemented in ProcessManager)."""
+        messagebox.showerror("Not Implemented", "EPLS LBL functionality is not available.")
 
     # Disruption and process methods
     # Removed select_disruption_type method since disruption_type_combobox does not exist.
@@ -292,16 +292,31 @@ class App:
 
         threading.Thread(target=run_in_background, daemon=True).start()
 
+    def _check_excel_availability(self):
+        """Check if Excel is available and functioning properly."""
+        try:
+            import xlwings as xw
+            # Try to create a temporary Excel application
+            app = xw.App(visible=False, add_book=False)
+            app.quit()
+            return True, "Excel COM interface is available"
+        except Exception as e:
+            return False, f"Excel COM interface unavailable: {e}"
+
     def _execute_template_paste(self, processed_file):
         """Execute the template paste operation with proper error handling."""
         import time
 
         start_time = time.time()
         
+        # Check Excel availability first
+        excel_available, excel_message = self._check_excel_availability()
+        logger.info(f"Excel check: {excel_message}")
+        
         # Initialize progress
         self.root.after(
             0,
-            lambda: self.update_progress(None, "Preparing to paste into template..."),
+            lambda: self.update_progress(0.72, "Preparing to paste into template..."),
         )
 
         # Validate template path
@@ -309,13 +324,25 @@ class App:
             raise ValueError("Template file path is not set.")
 
         # Prepare data and paths
+        self.root.after(
+            0,
+            lambda: self.update_progress(0.75, "Preparing template data..."),
+        )
         paste_data = self._prepare_template_data(processed_file)
         paths = self._prepare_template_paths()
         
         # Create backup and setup output file
+        self.root.after(
+            0,
+            lambda: self.update_progress(0.80, "Creating template backup..."),
+        )
         self._create_template_backup(paths)
         
         # Execute Excel operations
+        self.root.after(
+            0,
+            lambda: self.update_progress(0.85, "Opening template in Excel..."),
+        )
         self._execute_excel_paste(paste_data, paths)
         
         # Finalize and notify
@@ -351,35 +378,119 @@ class App:
         self.template_processor.create_template_backup(paths)
 
     def _execute_excel_paste(self, paste_data, paths):
-        """Execute the Excel paste operation."""
+        """Execute the Excel paste operation with improved error handling."""
+        try:
+            self._try_xlwings_paste(paste_data, paths)
+        except Exception as xlwings_error:
+            logger.warning(f"xlwings failed: {xlwings_error}")
+            try:
+                self._try_openpyxl_paste(paste_data, paths)
+            except Exception as openpyxl_error:
+                logger.error("Both xlwings and openpyxl failed")
+                raise Exception(f"Template update failed with both methods. xlwings: {xlwings_error}, openpyxl: {openpyxl_error}")
+
+    def _try_xlwings_paste(self, paste_data, paths):
+        """Try pasting using xlwings with better error handling."""
         import xlwings as xw
         
-        # Start Excel session
-        app = xw.App(visible=False)
-        wb = app.books.open(str(paths["output"]))
-        ws = wb.sheets["Claims Table"]
-
+        # Kill any existing Excel processes first
         try:
+            import subprocess
+            subprocess.run(
+                ["taskkill", "/F", "/IM", "excel.exe"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=10
+            )
+            import time
+            time.sleep(2)  # Wait for processes to fully terminate
+        except Exception as e:
+            logger.warning(f"Could not kill Excel processes: {e}")
+        
+        # Start Excel session with timeout and retry logic
+        self.root.after(
+            0,
+            lambda: self.update_progress(0.87, "Starting Excel session..."),
+        )
+        
+        app = None
+        wb = None
+        try:
+            app = xw.App(visible=False, add_book=False)
+            app.api.DisplayAlerts = False
+            wb = app.books.open(str(paths["output"]))
+            ws = wb.sheets["Claims Table"]
+
             # Batch read formulas and prepare data
+            self.root.after(
+                0,
+                lambda: self.update_progress(0.90, "Reading template formulas..."),
+            )
             formulas = ws.range((2, 1), (paste_data["nrows"] + 1, paste_data["ncols"])).formula
             data_to_write = self._prepare_excel_data(paste_data, formulas)
             
             # Paste values with progress updates
+            self.root.after(
+                0,
+                lambda: self.update_progress(0.95, f"Pasting {paste_data['nrows']} rows of data..."),
+            )
             self._paste_data_with_progress(ws, data_to_write, paste_data["nrows"], paste_data["ncols"])
             
             # Save and close
+            self.root.after(
+                0,
+                lambda: self.update_progress(0.98, "Saving template file..."),
+            )
             wb.save()
-            wb.close()
-            app.quit()
             
-        except Exception as e:
-            # Ensure Excel is closed even on error
-            try:
-                wb.close()
-                app.quit()
-            except Exception:
-                pass
-            raise e
+        finally:
+            # Ensure Excel is properly closed
+            if wb:
+                try:
+                    wb.close()
+                except Exception:
+                    pass
+            if app:
+                try:
+                    app.quit()
+                except Exception:
+                    pass
+
+    def _try_openpyxl_paste(self, paste_data, paths):
+        """Fallback method using openpyxl when xlwings fails."""
+        from openpyxl import load_workbook
+        import pandas as pd
+        
+        self.root.after(
+            0,
+            lambda: self.update_progress(0.87, "Using fallback method (openpyxl)..."),
+        )
+        
+        # Load workbook with openpyxl
+        wb = load_workbook(str(paths["output"]))
+        ws = wb["Claims Table"]
+        
+        # Convert paste_data to DataFrame for easier handling
+        df = pd.DataFrame(paste_data["data"])
+        
+        self.root.after(
+            0,
+            lambda: self.update_progress(0.95, f"Writing {len(df)} rows with openpyxl..."),
+        )
+        
+        # Write data starting from row 2 (assuming row 1 has headers)
+        for row_idx, row_data in enumerate(df.values, start=2):
+            for col_idx, value in enumerate(row_data, start=1):
+                ws.cell(row=row_idx, column=col_idx, value=value)
+        
+        self.root.after(
+            0,
+            lambda: self.update_progress(0.98, "Saving with openpyxl..."),
+        )
+        
+        # Save workbook
+        wb.save(str(paths["output"]))
+        wb.close()
 
     def _prepare_excel_data(self, paste_data, formulas):
         """Prepare data for Excel, preserving formulas."""
@@ -398,16 +509,8 @@ class App:
 
     def _paste_data_with_progress(self, ws, data_to_write, nrows, ncols):
         """Paste data to Excel with progress updates."""
-        # Paste values
+        # Paste values - this happens as a batch operation
         ws.range((2, 1), (nrows + 1, ncols)).value = data_to_write
-        
-        # Update progress periodically
-        for i in range(0, nrows, 250):
-            percent = 0.94 + 0.04 * (i / max(1, nrows))
-            msg = f"Pasting row {i + 1} of {nrows}..."
-            self.root.after(
-                0, lambda v=percent, m=msg: self.update_progress(v, m)
-            )
 
     def filter_template_columns(self, df):
         try:
@@ -483,12 +586,11 @@ class App:
             subprocess.run(
                 ["python", "merge.py", self.file1_path, self.file2_path], check=True
             )
-            self.update_progress(0.50)
+            self.update_progress(0.40)
             MERGED_FILE = "merged_file.xlsx"
             self.process_merged_file(MERGED_FILE)
-            self.update_progress(0.90)
-            # After all processing is done
-            self.update_progress(1.0)
+            self.update_progress(0.70)
+            # Progress will reach 100% when template pasting is complete
             # Ensure LBL scripts are NOT called here or in process_merged_file
         except subprocess.CalledProcessError as e:
             self.update_progress(0)
@@ -519,7 +621,7 @@ class App:
 
     def _initialize_processing(self):
         """Initialize the processing environment."""
-        self.update_progress(0.55)
+        self.update_progress(0.45)
         open("repricing_log.log", "w").close()
         logging.basicConfig(
             filename="repricing_log.log",
@@ -533,7 +635,7 @@ class App:
         """Load and validate the merged file data."""
         df = pd.read_excel(file_path)
         logging.info(f"Loaded {len(df)} records from {file_path}")
-        self.update_progress(0.60)
+        self.update_progress(0.50)
 
         # Validate required columns using configuration
         ProcessingConfig.validate_required_columns(df)
@@ -547,7 +649,7 @@ class App:
 
     def _process_data_multiprocessing(self, df):
         """Process data using multiprocessing for improved performance."""
-        self.update_progress(0.65)
+        self.update_progress(0.55)
         
         # Import and use multiprocessing helpers
         from modules import mp_helpers
@@ -571,7 +673,7 @@ class App:
             p.join()
         
         processed_df = pd.concat(results)
-        self.update_progress(0.75)
+        self.update_progress(0.60)
         
         return processed_df
 
@@ -603,7 +705,7 @@ class App:
         # Save unmatched reversals info
         self._save_unmatched_reversals(excel_rows_to_highlight, output_dir)
         
-        self.update_progress(0.80)
+        self.update_progress(0.65)
         return output_file
 
     def _save_to_parquet(self, df, output_dir):
@@ -654,13 +756,13 @@ class App:
     def _finalize_processing(self, output_file):
         """Finalize processing with highlighting and notifications."""
         self.highlight_unmatched_reversals(output_file)
-        self.update_progress(0.85)
+        self.update_progress(0.70)
 
         messagebox.showinfo(
             "Success", f"Processing complete. File saved as {output_file}"
         )
+        # Template pasting will handle progress from 70% to 100%
         self.paste_into_template(output_file)
-        self.update_progress(0.90)
 
     def highlight_unmatched_reversals(self, excel_file):
         """Highlight unmatched reversals in Excel file with reduced nesting complexity."""
