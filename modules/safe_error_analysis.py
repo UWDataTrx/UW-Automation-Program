@@ -4,8 +4,10 @@ Handles CSV parsing issues and provides comprehensive error analysis.
 """
 
 import os
+import json
 from datetime import datetime, timedelta
 import csv
+from pathlib import Path
 
 def safe_read_audit_log():
     """
@@ -14,9 +16,10 @@ def safe_read_audit_log():
     Returns:
         List of dictionaries containing log entries
     """
-    log_path = os.path.expandvars(
-        r"%OneDrive%/True Community - Data Analyst/Python Repricing Automation Program/Logs/audit_log.csv"
-    )
+    config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+    with open(config_path, 'r') as f:
+        file_paths = json.load(f)
+    log_path = os.path.expandvars(file_paths["audit_log"])
     
     entries = []
     

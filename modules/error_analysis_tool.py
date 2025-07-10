@@ -5,13 +5,16 @@ Provides tools to analyze audit logs and generate support reports for user assis
 
 import pandas as pd
 import os
+import json
 from datetime import datetime, timedelta
+from pathlib import Path
 
 def get_audit_log_path():
-    """Get the path to the audit log file."""
-    return os.path.expandvars(
-        r"%OneDrive%/True Community - Data Analyst/Python Repricing Automation Program/Logs/audit_log.csv"
-    )
+    """Get the path to the audit log file from config."""
+    config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+    with open(config_path, 'r') as f:
+        file_paths = json.load(f)
+    return os.path.expandvars(file_paths["audit_log"])
 
 def get_user_errors(username=None, days_back=7, error_types=None):
     """

@@ -9,6 +9,8 @@ import csv
 import os
 import sys
 import logging
+import json
+from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import write_shared_log
@@ -20,9 +22,11 @@ class LogManager:
     
     def __init__(self, app_instance):
         self.app = app_instance
-        self.shared_log_path = os.path.expandvars(
-            r"%OneDrive%/True Community - Data Analyst/Python Repricing Automation Program/Logs/audit_log.csv"
-        )
+        # Load the audit log path from config
+        config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+        with open(config_path, 'r') as f:
+            file_paths = json.load(f)
+        self.shared_log_path = os.path.expandvars(file_paths["audit_log"])
         
     def show_log_viewer(self):
         """Show the live log viewer window."""

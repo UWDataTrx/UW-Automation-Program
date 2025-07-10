@@ -72,10 +72,11 @@ class FileProcessor:
     def write_audit_log(self, file1, file2, status):
         """Write an entry to the audit log."""
         entry = [datetime.now().isoformat(), str(file1), str(file2), status]
-        write_header = not AppConstants.AUDIT_LOG.exists()
+        audit_log_path = AppConstants.get_audit_log_path()
+        write_header = not audit_log_path.exists()
         
         try:
-            with open(AppConstants.AUDIT_LOG, "a", newline="") as csvfile:
+            with open(audit_log_path, "a", newline="") as csvfile:
                 writer = csv.writer(csvfile)
                 if write_header:
                     writer.writerow(["Timestamp", "File1", "File2", "Status"])

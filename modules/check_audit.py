@@ -1,7 +1,13 @@
 import os
 import csv
+import json
+from pathlib import Path
 
-log_path = os.path.expandvars(r'%OneDrive%/True Community - Data Analyst/Python Repricing Automation Program/Logs/audit_log.csv')
+# Load the audit log path from config
+config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+with open(config_path, 'r') as f:
+    file_paths = json.load(f)
+log_path = os.path.expandvars(file_paths["audit_log"])
 
 print(f"Audit log path: {log_path}")
 print(f"File exists: {os.path.exists(log_path)}")

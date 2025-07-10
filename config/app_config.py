@@ -4,6 +4,8 @@ Contains configuration classes and constants.
 """
 
 import multiprocessing
+import json
+import os
 from pathlib import Path
 
 
@@ -85,7 +87,19 @@ class AppConstants:
     
     # Configuration and audit log files
     CONFIG_FILE = Path("config.json")
-    AUDIT_LOG = Path("audit_log.csv")
+    AUDIT_LOG = Path("audit_log.csv")  # Default fallback
+    
+    @classmethod
+    def get_audit_log_path(cls):
+        """Get the audit log path from configuration."""
+        try:
+            config_path = Path(__file__).parent / "file_paths.json"
+            with open(config_path, 'r') as f:
+                file_paths = json.load(f)
+            return Path(os.path.expandvars(file_paths["audit_log"]))
+        except (FileNotFoundError, KeyError):
+            # Fallback to default if config is missing
+            return cls.AUDIT_LOG
     
     # Template handling constants
     BACKUP_SUFFIX = "_backup.xlsx"
