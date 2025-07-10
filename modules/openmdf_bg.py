@@ -287,54 +287,31 @@ def process_data():
         if not na_pharmacies.empty:
             output_file_path = paths["pharmacy_validation"]
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
+            # Add Result column with "NA" value
+            na_pharmacies_output["Result"] = "NA"
             
-            # Update existing template or create new file
+            # Use pandas to write to Excel, which is simpler and more reliable
             try:
-                from openpyxl import load_workbook
-                import os
-                
-                # Check if template exists
+                # Try to append to existing file
                 if os.path.exists(output_file_path):
-                    # Load existing workbook
-                    wb = load_workbook(output_file_path)
-                    logger.info(f"Loading existing template: {output_file_path}")
+                    # Read existing data
+                    existing_df = pd.read_excel(output_file_path)
+                    # Concatenate with new data
+                    combined_df = pd.concat([existing_df, na_pharmacies_output], ignore_index=True)
+                    # Remove duplicates
+                    combined_df = combined_df.drop_duplicates()
                 else:
-                    # Create new workbook
-                    from openpyxl import Workbook
-                    wb = Workbook()
-                    logger.info(f"Creating new validation file: {output_file_path}")
+                    combined_df = na_pharmacies_output
                 
-                # Check if Validations sheet exists, if not create it
-                if "Validations" in wb.sheetnames:
-                    ws = wb["Validations"]
-                    # Clear existing data
-                    ws.delete_rows(1, ws.max_row)
-                else:
-                    ws = wb.create_sheet("Validations")
-                    # Remove default sheet if it exists and is empty
-                    if "Sheet" in wb.sheetnames and len(wb.sheetnames) > 1:
-                        wb.remove(wb["Sheet"])
-                
-                # Write headers
-                ws.append(["PHARMACYNPI", "NABP"])
-                
-                # Write data
-                for _, row in na_pharmacies_output.iterrows():
-                    ws.append([row["PHARMACYNPI"], row["NABP"]])
-                
-                # Save the workbook
-                wb.save(output_file_path)
-                logger.info(f"NA pharmacies written to '{output_file_path}' Validations sheet.")
+                # Write to Excel
+                combined_df.to_excel(output_file_path, index=False)
+                logger.info(f"NA pharmacies written to '{output_file_path}' with Result column.")
                 
             except Exception as e:
                 logger.error(f"Error updating pharmacy validation file: {e}")
-                # Fallback to original method
-                writer = pd.ExcelWriter(output_file_path, engine="openpyxl")
-                na_pharmacies_output.to_excel(
-                    writer, sheet_name="Validations", index=False, engine="openpyxl"
-                )
-                writer.close()
-                logger.info(f"NA pharmacies written to '{output_file_path}' sheet (fallback).")
+                # Fallback - just write the new data
+                na_pharmacies_output.to_excel(output_file_path, index=False)
+                logger.info(f"NA pharmacies written to '{output_file_path}' (fallback mode).")
 
     summary = pd.DataFrame(
         {
