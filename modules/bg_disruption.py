@@ -16,6 +16,12 @@ from utils.utils import (
     filter_recent_date,
     write_shared_log,
 )
+from modules.audit_helper import (
+    make_audit_entry,
+    log_user_session_start,
+    log_user_session_end,
+    log_file_access,
+)
 
 # Logging setup
 logging.basicConfig(
@@ -53,6 +59,7 @@ def load_data_files(file_paths):
         )
     except Exception as e:
         logger.warning(f"Claims Table fallback: {e}")
+        make_audit_entry("bg_disruption.py", f"Claims Table fallback error: {e}", "FILE_ERROR")
         write_shared_log(
             "bg_disruption.py", f"Claims Table fallback: {e}", status="WARNING"
         )
@@ -188,6 +195,7 @@ def handle_pharmacy_exclusions(df, file_paths):
                 
             except Exception as e:
                 logger.error(f"Error updating pharmacy validation file: {e}")
+                make_audit_entry("bg_disruption.py", f"Pharmacy validation file update error: {e}", "FILE_ERROR")
                 # Fallback - just write the new data
                 na_pharmacies_output.to_excel(output_file_path, index=False)
                 logger.info(f"NA pharmacies written to '{output_file_path}' (fallback mode).")
@@ -400,55 +408,76 @@ def show_completion_notification():
 
 def process_data():
     """Main processing function - coordinates all data processing steps."""
+    # Start audit session
+    log_user_session_start("bg_disruption.py")
     write_shared_log("bg_disruption.py", "Processing started.")
-    import sys
+    
+    try:
+        import sys
 
-    output_filename = "LBL for Disruption.xlsx"
-    if len(sys.argv) > 1:
-        output_filename = sys.argv[1]
-    
-    # Get the config file path relative to the project root
-    config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-    file_paths = load_file_paths(str(config_path))
-    if "reprice" not in file_paths or not file_paths["reprice"]:
-        write_shared_log(
-            "bg_disruption.py", "No reprice/template file provided.", status="ERROR"
-        )
-        print("Error: No reprice/template file provided.")
-        return
+        output_filename = "LBL for Disruption.xlsx"
+        if len(sys.argv) > 1:
+            output_filename = sys.argv[1]
+        
+        # Get the config file path relative to the project root
+        config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+        file_paths = load_file_paths(str(config_path))
+        if "reprice" not in file_paths or not file_paths["reprice"]:
+            make_audit_entry("bg_disruption.py", "No reprice/template file provided.", "FILE_ERROR")
+            write_shared_log(
+                "bg_disruption.py", "No reprice/template file provided.", status="ERROR"
+            )
+            print("Error: No reprice/template file provided.")
+            return
 
-    # Load all data files
-    claims, medi, uni, exl, network = load_data_files(file_paths)
-    
-    # Merge all data files
-    reference_data = (medi, uni, exl)
-    df = merge_data_files(claims, reference_data, network)
-    
-    # Process and filter data
-    df = process_and_filter_data(df)
-    
-    # Handle pharmacy exclusions
-    df = handle_pharmacy_exclusions(df, file_paths)
-    
-    # Create filtered datasets
-    uni_pos, uni_neg, ex_pos, ex_neg, ex_ex = create_data_filters(df)
-    
-    # Create pivot tables
-    filtered_data = (uni_pos, uni_neg, ex_pos, ex_neg, ex_ex)
-    tabs = create_pivot_tables(filtered_data)
-    
-    # Create summary data
-    summary = create_summary_data(df, tabs)
-    
-    # Create network data
-    network_pivot = create_network_data(df)
-    
-    # Write Excel report
-    report_data = (df, summary, tabs, network_pivot)
-    write_excel_report(report_data, output_filename)
-    
-    write_shared_log("bg_disruption.py", "Processing complete.")
-    print("Processing complete")
+        # Log file access
+        log_file_access("bg_disruption.py", file_paths["reprice"], "LOADING")
+        
+        # Load all data files
+        claims, medi, uni, exl, network = load_data_files(file_paths)
+        
+        # Merge all data files
+        reference_data = (medi, uni, exl)
+        df = merge_data_files(claims, reference_data, network)
+        
+        # Process and filter data
+        df = process_and_filter_data(df)
+        
+        # Handle pharmacy exclusions
+        df = handle_pharmacy_exclusions(df, file_paths)
+        
+        # Create filtered datasets
+        uni_pos, uni_neg, ex_pos, ex_neg, ex_ex = create_data_filters(df)
+        
+        # Create pivot tables
+        filtered_data = (uni_pos, uni_neg, ex_pos, ex_neg, ex_ex)
+        tabs = create_pivot_tables(filtered_data)
+        
+        # Create summary data
+        summary = create_summary_data(df, tabs)
+        
+        # Create network data
+        network_pivot = create_network_data(df)
+        
+        # Write Excel report
+        report_data = (df, summary, tabs, network_pivot)
+        write_excel_report(report_data, output_filename)
+        
+        # Log successful completion
+        make_audit_entry("bg_disruption.py", f"Successfully generated report: {output_filename}", "INFO")
+        log_file_access("bg_disruption.py", output_filename, "CREATED")
+        
+        write_shared_log("bg_disruption.py", "Processing complete.")
+        print("Processing complete")
+        
+    except Exception as e:
+        # Log any uncaught errors
+        make_audit_entry("bg_disruption.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR")
+        logger.error(f"Processing failed: {e}")
+        raise
+    finally:
+        # End audit session
+        log_user_session_end("bg_disruption.py")
     
     # Show completion notification
     show_completion_notification()

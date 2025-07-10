@@ -8,8 +8,13 @@ import sys
 import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.excel_utils import write_df_to_template
-
 from utils.utils import load_file_paths, write_shared_log
+from modules.audit_helper import (
+    make_audit_entry,
+    log_user_session_start,
+    log_user_session_end,
+    log_file_access,
+)
 
 # Setup logging
 logging.basicConfig(
@@ -34,7 +39,11 @@ def show_message(awp, ing, total, rxs):
 
 def main() -> None:
     tk.Tk().withdraw()
+    
+    # Start audit session
+    log_user_session_start("epls_lbl.py")
     write_shared_log("epls_lbl.py", "Processing started.")
+    
     try:
         # Get the config file path relative to the project root
         config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
@@ -43,9 +52,15 @@ def main() -> None:
         # Failsafe: check that both input and template files exist
         for key in ["reprice", "epls"]:
             if not Path(paths[key]).exists():
+                make_audit_entry("epls_lbl.py", f"{key} path not found: {paths[key]}", "FILE_ERROR")
                 raise FileNotFoundError(f"{key} path not found: {paths[key]}")
 
         template_path = Path(paths["epls"])
+        
+        # Log file access
+        log_file_access("epls_lbl.py", paths["reprice"], "LOADING")
+        log_file_access("epls_lbl.py", paths["epls"], "LOADING")
+        
         df = pd.read_excel(paths["reprice"], sheet_name="Claims Table")
 
         # Debug print and log
@@ -54,6 +69,7 @@ def main() -> None:
         logger.info(f"Columns in claims DataFrame: {df.columns.tolist()}")
 
         if "Logic" not in df.columns:
+            make_audit_entry("epls_lbl.py", "Missing 'Logic' column in Claims Table", "DATA_ERROR")
             raise KeyError("Missing 'Logic' column in Claims Table.")
 
         df["Logic"] = pd.to_numeric(df["Logic"], errors="coerce")
@@ -110,13 +126,23 @@ def main() -> None:
         )
 
         logger.info("EPLS LBL file created successfully.")
+        
+        # Log successful completion
+        make_audit_entry("epls_lbl.py", f"Successfully generated EPLS file: {output_path}", "INFO")
+        log_file_access("epls_lbl.py", str(output_path), "CREATED")
+        
         write_shared_log("epls_lbl.py", "EPLS LBL file created successfully.")
         show_message(awp, ing, total, rxs)
         messagebox.showinfo("Processing Complete", "Processing complete")
+        
     except Exception as e:
         logger.exception("An error occurred during EPLS LBL processing")
+        make_audit_entry("epls_lbl.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR")
         write_shared_log("epls_lbl.py", f"An error occurred: {e}", status="ERROR")
         messagebox.showerror("Error", f"An error occurred: {e}")
+    finally:
+        # End audit session
+        log_user_session_end("epls_lbl.py")
 
 
 if __name__ == "__main__":

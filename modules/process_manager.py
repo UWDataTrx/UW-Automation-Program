@@ -54,8 +54,7 @@ class ProcessManager:
             merged_file = "merged_file.xlsx"
             self.app.process_merged_file(merged_file)
             
-            # Complete
-            self.app.update_progress(1.0)
+            # Progress will reach 100% when template pasting is complete in app.py
             
         except Exception as e:
             self.app.update_progress(0)

@@ -124,7 +124,7 @@ class UIBuilder:
 
         # Exit button
         self.app.exit_button = UIFactory.create_red_button(
-            self.app.button_frame, "Exit", self.app.root.quit
+            self.app.button_frame, "Exit", self.app.on_closing
         )
         self.app.exit_button.grid(row=6, column=2, pady=10, padx=10, sticky="ew")
 

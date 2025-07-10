@@ -12,6 +12,7 @@ import logging
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import write_shared_log
+from modules.audit_helper import log_user_session_start, log_user_session_end, validate_user_access
 
 
 class LogManager:
@@ -121,14 +122,18 @@ class LogManager:
         logging.info("Logging initialized")
         
     def log_application_start(self):
-        """Log application startup."""
+        """Log application startup with comprehensive user information."""
+        # Validate user access first
+        if not validate_user_access():
+            logging.warning("User validation failed but allowing access")
+        
         logging.info("Repricing Automation application started")
-        write_shared_log("LogManager", "Application started")
+        log_user_session_start("RepricingApp")
         
     def log_application_shutdown(self):
-        """Log application shutdown."""
+        """Log application shutdown with user information."""
         logging.info("Repricing Automation application shutting down")
-        write_shared_log("LogManager", "Application shutdown")
+        log_user_session_end("RepricingApp")
 
 
 class ThemeController:

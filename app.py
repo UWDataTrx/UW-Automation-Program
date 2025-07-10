@@ -4,6 +4,7 @@ from tkinter import filedialog, messagebox, scrolledtext
 import subprocess
 import os
 from utils.utils import write_shared_log
+from modules.audit_helper import log_file_access, log_process_action, log_system_error, log_file_error
 import logging
 import threading
 import multiprocessing
@@ -74,6 +75,18 @@ class App:
         self.theme_controller.apply_initial_theme()
         self.log_manager.initialize_logging()
         self.log_manager.log_application_start()
+        
+        # Set up proper window close handler for audit logging
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        """Handle application closing with proper audit logging."""
+        try:
+            self.log_manager.log_application_shutdown()
+        except Exception as e:
+            logging.error(f"Failed to log shutdown: {e}")
+        finally:
+            self.root.destroy()
 
     def _initialize_variables(self):
         """Initialize all instance variables."""
@@ -115,12 +128,20 @@ class App:
 
     def import_file1(self):
         """Import the first file with template validation using guard clauses."""
-        file_path = self._get_file_path("Select File Uploaded to Tool")
-        if not file_path:
-            return  # User cancelled
-        
-        self._set_file1_path(file_path)
-        self._validate_gross_cost_template(file_path)
+        file_path = None
+        try:
+            file_path = self._get_file_path("Select File Uploaded to Tool")
+            if not file_path:
+                return  # User cancelled
+            
+            self._set_file1_path(file_path)
+            self._validate_gross_cost_template(file_path)
+            
+        except Exception as e:
+            error_msg = f"Failed to import File1: {str(e)}"
+            log_file_error("File1Import", file_path or "Unknown", error_msg, "IMPORT")
+            messagebox.showerror("File Import Error", f"Could not import File1:\n{error_msg}")
+            logging.error(f"File1 import failed: {e}")
 
     def _get_file_path(self, title):
         """Get file path from file dialog."""
@@ -135,6 +156,7 @@ class App:
         if self.file1_label:
             self.file1_label.configure(text=os.path.basename(file_path))
         self.file_processor.check_template(file_path)
+        log_file_access("File1Import", file_path, "IMPORTED")
         write_shared_log("File1 imported", file_path)
 
     def _validate_gross_cost_template(self, file_path):
@@ -145,27 +167,45 @@ class App:
 
     def import_file2(self):
         """Import the second file."""
-        file_path = self._get_file_path("Select File From Tool")
-        if not file_path:
-            return  # User cancelled
-        
-        self.file2_path = file_path
-        if self.file2_label:
-            self.file2_label.configure(text=os.path.basename(file_path))
-        write_shared_log("File2 imported", file_path)
+        file_path = None
+        try:
+            file_path = self._get_file_path("Select File From Tool")
+            if not file_path:
+                return  # User cancelled
+            
+            self.file2_path = file_path
+            if self.file2_label:
+                self.file2_label.configure(text=os.path.basename(file_path))
+            log_file_access("File2Import", file_path, "IMPORTED")
+            write_shared_log("File2 imported", file_path)
+            
+        except Exception as e:
+            error_msg = f"Failed to import File2: {str(e)}"
+            log_file_error("File2Import", file_path or "Unknown", error_msg, "IMPORT")
+            messagebox.showerror("File Import Error", f"Could not import File2:\n{error_msg}")
+            logging.error(f"File2 import failed: {e}")
 
     def import_template_file(self):
         """Import the template file."""
-        file_path = filedialog.askopenfilename(
-            title="Select Template File", filetypes=ProcessingConfig.TEMPLATE_FILE_TYPES
-        )
-        if not file_path:
-            return  # User cancelled
-        
-        self.template_file_path = file_path
-        if self.template_label:
-            self.template_label.configure(text=os.path.basename(file_path))
-        write_shared_log("Template file imported", file_path)
+        file_path = None
+        try:
+            file_path = filedialog.askopenfilename(
+                title="Select Template File", filetypes=ProcessingConfig.TEMPLATE_FILE_TYPES
+            )
+            if not file_path:
+                return  # User cancelled
+            
+            self.template_file_path = file_path
+            if self.template_label:
+                self.template_label.configure(text=os.path.basename(file_path))
+            log_file_access("TemplateImport", file_path, "IMPORTED")
+            write_shared_log("Template file imported", file_path)
+            
+        except Exception as e:
+            error_msg = f"Failed to import template file: {str(e)}"
+            log_file_error("TemplateImport", file_path or "Unknown", error_msg, "IMPORT")
+            messagebox.showerror("Template Import Error", f"Could not import template file:\n{error_msg}")
+            logging.error(f"Template import failed: {e}")
 
     # Logging and notification methods
     # Removed duplicate write_audit_log method to resolve method name conflict.
@@ -548,6 +588,7 @@ class App:
 
     def start_process(self):
         threading.Thread(target=self._start_process_internal).start()
+        log_process_action("RepricingProcess", "STARTED")
         write_shared_log("Repricing process started", "")
 
     def validate_merge_inputs(self):
@@ -594,8 +635,16 @@ class App:
             # Ensure LBL scripts are NOT called here or in process_merged_file
         except subprocess.CalledProcessError as e:
             self.update_progress(0)
+            error_msg = f"Merge process failed: {str(e)}"
+            log_system_error("MergeProcess", error_msg, str(e), f"Files: {self.file1_path}, {self.file2_path}")
             logger.exception("Failed to run merge.py")
             messagebox.showerror("Error", f"Failed to run merge.py: {e}")
+        except Exception as e:
+            self.update_progress(0)
+            error_msg = f"Unexpected error during merge: {str(e)}"
+            log_system_error("MergeProcess", error_msg, str(e), f"Files: {self.file1_path}, {self.file2_path}")
+            logger.exception("Unexpected error in merge process")
+            messagebox.showerror("Error", f"Unexpected error during merge: {e}")
 
     def process_merged_file(self, file_path):
         """Process merged file with reduced complexity using helper methods."""
@@ -616,6 +665,8 @@ class App:
             self._finalize_processing(output_file)
             
         except Exception as e:
+            error_msg = f"Error processing merged file: {str(e)}"
+            log_system_error("DataProcessing", error_msg, str(e), f"File: {file_path}")
             logger.error(f"Error processing merged file: {e}")
             messagebox.showerror("Error", f"Processing failed: {e}")
 

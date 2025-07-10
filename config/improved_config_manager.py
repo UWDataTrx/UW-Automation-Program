@@ -44,7 +44,7 @@ class ConfigurationManager:
     - Clear separation of concerns
     """
     
-    def __init__(self, config_file: Path = None):
+    def __init__(self, config_file: Optional[Path] = None):
         self.config_file = config_file or Path("config.json")
         self._settings: Optional[AppSettings] = None
         self._load_configuration()
@@ -89,6 +89,8 @@ class ConfigurationManager:
     @property
     def settings(self) -> AppSettings:
         """Get current settings."""
+        if self._settings is None:
+            self._settings = AppSettings.default()
         return self._settings
     
     def update_setting(self, key: str, value: Any) -> bool:

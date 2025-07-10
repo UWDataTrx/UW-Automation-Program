@@ -16,6 +16,12 @@ from utils.utils import (
     filter_products_and_alternative,
     write_shared_log,
 )
+from modules.audit_helper import (
+    make_audit_entry,
+    log_user_session_start,
+    log_user_session_end,
+    log_file_access,
+)
 
 # Setup logging
 logging.basicConfig(
@@ -46,36 +52,46 @@ included_nabp_npi = {
 
 
 def process_data():
+    # Start audit session
+    log_user_session_start("openmdf_bg.py")
     write_shared_log("openmdf_bg.py", "Processing started.")
 
-    import sys
-
-    # Get the config file path relative to the project root
-    config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-    paths = load_file_paths(str(config_path))
-
-    if "reprice" not in paths or not paths["reprice"]:
-        logger.warning("No reprice/template file provided.")
-        write_shared_log(
-            "openmdf_bg.py", "No reprice/template file provided.", status="ERROR"
-        )
-        print("No reprice/template file provided.")
-        return False
-
-    # Check for required sheet name in reprice file
     try:
-        xl = pd.ExcelFile(paths["reprice"])
-        if "Claims Table" not in xl.sheet_names:
-            logger.error(
-                f"Sheet 'Claims Table' not found in {paths['reprice']}. Sheets: {xl.sheet_names}"
-            )
+        import sys
+
+        # Get the config file path relative to the project root
+        config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+        paths = load_file_paths(str(config_path))
+
+        if "reprice" not in paths or not paths["reprice"]:
+            logger.warning("No reprice/template file provided.")
+            make_audit_entry("openmdf_bg.py", "No reprice/template file provided.", "FILE_ERROR")
             write_shared_log(
-                "openmdf_bg.py",
-                f"Sheet 'Claims Table' not found in {paths['reprice']}. Sheets: {xl.sheet_names}",
-                status="ERROR",
+                "openmdf_bg.py", "No reprice/template file provided.", status="ERROR"
             )
+            print("No reprice/template file provided.")
+            log_user_session_end("openmdf_bg.py")
             return False
-        claims = xl.parse(
+
+        # Log file access
+        log_file_access("openmdf_bg.py", paths["reprice"], "LOADING")
+
+        # Check for required sheet name in reprice file
+        try:
+            xl = pd.ExcelFile(paths["reprice"])
+            if "Claims Table" not in xl.sheet_names:
+                logger.error(
+                    f"Sheet 'Claims Table' not found in {paths['reprice']}. Sheets: {xl.sheet_names}"
+                )
+                make_audit_entry("openmdf_bg.py", f"Sheet 'Claims Table' not found. Available sheets: {xl.sheet_names}", "DATA_ERROR")
+                write_shared_log(
+                    "openmdf_bg.py",
+                    f"Sheet 'Claims Table' not found in {paths['reprice']}. Sheets: {xl.sheet_names}",
+                    status="ERROR",
+                )
+                log_user_session_end("openmdf_bg.py")
+                return False
+            claims = xl.parse(
             "Claims Table",
             usecols=[
                 "SOURCERECORDID",
@@ -92,11 +108,21 @@ def process_data():
                 "Exclusive Rebates",
             ],
         )
+        except Exception as e:
+            logger.error(f"Failed to read Claims Table: {e}")
+            make_audit_entry("openmdf_bg.py", f"Failed to read Claims Table: {e}", "FILE_ERROR")
+            write_shared_log(
+                "openmdf_bg.py", f"Failed to read Claims Table: {e}", status="ERROR"
+            )
+            log_user_session_end("openmdf_bg.py")
+            return False
     except Exception as e:
-        logger.error(f"Failed to read Claims Table: {e}")
+        logger.error(f"Failed to load configuration or reprice file: {e}")
+        make_audit_entry("openmdf_bg.py", f"Failed to load configuration or reprice file: {e}", "FILE_ERROR")
         write_shared_log(
-            "openmdf_bg.py", f"Failed to read Claims Table: {e}", status="ERROR"
+            "openmdf_bg.py", f"Failed to load configuration or reprice file: {e}", status="ERROR"
         )
+        log_user_session_end("openmdf_bg.py")
         return False
 
     # Log claim count before any filtering
@@ -105,50 +131,62 @@ def process_data():
 
     try:
         medi = pd.read_excel(paths["medi_span"])[["NDC", "Maint Drug?", "Product Name"]]
+        log_file_access("openmdf_bg.py", paths["medi_span"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read medi_span file: {paths['medi_span']} | {e}")
+        make_audit_entry("openmdf_bg.py", f"Failed to read medi_span file: {e}", "FILE_ERROR")
         write_shared_log(
             "openmdf_bg.py",
             f"Failed to read medi_span file: {paths['medi_span']} | {e}",
             status="ERROR",
         )
+        log_user_session_end("openmdf_bg.py")
         return False
     try:
         mdf = pd.read_excel(paths["mdf_disrupt"], sheet_name="Open MDF NDC")[
             ["NDC", "Tier"]
         ]
+        log_file_access("openmdf_bg.py", paths["mdf_disrupt"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read mdf_disrupt file: {paths['mdf_disrupt']} | {e}")
+        make_audit_entry("openmdf_bg.py", f"Failed to read mdf_disrupt file: {e}", "FILE_ERROR")
         write_shared_log(
             "openmdf_bg.py",
             f"Failed to read mdf_disrupt file: {paths['mdf_disrupt']} | {e}",
             status="ERROR",
         )
+        log_user_session_end("openmdf_bg.py")
         return False
     try:
         network = pd.read_excel(paths["n_disrupt"])[
             ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
         ]
+        log_file_access("openmdf_bg.py", paths["n_disrupt"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read n_disrupt file: {paths['n_disrupt']} | {e}")
+        make_audit_entry("openmdf_bg.py", f"Failed to read n_disrupt file: {e}", "FILE_ERROR")
         write_shared_log(
             "openmdf_bg.py",
             f"Failed to read n_disrupt file: {paths['n_disrupt']} | {e}",
             status="ERROR",
         )
+        log_user_session_end("openmdf_bg.py")
         return False
         # Read Alternatives NDC for 'Alternative' column
     try:
         exclusive = pd.read_excel(paths["e_disrupt"], sheet_name="Alternatives NDC")[
             ["NDC", "Tier", "Alternative"]
         ]
+        log_file_access("openmdf_bg.py", paths["e_disrupt"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read e_disrupt file: {paths['e_disrupt']} | {e}")
+        make_audit_entry("openmdf_bg.py", f"Failed to read e_disrupt file: {e}", "FILE_ERROR")
         write_shared_log(
             "openmdf_bg.py",
             f"Failed to read e_disrupt file: {paths['e_disrupt']} | {e}",
             status="ERROR",
         )
+        log_user_session_end("openmdf_bg.py")
         return False
 
     df = claims.merge(medi, on="NDC", how="left")
@@ -442,8 +480,15 @@ def process_data():
             writer.sheets.update(dict(items))
 
     writer.close()
+    
+    # Log successful completion
     logger.info(f"Open MDF BG processing completed. Output file: {output_path}")
+    make_audit_entry("openmdf_bg.py", f"Successfully generated Open MDF BG report: {output_path}", "INFO")
+    log_file_access("openmdf_bg.py", str(output_path), "CREATED")
     write_shared_log("openmdf_bg.py", "Processing complete.")
+    log_user_session_end("openmdf_bg.py")
+    
+    # Final cleanup and completion message
     try:
         import tkinter as tk
         from tkinter import messagebox
@@ -454,6 +499,7 @@ def process_data():
         root.destroy()
     except Exception:
         pass
+    
     return True
 
 

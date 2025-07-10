@@ -16,6 +16,12 @@ from utils.utils import (
     filter_products_and_alternative,
     write_shared_log,
 )
+from modules.audit_helper import (
+    make_audit_entry,
+    log_user_session_start,
+    log_user_session_end,
+    log_file_access,
+)
 
 # Logging setup
 logging.basicConfig(
@@ -64,6 +70,7 @@ def load_openmdf_tier_data(file_paths):
         claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table")
     except Exception as e:
         logger.error(f"Error loading claims: {e}")
+        make_audit_entry("openmdf_tier.py", f"Claims Table fallback error: {e}", "FILE_ERROR")
         claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
 
     print(f"claims shape: {claims.shape}")
@@ -465,12 +472,16 @@ def show_openmdf_completion_message(output_path):
 
 
 def process_data():
+    # Start audit session
+    log_user_session_start("openmdf_tier.py")
     write_shared_log("openmdf_tier.py", "Processing started.")
+    
     # Output filename from CLI arg or default
     output_filename = "LBL for Disruption.xlsx"
     if len(sys.argv) > 1:
         output_filename = sys.argv[1]
     output_path = Path(output_filename).resolve()
+    
     try:
         # Get the config file path relative to the project root
         config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
@@ -478,8 +489,12 @@ def process_data():
 
         result = load_openmdf_tier_data(file_paths)
         if result is None:
+            make_audit_entry("openmdf_tier.py", "Claims loading failed - early exit", "DATA_ERROR")
             return  # Early exit if claims loading failed
         claims, medi, mdf, exclusive, network = result
+
+        # Log file access
+        log_file_access("openmdf_tier.py", file_paths.get("reprice", "unknown"), "LOADING")
 
         reference_data = (medi, mdf, exclusive)
         df = process_openmdf_data_pipeline(claims, reference_data, network)
@@ -492,6 +507,9 @@ def process_data():
         # Totals for summary
         total_claims = df["Rxs"].sum()
         total_members = df["MemberID"].nunique()
+        
+        # Log data processing metrics
+        make_audit_entry("openmdf_tier.py", f"Processed {total_claims} claims for {total_members} members", "INFO")
 
         # Excel writer setup
         writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
@@ -549,12 +567,22 @@ def process_data():
         reorder_openmdf_excel_sheets(writer)
 
         writer.close()
+        # Log successful completion
+        make_audit_entry("openmdf_tier.py", f"Successfully generated Open MDF Tier report: {output_filename}", "INFO")
+        log_file_access("openmdf_tier.py", str(output_path), "CREATED")
+        
         show_openmdf_completion_message(output_path)
+        
     except Exception as e:
+        # Log detailed error information
+        make_audit_entry("openmdf_tier.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR")
         write_shared_log(
             "openmdf_tier.py", f"Processing failed: {e}", status="ERROR"
         )
         raise
+    finally:
+        # End audit session
+        log_user_session_end("openmdf_tier.py")
 
 
 if __name__ == "__main__":

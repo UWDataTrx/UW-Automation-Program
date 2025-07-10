@@ -9,6 +9,12 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.excel_utils import write_df_to_template
 from utils.utils import load_file_paths, write_shared_log
+from modules.audit_helper import (
+    make_audit_entry,
+    log_user_session_start,
+    log_user_session_end,
+    log_file_access,
+)
 
 CLAIMS_SHEET = "Claims Table"
 OUTPUT_SHEET = "Line By Line"
@@ -37,6 +43,9 @@ def show_message(awp: float, ing: float, total: float, rxs: int) -> None:
 def main():
     root = tk.Tk()
     root.withdraw()
+    
+    # Start audit session
+    log_user_session_start("sharx_lbl.py")
     write_shared_log("sharx_lbl.py", "Processing started.")
 
     try:
@@ -56,13 +65,20 @@ def main():
             )
 
         template_path = Path(paths["sharx"])
+        
+        # Log file access
+        log_file_access("sharx_lbl.py", paths["reprice"], "LOADING")
+        log_file_access("sharx_lbl.py", paths["sharx"], "LOADING")
+        
         try:
             df = pd.read_excel(paths["reprice"], sheet_name=CLAIMS_SHEET)
         except FileNotFoundError:
             logger.error(f"Claims file not found: {paths['reprice']}")
+            make_audit_entry("sharx_lbl.py", f"Claims file not found: {paths['reprice']}", "FILE_ERROR")
             raise FileNotFoundError(f"Claims file not found: {paths['reprice']}")
         except ValueError as e:
             logger.error(f"Sheet loading failed: {e}")
+            make_audit_entry("sharx_lbl.py", f"Sheet loading failed: {e}", "DATA_ERROR")
             raise ValueError(f"Sheet loading failed: {e}")
 
         # Debug print and log
@@ -116,15 +132,23 @@ def main():
 
         logger.info(f"SHARx output saved to: {output_path}")
         logger.info("SHARx LBL file created successfully.")
+        
+        # Log successful completion
+        make_audit_entry("sharx_lbl.py", f"Successfully generated SHARx file: {output_path}", "INFO")
+        log_file_access("sharx_lbl.py", str(output_path), "CREATED")
+        
         write_shared_log("sharx_lbl.py", "SHARx LBL file created successfully.")
         show_message(awp, ing, total, rxs)
         messagebox.showinfo("Processing Complete", "Processing complete")
 
     except Exception as e:
         logger.exception("An error occurred during SHARx LBL processing")
+        make_audit_entry("sharx_lbl.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR")
         write_shared_log("sharx_lbl.py", f"An error occurred: {e}", status="ERROR")
         messagebox.showerror("Error", f"An error occurred: {e}")
     finally:
+        # End audit session
+        log_user_session_end("sharx_lbl.py")
         root.quit()
 
 
