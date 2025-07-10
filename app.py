@@ -105,6 +105,7 @@ class App:
         self.toggle_theme_button: Optional[ctk.CTkButton] = None
         self.progress_bar: Optional[ctk.CTkProgressBar] = None
         self.progress_label: Optional[ctk.CTkLabel] = None
+        self.processed_claim_data = None  # Store processed data for CSV generation
 
     def _initialize_processors(self):
         """Initialize all processor and manager instances."""
@@ -389,13 +390,18 @@ class App:
         elapsed = time.time() - start_time
         msg = f"Template updated successfully in {elapsed:.2f} seconds."
         logger.info(msg)
-        self.root.after(0, lambda: self.update_progress(1.0, msg))
-        self.root.after(0, lambda: self.show_toast(msg))
+        self.root.after(0, lambda: self.update_progress(0.95, msg))
+        
+        # Generate Claim Detail CSV with Logic from completed template
+        self.root.after(0, lambda: self._generate_claim_detail_csv_with_template_logic())
+        
+        self.root.after(0, lambda: self.update_progress(1.0, "Process complete with Claim Detail CSV"))
+        self.root.after(0, lambda: self.show_toast("Process complete with updated CSV"))
         self.root.after(
             0,
             lambda: messagebox.showinfo(
                 "Template Update Complete",
-                "Pasting into the template is complete. You may now review the updated file.",
+                "Pasting into the template is complete. Claim Detail CSV has been generated with Logic from the workflow. You may now review the updated files.",
             ),
         )
 
@@ -751,10 +757,12 @@ class App:
         # Save to multiple formats
         self._save_to_parquet(df_sorted, output_dir)
         self._save_to_excel(df_sorted, output_file)
-        self._save_to_csv(df_sorted, output_dir)
         
         # Save unmatched reversals info
         self._save_unmatched_reversals(excel_rows_to_highlight, output_dir)
+        
+        # Store the processed data for later CSV generation after template completion
+        self.processed_claim_data = df_sorted.copy()
         
         self.update_progress(0.65)
         return output_file
@@ -803,6 +811,62 @@ class App:
             logger.warning(f"Could not extract opportunity name from file1: {e}")
         
         return opportunity_name
+
+    def _generate_claim_detail_csv_with_template_logic(self):
+        """Generate Claim Detail CSV using Logic column from completed _Rx Repricing_wf template."""
+        try:
+            # Check if we have processed claim data stored
+            if not hasattr(self, 'processed_claim_data') or self.processed_claim_data is None:
+                logger.warning("No processed claim data available for CSV generation")
+                return
+            
+            # Read the completed template to get the Logic column
+            # Use the updated template file that was created during the paste operation
+            from config.app_config import AppConstants
+            updated_template_path = Path.cwd() / AppConstants.UPDATED_TEMPLATE_NAME
+            
+            if not updated_template_path.exists():
+                logger.error(f"Updated template file not found: {updated_template_path}")
+                return
+            
+            # Read the Logic column from the completed template
+            template_df = pd.read_excel(updated_template_path, sheet_name='Claims Table')
+            if 'Logic' not in template_df.columns:
+                logger.error("Logic column not found in template")
+                return
+            
+            # Prepare the claim detail data with updated Logic
+            claim_detail_df = self.processed_claim_data.copy()
+            
+            # Merge Logic column from template based on common key(s)
+            # Using SOURCERECORDID as the primary key for matching
+            if 'SOURCERECORDID' in template_df.columns and 'SOURCERECORDID' in claim_detail_df.columns:
+                # Create mapping of SOURCERECORDID to Logic from template
+                logic_mapping = template_df.set_index('SOURCERECORDID')['Logic'].to_dict()
+                
+                # Update Logic column in claim detail data
+                claim_detail_df['Logic'] = claim_detail_df['SOURCERECORDID'].map(logic_mapping).fillna('')
+                
+                # Save the updated CSV
+                output_dir = Path.cwd()
+                opportunity_name = self._extract_opportunity_name()
+                csv_path = output_dir / f"{opportunity_name} Claim Detail.csv"
+                
+                claim_detail_df.drop_duplicates().to_csv(csv_path, index=False)
+                logger.info(f"Generated Claim Detail CSV with template Logic: {csv_path}")
+                
+            else:
+                logger.error("SOURCERECORDID not found in template or claim data for matching")
+                # Fallback: save without updated Logic
+                self._save_to_csv(claim_detail_df, Path.cwd())
+                
+        except Exception as e:
+            logger.error(f"Failed to generate Claim Detail CSV with template Logic: {e}")
+            # Fallback: save the original processed data as CSV
+            try:
+                self._save_to_csv(self.processed_claim_data, Path.cwd())
+            except Exception as fallback_error:
+                logger.error(f"Fallback CSV generation also failed: {fallback_error}")
 
     def _finalize_processing(self, output_file):
         """Finalize processing with highlighting and notifications."""
