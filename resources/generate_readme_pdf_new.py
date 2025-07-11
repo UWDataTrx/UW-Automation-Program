@@ -1,0 +1,233 @@
+"""
+Generate PDF from README.txt using reportlab for consistent formatting
+"""
+
+from pathlib import Path
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.colors import HexColor
+from datetime import datetime
+import re
+
+def generate_readme_pdf():
+    """Generate PDF from the README.txt file using ReportLab."""
+    
+    # Get the current directory
+    current_dir = Path(__file__).parent
+    
+    # Input and output file paths
+    txt_file = current_dir / "README.txt"
+    pdf_file = current_dir / "README.pdf"
+    
+    try:
+        # Read the text file
+        with open(txt_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Create PDF document
+        doc = SimpleDocTemplate(
+            str(pdf_file),
+            pagesize=A4,
+            rightMargin=72,
+            leftMargin=72,
+            topMargin=72,
+            bottomMargin=72
+        )
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        
+        # Create custom styles matching your project documentation
+        title_style = ParagraphStyle(
+            'ReadmeTitle',
+            parent=styles['Title'],
+            fontSize=24,
+            spaceAfter=30,
+            textColor=HexColor('#2c3e50'),
+            alignment=1  # Center
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'Subtitle',
+            parent=styles['Heading1'],
+            fontSize=14,
+            spaceAfter=20,
+            textColor=HexColor('#7f8c8d'),
+            alignment=1  # Center
+        )
+        
+        heading1_style = ParagraphStyle(
+            'CustomHeading1',
+            parent=styles['Heading1'],
+            fontSize=18,
+            spaceAfter=15,
+            spaceBefore=25,
+            textColor=HexColor('#2c3e50'),
+            borderWidth=2,
+            borderColor=HexColor('#3498db'),
+            borderPadding=5
+        )
+        
+        heading2_style = ParagraphStyle(
+            'CustomHeading2',
+            parent=styles['Heading2'],
+            fontSize=14,
+            spaceAfter=10,
+            spaceBefore=15,
+            textColor=HexColor('#34495e')
+        )
+        
+        heading3_style = ParagraphStyle(
+            'CustomHeading3',
+            parent=styles['Heading3'],
+            fontSize=12,
+            spaceAfter=8,
+            spaceBefore=12,
+            textColor=HexColor('#2980b9')
+        )
+        
+        code_style = ParagraphStyle(
+            'Code',
+            parent=styles['Code'],
+            fontSize=9,
+            fontName='Courier',
+            backColor=HexColor('#f8f9fa'),
+            borderColor=HexColor('#e9ecef'),
+            borderWidth=1,
+            borderPadding=10,
+            leftIndent=10,
+            rightIndent=10,
+            spaceAfter=10
+        )
+        
+        bullet_style = ParagraphStyle(
+            'BulletList',
+            parent=styles['Normal'],
+            leftIndent=20,
+            bulletIndent=10,
+            spaceAfter=5
+        )
+        
+        numbered_style = ParagraphStyle(
+            'NumberedList',
+            parent=styles['Normal'],
+            leftIndent=20,
+            bulletIndent=10,
+            spaceAfter=5
+        )
+        
+        # Story to hold document content
+        story = []
+        
+        # Title page
+        story.append(Paragraph("UW Automation Program", title_style))
+        story.append(Paragraph("README Documentation", subtitle_style))
+        story.append(Spacer(1, 20))
+        story.append(Paragraph(f"Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", styles['Normal']))
+        story.append(PageBreak())
+        
+        # Split content into lines
+        lines = content.split('\n')
+        
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            if not line:
+                story.append(Spacer(1, 6))
+                i += 1
+                continue
+            
+            # Clean text function
+            line = clean_text(line)
+            
+            # Handle headings
+            if line.startswith('# '):
+                story.append(Paragraph(line[2:], heading1_style))
+            elif line.startswith('## '):
+                story.append(Paragraph(line[3:], heading2_style))
+            elif line.startswith('### '):
+                story.append(Paragraph(line[4:], heading3_style))
+            elif line.startswith('#### '):
+                story.append(Paragraph(line[5:], heading3_style))
+            
+            # Handle code blocks
+            elif line.startswith('```'):
+                # Find end of code block
+                code_lines = []
+                i += 1
+                while i < len(lines) and not lines[i].strip().startswith('```'):
+                    code_lines.append(lines[i])
+                    i += 1
+                
+                if code_lines:
+                    code_text = '\n'.join(code_lines)
+                    story.append(Preformatted(code_text, code_style))
+            
+            # Handle bullet points
+            elif line.startswith('- ') or line.startswith('* '):
+                bullet_text = line[2:].strip()
+                bullet_text = format_text(bullet_text)
+                story.append(Paragraph(f"• {bullet_text}", bullet_style))
+            
+            # Handle numbered lists
+            elif re.match(r'^\d+\.\s', line):
+                # Numbered list
+                list_text = re.sub(r'^\d+\.\s', '', line)
+                list_text = format_text(list_text)
+                story.append(Paragraph(f"{line.split('.')[0]}. {list_text}", numbered_style))
+            
+            # Handle indented content
+            elif line.startswith('    '):
+                indented_text = line[4:]
+                indented_text = format_text(indented_text)
+                story.append(Paragraph(f"    {indented_text}", styles['Normal']))
+            
+            # Handle regular text
+            else:
+                # Format text
+                text = format_text(line)
+                if text:
+                    story.append(Paragraph(text, styles['Normal']))
+            
+            i += 1
+        
+        # Build PDF
+        doc.build(story)
+        
+        print("✅ README PDF generated successfully!")
+        print(f"📄 File: {pdf_file}")
+        print(f"📊 Size: {pdf_file.stat().st_size / 1024:.1f} KB")
+        
+        return str(pdf_file)
+        
+    except Exception as e:
+        print(f"❌ Error generating README PDF: {e}")
+        return None
+
+def clean_text(text):
+    """Clean text by replacing unicode characters with standard ones."""
+    # Replace en dash and other unicode dashes with hyphen
+    text = re.sub(r"[\u2013\u2014\u2012]", "-", text)
+    # Replace curly quotes with straight quotes
+    text = text.replace(""", '"').replace(""", '"').replace("'", "'").replace("'", "'")
+    # Handle other unicode characters more gracefully
+    text = text.encode('ascii', 'ignore').decode('ascii')
+    return text
+
+def format_text(text):
+    """Format basic text - simplified to avoid formatting conflicts."""
+    # Clean the text
+    text = clean_text(text)
+    
+    # Only handle simple bold text that doesn't overlap
+    text = re.sub(r'\*\*([^*]+?)\*\*', r'<b>\1</b>', text)
+    
+    # Remove other formatting to avoid conflicts
+    text = re.sub(r'[*_`]', '', text)  # Remove remaining markdown chars
+    
+    return text
+
+if __name__ == "__main__":
+    generate_readme_pdf()
