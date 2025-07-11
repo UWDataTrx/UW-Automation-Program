@@ -280,10 +280,6 @@ class App:
         else:
             self.root.after(0, update_func)
 
-    def write_audit_log(self, file1, file2, status):
-        """Write audit log entry using file processor."""
-        return self.file_processor.write_audit_log(file1, file2, status)
-
     def show_log_viewer(self):
         """Show log viewer using log manager."""
         self.log_manager.show_log_viewer()
@@ -417,7 +413,8 @@ class App:
 
     def _prepare_template_paths(self):
         """Prepare file paths for template operations using file processor."""
-        return self.file_processor.prepare_file_paths(self.template_file_path)
+        opportunity_name = self._extract_opportunity_name()
+        return self.file_processor.prepare_file_paths(self.template_file_path, opportunity_name)
 
     def _create_template_backup(self, paths):
         """Create backup of template and prepare output file using template processor."""
@@ -741,7 +738,10 @@ class App:
         
         # Prepare output directory and files
         output_dir = Path.cwd()
-        output_file = output_dir / "merged_file_with_OR.xlsx"
+        
+        # Get opportunity name and create custom filename
+        opportunity_name = self._extract_opportunity_name()
+        output_file = output_dir / f"{opportunity_name}_merged_file_with_OR.xlsx"
         
         # Create row mapping for highlighting
         row_mapping = {
@@ -754,8 +754,8 @@ class App:
         # Clean up data
         df_sorted.drop(columns=["RowID"], inplace=True, errors="ignore")
         
-        # Save to multiple formats
-        self._save_to_parquet(df_sorted, output_dir)
+        # Save to multiple formats with updated names
+        self._save_to_parquet(df_sorted, output_dir, opportunity_name)
         self._save_to_excel(df_sorted, output_file)
         
         # Save unmatched reversals info
@@ -767,10 +767,13 @@ class App:
         self.update_progress(0.65)
         return output_file
 
-    def _save_to_parquet(self, df, output_dir):
+    def _save_to_parquet(self, df, output_dir, opportunity_name=None):
         """Save data to Parquet format for large DataFrames."""
         try:
-            parquet_path = output_dir / "merged_file_with_OR.parquet"
+            if opportunity_name:
+                parquet_path = output_dir / f"{opportunity_name}_merged_file_with_OR.parquet"
+            else:
+                parquet_path = output_dir / "merged_file_with_OR.parquet"
             df.drop_duplicates().to_parquet(parquet_path, index=False)
             logger.info(f"Saved intermediate Parquet file: {parquet_path}")
         except Exception as e:
@@ -822,8 +825,8 @@ class App:
             
             # Read the completed template to get the Logic column
             # Use the updated template file that was created during the paste operation
-            from config.app_config import AppConstants
-            updated_template_path = Path.cwd() / AppConstants.UPDATED_TEMPLATE_NAME
+            opportunity_name = self._extract_opportunity_name()
+            updated_template_path = Path.cwd() / f"{opportunity_name}_Rx Repricing_wf.xlsx"
             
             if not updated_template_path.exists():
                 logger.error(f"Updated template file not found: {updated_template_path}")

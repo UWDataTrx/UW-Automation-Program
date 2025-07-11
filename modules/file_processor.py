@@ -5,9 +5,6 @@ Extracted from app.py to improve cohesion and reduce file size.
 
 import pandas as pd
 from pathlib import Path
-from datetime import datetime
-import csv
-import logging
 import os
 import sys
 from tkinter import messagebox
@@ -69,22 +66,7 @@ class FileProcessor:
             messagebox.showerror("Validation Error", str(e))
             return False
     
-    def write_audit_log(self, file1, file2, status):
-        """Write an entry to the audit log."""
-        entry = [datetime.now().isoformat(), str(file1), str(file2), status]
-        audit_log_path = AppConstants.get_audit_log_path()
-        write_header = not audit_log_path.exists()
-        
-        try:
-            with open(audit_log_path, "a", newline="") as csvfile:
-                writer = csv.writer(csvfile)
-                if write_header:
-                    writer.writerow(["Timestamp", "File1", "File2", "Status"])
-                writer.writerow(entry)
-        except Exception as e:
-            logging.error(f"Failed to write audit log: {e}")
-    
-    def prepare_file_paths(self, template_path):
+    def prepare_file_paths(self, template_path, opportunity_name=None):
         """Prepare file paths for template operations."""
         if not template_path:
             raise ValueError("Template file path is not set.")
@@ -92,10 +74,16 @@ class FileProcessor:
         template = Path(template_path)
         backup_name = template.stem + AppConstants.BACKUP_SUFFIX
         
+        # Use opportunity name in output filename if provided
+        if opportunity_name:
+            output_name = f"{opportunity_name}_Rx Repricing_wf.xlsx"
+        else:
+            output_name = AppConstants.UPDATED_TEMPLATE_NAME
+        
         return {
             "template": template,
             "backup": Path.cwd() / backup_name,
-            "output": Path.cwd() / AppConstants.UPDATED_TEMPLATE_NAME
+            "output": Path.cwd() / output_name
         }
     
     def safe_file_operation(self, operation, *args, **kwargs):
