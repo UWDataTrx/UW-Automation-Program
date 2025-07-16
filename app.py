@@ -402,19 +402,57 @@ class App:
         )
 
     def _prepare_template_data(self, processed_file):
-        """Prepare data for template pasting."""
+        """Prepare data for template pasting with enhanced data cleaning."""
         df = pd.read_excel(processed_file)
         df = self.format_dataframe(df)
+        
+        # Enhanced data cleaning to prevent Excel errors
+        df = self._clean_data_for_excel(df)
+        
+        # Only return the data values (not headers) since template already has headers
+        # Ensure we only paste the first 39 columns (A:AM) to match template structure
+        data_values = df.iloc[:, :39].values  # Get data without headers, limit to 39 columns
+        
         return {
-            "data": df.values,
+            "data": data_values,
             "nrows": df.shape[0],
-            "ncols": df.shape[1]
+            "ncols": min(df.shape[1], 39)
         }
+
+    def _clean_data_for_excel(self, df):
+        """Clean data to prevent Excel errors during paste operations."""
+        df_clean = df.copy()
+        
+        try:
+            # Replace problematic values that can cause Excel errors
+            for col in df_clean.columns:
+                if df_clean[col].dtype == 'object':
+                    # Replace None/NaN with empty string
+                    df_clean[col] = df_clean[col].fillna('')
+                    # Convert to string and handle any remaining issues
+                    df_clean[col] = df_clean[col].astype(str)
+                    # Replace 'None' string with empty string
+                    df_clean[col] = df_clean[col].replace('None', '')
+                    # Truncate very long strings that might cause Excel issues
+                    df_clean[col] = df_clean[col].apply(lambda x: x[:32767] if len(str(x)) > 32767 else x)
+                elif pd.api.types.is_numeric_dtype(df_clean[col]):
+                    # Handle infinite values
+                    df_clean[col] = df_clean[col].replace([np.inf, -np.inf], np.nan)
+                    # Fill NaN with 0 for numeric columns
+                    df_clean[col] = df_clean[col].fillna(0)
+            
+            logger.info("Data cleaning for Excel completed successfully")
+            
+        except Exception as e:
+            logger.warning(f"Error during data cleaning: {e}. Using original data.")
+            return df
+        
+        return df_clean
 
     def _prepare_template_paths(self):
         """Prepare file paths for template operations using file processor."""
-        opportunity_name = self._extract_opportunity_name()
-        return self.file_processor.prepare_file_paths(self.template_file_path, opportunity_name)
+        # Pass None for opportunity_name to use default _Rx Repricing_wf.xlsx naming
+        return self.file_processor.prepare_file_paths(self.template_file_path, None)
 
     def _create_template_backup(self, paths):
         """Create backup of template and prepare output file using template processor."""
@@ -824,6 +862,9 @@ class App:
         # Sort and filter data
         df_sorted = pd.concat([df[df["Logic"] == ""], df[df["Logic"] == "OR"]])
         
+        # Ensure Logic column is positioned as column AM (39th column) and rename to "O's & R's Check"
+        df_sorted = self._fix_column_positioning(df_sorted)
+        
         # Prepare output directory and files
         output_dir = Path.cwd()
         
@@ -913,8 +954,7 @@ class App:
             
             # Read the completed template to get the Logic column
             # Use the updated template file that was created during the paste operation
-            opportunity_name = self._extract_opportunity_name()
-            updated_template_path = Path.cwd() / f"{opportunity_name}_Rx Repricing_wf.xlsx"
+            updated_template_path = Path.cwd() / "_Rx Repricing_wf.xlsx"
             
             if not updated_template_path.exists():
                 logger.error(f"Updated template file not found: {updated_template_path}")
@@ -1016,6 +1056,28 @@ class App:
         row = ws[row_num]
         for cell in row:
             cell.fill = fill
+
+    def _fix_column_positioning(self, df):
+        """
+        Ensure the 'Logic' column is the 39th column (AM) and rename it to "O's & R's Check".
+        If there are fewer than 39 columns, pad with empty columns.
+        """
+        df = df.copy()
+        # Rename 'Logic' column if present
+        if "Logic" in df.columns:
+            df = df.rename(columns={"Logic": "O's & R's Check"})
+        
+        # Ensure we have exactly 39 columns for template compatibility
+        current_cols = len(df.columns)
+        if current_cols < 39:
+            # Add empty columns to reach 39 total
+            for i in range(current_cols, 39):
+                df[f"Column_{i+1}"] = ""
+        elif current_cols > 39:
+            # Keep only first 39 columns
+            df = df.iloc[:, :39]
+        
+        return df
 
 
 warnings.filterwarnings("ignore", category=FutureWarning, message=".*swapaxes.*")
