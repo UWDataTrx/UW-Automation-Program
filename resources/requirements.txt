@@ -10,3 +10,4 @@ numba
 pyarrow
 pyjokes
 emoji
+reportlab
