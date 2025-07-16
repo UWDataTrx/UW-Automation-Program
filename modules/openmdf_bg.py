@@ -16,6 +16,7 @@ from utils.utils import (
     filter_products_and_alternative,
     write_shared_log,
 )
+from utils.excel_utils import safe_excel_write, check_disk_space
 from modules.audit_helper import (
     make_audit_entry,
     log_user_session_start,
@@ -303,7 +304,23 @@ def process_data():
             output_path = output_filename
 
     # Write LBL output unconditionally (no --output-lbl flag required)
-    writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
+    
+    # Check disk space before attempting to write
+    if not check_disk_space(".", 500):  # Require 500MB free space
+        logger.error("Insufficient disk space for Excel operations")
+        make_audit_entry("openmdf_bg.py", "Insufficient disk space for Excel operations", "SYSTEM_ERROR")
+        write_shared_log("openmdf_bg.py", "Insufficient disk space for Excel operations", status="ERROR")
+        log_user_session_end("openmdf_bg.py")
+        return False
+    
+    try:
+        writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
+    except Exception as e:
+        logger.error(f"Failed to create Excel writer for {output_path}: {e}")
+        make_audit_entry("openmdf_bg.py", f"Failed to create Excel writer: {e}", "FILE_ERROR")
+        write_shared_log("openmdf_bg.py", f"Failed to create Excel writer: {e}", status="ERROR")
+        log_user_session_end("openmdf_bg.py")
+        return False
 
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
@@ -341,8 +358,11 @@ def process_data():
                 else:
                     combined_df = na_pharmacies_output
                 
-                # Write to Excel
-                combined_df.to_excel(output_file_path, index=False)
+                # Write to Excel using safe method
+                if not safe_excel_write(combined_df, output_file_path, index=False):
+                    logger.error(f"Safe write failed for {output_file_path}, trying fallback")
+                    # Fallback to direct pandas write
+                    combined_df.to_excel(output_file_path, index=False)
                 logger.info(f"NA pharmacies written to '{output_file_path}' with Result column.")
                 
             except Exception as e:
@@ -479,7 +499,31 @@ def process_data():
             writer.sheets.clear()
             writer.sheets.update(dict(items))
 
-    writer.close()
+    # Close writer with error handling
+    try:
+        writer.close()
+        logger.info(f"Excel writer closed successfully for {output_path}")
+        
+        # Validate the output file was created correctly
+        if not os.path.exists(output_path):
+            raise FileNotFoundError(f"Output file was not created: {output_path}")
+        
+        # Quick validation of the Excel file
+        try:
+            pd.read_excel(output_path, nrows=1)
+            logger.info(f"Output file validation successful: {output_path}")
+        except Exception as validation_error:
+            logger.error(f"Output file validation failed: {validation_error}")
+            make_audit_entry("openmdf_bg.py", f"Output file validation failed: {validation_error}", "FILE_ERROR")
+            write_shared_log("openmdf_bg.py", f"Output file validation failed: {validation_error}", status="ERROR")
+            # Don't return False here as the file might still be usable
+        
+    except Exception as e:
+        logger.error(f"Failed to close Excel writer: {e}")
+        make_audit_entry("openmdf_bg.py", f"Failed to close Excel writer: {e}", "FILE_ERROR")
+        write_shared_log("openmdf_bg.py", f"Failed to close Excel writer: {e}", status="ERROR")
+        log_user_session_end("openmdf_bg.py")
+        return False
     
     # Log successful completion
     logger.info(f"Open MDF BG processing completed. Output file: {output_path}")

@@ -589,7 +589,95 @@ class App:
         """Show toast notification using template processor."""
         return self.template_processor.show_toast(message, duration)
 
+    def perform_preflight_checks(self) -> tuple[bool, str]:
+        """
+        Perform pre-flight checks before starting any processing.
+        Returns (is_ready, warning_message)
+        """
+        warnings = []
+        errors = []
+        
+        # Check disk space
+        try:
+            import shutil
+            stat = shutil.disk_usage(".")
+            free_gb = stat.free / (1024 * 1024 * 1024)
+            if free_gb < 1.0:
+                errors.append(f"Insufficient disk space: {free_gb:.1f}GB available (minimum 1GB required)")
+            elif free_gb < 2.0:
+                warnings.append(f"Low disk space: {free_gb:.1f}GB available (recommended 2GB+)")
+        except Exception:
+            warnings.append("Could not check disk space")
+        
+        # Check for running Excel processes
+        try:
+            import psutil  # type: ignore
+            excel_processes = [p for p in psutil.process_iter(['name']) if 'excel' in p.info['name'].lower()]
+            if excel_processes:
+                warnings.append(f"Found {len(excel_processes)} Excel process(es) running - this may cause file conflicts")
+        except ImportError:
+            # psutil not available, skip this check
+            pass
+        except Exception:
+            pass
+        
+        # Check for existing output files that might be locked
+        output_patterns = ["*_Rx Repricing_wf.xlsx", "LBL for Disruption.xlsx"]
+        locked_files = []
+        for pattern in output_patterns:
+            for file_path in Path(".").glob(pattern):
+                try:
+                    # Try to open the file in append mode to check if it's locked
+                    with open(file_path, 'r+b'):
+                        pass
+                except (PermissionError, IOError):
+                    locked_files.append(str(file_path))
+        
+        if locked_files:
+            warnings.append(f"Output files may be locked by Excel: {', '.join(locked_files)}")
+        
+        # Check memory usage
+        try:
+            import psutil  # type: ignore
+            memory = psutil.virtual_memory()
+            available_gb = memory.available / (1024 * 1024 * 1024)
+            if available_gb < 2.0:
+                warnings.append(f"Low available memory: {available_gb:.1f}GB (recommended 2GB+)")
+        except Exception:
+            pass
+        
+        # Check OneDrive sync status (if applicable)
+        onedrive_path = os.path.expandvars("%OneDrive%")
+        if onedrive_path and onedrive_path != "%OneDrive%" and os.path.exists(onedrive_path):
+            # Check if there are any sync conflicts or pending uploads
+            sync_files = list(Path(onedrive_path).rglob("*- Copy.*"))
+            if sync_files:
+                warnings.append(f"Found {len(sync_files)} OneDrive sync conflict files")
+        
+        # Compile results
+        if errors:
+            return False, "Critical Issues Found:\n" + "\n".join(f"• {error}" for error in errors)
+        
+        if warnings:
+            warning_msg = "Warnings (process can continue but may have issues):\n"
+            warning_msg += "\n".join(f"• {warning}" for warning in warnings)
+            warning_msg += "\n\nContinue anyway?"
+            return True, warning_msg
+        
+        return True, ""
+
     def start_process(self):
+        # Perform pre-flight checks
+        is_ready, message = self.perform_preflight_checks()
+        
+        if not is_ready:
+            messagebox.showerror("System Check Failed", message)
+            return
+        
+        if message:  # Warnings present
+            if not messagebox.askyesno("System Warnings", message):
+                return
+        
         threading.Thread(target=self._start_process_internal).start()
         log_process_action("RepricingProcess", "STARTED")
         write_shared_log("Repricing process started", "")

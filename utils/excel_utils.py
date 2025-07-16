@@ -6,11 +6,90 @@ import importlib.util
 from typing import Any, Tuple
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import tempfile
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 # COM fallback via pywin32
 EXCEL_COM_AVAILABLE = importlib.util.find_spec("win32com.client") is not None
+
+
+def validate_excel_file(file_path: str) -> bool:
+    """
+    Validate if an Excel file is not corrupted and can be opened.
+    Returns True if valid, False if corrupted.
+    """
+    try:
+        # Quick validation using pandas first
+        pd.read_excel(file_path, nrows=1)
+        return True
+    except Exception as e:
+        logger.warning(f"Excel file validation failed for {file_path}: {e}")
+        return False
+
+
+def safe_excel_write(df: pd.DataFrame, output_path: str, **kwargs) -> bool:
+    """
+    Safely write DataFrame to Excel with atomic operations and validation.
+    Returns True if successful, False otherwise.
+    """
+    try:
+        # Create a temporary file first
+        temp_dir = Path(output_path).parent
+        with tempfile.NamedTemporaryFile(
+            suffix='.xlsx', 
+            dir=temp_dir, 
+            delete=False
+        ) as temp_file:
+            temp_path = temp_file.name
+        
+        # Write to temporary file first
+        df.to_excel(temp_path, **kwargs)
+        
+        # Validate the temporary file
+        if not validate_excel_file(temp_path):
+            os.unlink(temp_path)
+            logger.error(f"Generated Excel file failed validation: {temp_path}")
+            return False
+        
+        # If output file exists, create backup
+        if os.path.exists(output_path):
+            backup_path = f"{output_path}.backup"
+            shutil.copy2(output_path, backup_path)
+            logger.info(f"Created backup: {backup_path}")
+        
+        # Atomic move from temp to final location
+        shutil.move(temp_path, output_path)
+        logger.info(f"Successfully wrote Excel file: {output_path}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Safe Excel write failed: {e}")
+        # Clean up temp file if it exists
+        temp_path_to_clean = locals().get('temp_path')
+        if temp_path_to_clean and os.path.exists(temp_path_to_clean):
+            try:
+                os.unlink(temp_path_to_clean)
+            except Exception:
+                pass
+        return False
+
+
+def check_disk_space(path: str, required_mb: int = 100) -> bool:
+    """
+    Check if there's sufficient disk space for Excel operations.
+    """
+    try:
+        stat = shutil.disk_usage(path)
+        free_mb = stat.free / (1024 * 1024)
+        if free_mb < required_mb:
+            logger.warning(f"Low disk space: {free_mb:.1f}MB available, {required_mb}MB required")
+            return False
+        return True
+    except Exception as e:
+        logger.warning(f"Could not check disk space: {e}")
+        return True  # Assume OK if we can't check
 
 
 def open_workbook(path: str, visible: bool = False) -> Tuple[Any, Any, bool]:
