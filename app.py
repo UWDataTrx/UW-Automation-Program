@@ -163,8 +163,18 @@ class App:
     def _validate_gross_cost_template(self, file_path):
         """Validate GrossCost column and suggest template type using data processor."""
         template_suggestion = self.data_processor.validate_gross_cost_template(file_path)
+        
+        # Always show the template recommendation to the user
         if template_suggestion:
-            messagebox.showinfo("Template Selection", template_suggestion)
+            messagebox.showinfo("Template Selection Guide", template_suggestion)
+        else:
+            # Fallback message if validation fails
+            messagebox.showinfo("Template Selection Guide", 
+                              "File imported successfully!\n\n"
+                              "Template Selection:\n"
+                              "• Use BLANK template if your data has no cost information\n"
+                              "• Use STANDARD template if your data contains cost values\n\n"
+                              "Check your GrossCost column to determine which template to use.")
 
     def import_file2(self):
         """Import the second file."""
@@ -925,14 +935,57 @@ class App:
             p.join()
         
         processed_df = pd.concat(results)
+        
+        # Critical Fix: Recreate RowID after multiprocessing concat to prevent conflicts
+        try:
+            processed_df = processed_df.reset_index(drop=True)
+            processed_df["RowID"] = np.arange(len(processed_df))
+            logging.info(f"Recreated RowID after multiprocessing concat: {len(processed_df)} rows")
+        except Exception as e:
+            logging.warning(f"Could not recreate RowID after concat: {e}")
+            processed_df["RowID"] = processed_df.index.values
+        
         self.update_progress(0.60)
         
         return processed_df
 
     def _save_processed_outputs(self, df):
-        """Save processed data to various output formats."""
-        # Sort and filter data
-        df_sorted = pd.concat([df[df["Logic"] == ""], df[df["Logic"] == "OR"]])
+        """Save processed data to various output formats with enhanced RowID error handling."""
+        try:
+            # Validate input DataFrame
+            if df is None or df.empty:
+                raise ValueError("Input DataFrame is None or empty")
+            
+            logging.info(f"Starting output processing with {len(df)} rows")
+            
+            # Ensure RowID integrity before processing
+            if 'RowID' not in df.columns:
+                logging.warning("RowID missing in input DataFrame, recreating...")
+                df = df.reset_index(drop=True)
+                df['RowID'] = np.arange(len(df))
+            
+            # Sort and filter data with error handling
+            try:
+                df_sorted = pd.concat([df[df["Logic"] == ""], df[df["Logic"] == "OR"]])
+                logging.info(f"Filtered and sorted data: {len(df_sorted)} rows")
+            except Exception as e:
+                logging.error(f"Error in data filtering: {e}")
+                # Fallback: use all data
+                df_sorted = df.copy()
+            
+            # Ensure RowID is still valid after concat
+            if 'RowID' in df_sorted.columns:
+                # Check for any RowID issues and fix them
+                rowid_issues = df_sorted['RowID'].isnull().sum()
+                if rowid_issues > 0:
+                    logging.warning(f"Found {rowid_issues} null RowID values, fixing...")
+                    df_sorted = df_sorted.reset_index(drop=True)
+                    df_sorted['RowID'] = np.arange(len(df_sorted))
+        
+        except Exception as e:
+            error_msg = f"Critical error in _save_processed_outputs initialization: {str(e)}"
+            logging.error(error_msg)
+            raise Exception(error_msg)
         
         # Ensure Logic column is positioned as column AM (39th column) and rename to "O's & R's Check"
         df_sorted = self._fix_column_positioning(df_sorted)
@@ -944,16 +997,46 @@ class App:
         opportunity_name = self._extract_opportunity_name()
         output_file = output_dir / f"{opportunity_name}_merged_file_with_OR.xlsx"
         
-        # Create row mapping for highlighting
-        row_mapping = {
-            row["RowID"]: i + 2 for i, (_, row) in enumerate(df_sorted.iterrows())
-        }
-        excel_rows_to_highlight = [
-            row_mapping[rid] for rid in [] if rid in row_mapping
-        ]  # Placeholder
+        # Create row mapping for highlighting with robust error handling
+        try:
+            # Ensure RowID exists and is accessible
+            if 'RowID' not in df_sorted.columns:
+                logging.warning("RowID column missing in df_sorted, recreating...")
+                df_sorted = df_sorted.reset_index(drop=True)
+                df_sorted['RowID'] = np.arange(len(df_sorted))
+            
+            # Safely create row mapping
+            row_mapping = {}
+            for i, (_, row) in enumerate(df_sorted.iterrows()):
+                try:
+                    row_id = row["RowID"]
+                    if pd.notna(row_id):  # Check for valid RowID
+                        row_mapping[row_id] = i + 2
+                except (KeyError, IndexError, TypeError) as e:
+                    logging.warning(f"Skipped row {i} in mapping due to RowID issue: {e}")
+                    continue
+            
+            excel_rows_to_highlight = [
+                row_mapping[rid] for rid in [] if rid in row_mapping
+            ]  # Placeholder
+            
+            logging.info(f"Created row mapping with {len(row_mapping)} entries")
+            
+        except Exception as e:
+            logging.error(f"Failed to create row mapping: {e}")
+            row_mapping = {}
+            excel_rows_to_highlight = []
         
-        # Clean up data
-        df_sorted.drop(columns=["RowID"], inplace=True, errors="ignore")
+        # Clean up data with safe RowID removal
+        try:
+            if 'RowID' in df_sorted.columns:
+                df_sorted = df_sorted.drop(columns=["RowID"])
+                logging.info("Successfully removed RowID column before saving")
+            else:
+                logging.info("RowID column not present, skipping removal")
+        except Exception as e:
+            logging.warning(f"Could not remove RowID column: {e}")
+            # Continue without removing RowID if there's an issue
         
         # Save to multiple formats with updated names
         self._save_to_parquet(df_sorted, output_dir, opportunity_name)

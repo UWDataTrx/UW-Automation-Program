@@ -23,6 +23,16 @@ class DataProcessor:
     def __init__(self, app_instance):
         self.app = app_instance
         
+    def _read_file_flexible(self, file_path):
+        """Read file supporting both CSV and Excel formats."""
+        try:
+            if file_path.lower().endswith(('.xlsx', '.xls')):
+                return pd.read_excel(file_path), "Excel"
+            else:
+                return pd.read_csv(file_path), "CSV"
+        except Exception as e:
+            raise Exception(f"Could not read file {file_path}: {str(e)}")
+        
     def load_and_validate_data(self, file_path):
         """Load and validate the merged file data with enhanced error handling."""
         try:
@@ -304,23 +314,56 @@ class DataProcessor:
         return True, "Inputs are valid"
     
     def validate_gross_cost_template(self, file_path):
-        """Validate GrossCost column and suggest template type."""
+        """Validate GrossCost column and suggest template type for both CSV and Excel files."""
         try:
-            df = pd.read_csv(file_path)
+            # Use the flexible file reader
+            df, file_type = self._read_file_flexible(file_path)
+            
+            logging.info(f"Reading {file_type} file for template validation: {file_path}")
             
             # Guard clause: no GrossCost column
             if "GrossCost" not in df.columns:
-                return None
+                return f"File Analysis Complete ({file_type}):\n\nNo 'GrossCost' column found in the data.\n\nTemplate Recommendation:\nUse the BLANK template since there's no cost data to analyze."
             
-            return self._determine_template_type(df["GrossCost"])
+            return self._determine_template_type(df["GrossCost"], file_type)
             
         except Exception as e:
             logging.warning(f"Could not validate GrossCost column: {e}")
-            return None
+            return f"File Analysis Warning:\n\nCould not analyze the file: {str(e)}\n\nDefault Recommendation:\nIf your data contains cost information, use the STANDARD template.\nIf your data has no costs or only $0 values, use the BLANK template."
     
-    def _determine_template_type(self, gross_cost_series):
-        """Determine which template type to recommend based on GrossCost data."""
-        if gross_cost_series.isna().all() or (gross_cost_series == 0).all():
-            return "The GrossCost column is blank or all zero. Please use the Blind template."
+    def _determine_template_type(self, gross_cost_series, file_type=""):
+        """Determine template type based on GrossCost data analysis."""
+        # Check for null/empty values
+        null_count = gross_cost_series.isnull().sum()
+        total_count = len(gross_cost_series)
+        
+        # Convert to numeric, handling errors
+        numeric_costs = pd.to_numeric(gross_cost_series, errors='coerce')
+        zero_count = (numeric_costs == 0).sum()
+        
+        # Calculate percentages
+        null_percent = (null_count / total_count) * 100 if total_count > 0 else 0
+        zero_percent = (zero_count / total_count) * 100 if total_count > 0 else 0
+        blank_or_zero_percent = ((null_count + zero_count) / total_count) * 100 if total_count > 0 else 0
+        
+        file_info = f" ({file_type})" if file_type else ""
+        
+        # Determine template recommendation
+        if blank_or_zero_percent >= 80:
+            return (f"File Analysis Complete{file_info}:\n\n"
+                   f"GrossCost Analysis:\n"
+                   f"• Total records: {total_count:,}\n"
+                   f"• Blank/null values: {null_count:,} ({null_percent:.1f}%)\n"
+                   f"• Zero values: {zero_count:,} ({zero_percent:.1f}%)\n"
+                   f"• Combined blank/zero: {blank_or_zero_percent:.1f}%\n\n"
+                   f"🎯 TEMPLATE RECOMMENDATION: BLANK TEMPLATE\n"
+                   f"Most of your cost data is blank or zero - use the Blind template for this type of data.")
         else:
-            return "The GrossCost column contains data. Please use the Standard template."
+            has_costs_count = total_count - null_count - zero_count
+            return (f"File Analysis Complete{file_info}:\n\n"
+                   f"GrossCost Analysis:\n"
+                   f"• Total records: {total_count:,}\n"
+                   f"• Records with cost data: {has_costs_count:,} ({100-blank_or_zero_percent:.1f}%)\n"
+                   f"• Blank/zero values: {null_count + zero_count:,} ({blank_or_zero_percent:.1f}%)\n\n"
+                   f"🎯 TEMPLATE RECOMMENDATION: STANDARD TEMPLATE\n"
+                   f"Your data contains significant cost information - use the Standard template to properly process this data.")
