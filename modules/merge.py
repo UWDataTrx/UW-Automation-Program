@@ -5,11 +5,19 @@ from openpyxl import load_workbook
 from openpyxl.styles import NamedStyle
 import logging
 
-from utils.utils import write_shared_log
-
 # Add the project root directory to the Python path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+project_root = Path(__file__).parent.parent.resolve()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Try to import write_shared_log, create a fallback if not available
+try:
+    from utils.utils import write_shared_log
+except ImportError:
+    # Fallback function if utils.utils is not available
+    def write_shared_log(script_name, message, status="INFO"):
+        """Fallback logging function when utils.utils is not available"""
+        print(f"[{status}] {script_name}: {message}")
 
 # Configure logging
 logging.basicConfig(
