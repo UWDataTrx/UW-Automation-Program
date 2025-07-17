@@ -405,13 +405,16 @@ class DiagnosticTool:
         else:
             self.add_line("✓ No major issues detected!")
             
-        # Save report
+        # Save report locally
         report_file = Path("diagnostic_report.txt")
         with open(report_file, 'w', encoding='utf-8') as f:
             f.write('\n'.join(self.report_lines))
             
         print("\nDiagnostic complete!")
         print(f"Report saved to: {report_file.absolute()}")
+        
+        # Try to automatically upload report to support directory
+        self._upload_report_to_support(report_file)
         
         # Print summary to console
         print("\n" + "="*50)
@@ -433,6 +436,64 @@ class DiagnosticTool:
         
         return len(self.issues_found) == 0
 
+    def _upload_report_to_support(self, report_file):
+        """Automatically upload diagnostic report to support directory."""
+        try:
+            # Support directory path
+            support_dir = Path(r"C:\Users\DamionMorrison\OneDrive - True Rx Health Strategists\True Community - Data Analyst\UW Python Program\Diagnostic Reports")
+            
+            # Create support directory if it doesn't exist
+            support_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Get user information for unique filename
+            import getpass
+            import socket
+            
+            username = getpass.getuser()
+            hostname = socket.gethostname()
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Create unique filename
+            unique_filename = f"diagnostic_report_{username}_{hostname}_{timestamp}.txt"
+            support_file_path = support_dir / unique_filename
+            
+            # Copy report to support directory
+            import shutil
+            shutil.copy2(report_file, support_file_path)
+            
+            print("✓ Report automatically uploaded to support directory:")
+            print(f"  Location: {support_file_path}")
+            print(f"  Filename: {unique_filename}")
+            
+            # Also create a summary file for quick overview
+            summary_file = support_dir / f"summary_{username}_{hostname}_{timestamp}.txt"
+            with open(summary_file, 'w', encoding='utf-8') as f:
+                f.write("Diagnostic Report Summary\n")
+                f.write("========================\n")
+                f.write(f"User: {username}\n")
+                f.write(f"Computer: {hostname}\n")
+                f.write(f"Generated: {datetime.now()}\n")
+                f.write(f"Platform: {platform.platform()}\n")
+                f.write(f"Python Version: {sys.version.split()[0]}\n")
+                f.write(f"Issues Found: {len(self.issues_found)}\n")
+                f.write("\nIssues:\n")
+                for i, issue in enumerate(self.issues_found, 1):
+                    f.write(f"{i}. {issue}\n")
+                f.write(f"\nFull Report: {unique_filename}\n")
+            
+            print(f"✓ Summary also created: summary_{username}_{hostname}_{timestamp}.txt")
+            
+            return True
+            
+        except PermissionError:
+            print("⚠ Could not upload report - permission denied to support directory")
+            print("  Please manually send the diagnostic_report.txt file")
+            return False
+        except Exception as e:
+            print(f"⚠ Could not upload report automatically: {e}")
+            print("  Please manually send the diagnostic_report.txt file")
+            return False
+
 def main():
     """Main function to run diagnostics."""
     try:
@@ -445,10 +506,12 @@ def main():
         else:
             print("Issues detected - please review recommendations above.")
             
-        print("\nTo share this report with support:")
-        print("1. Send the diagnostic_report.txt file")
-        print("2. Include any specific error messages you're seeing")
-        print("3. Describe what you were trying to do when the problem occurred")
+        print("\nSupport Information:")
+        print("• Your diagnostic report has been automatically sent to support")
+        print("• If you need immediate assistance, describe:")
+        print("  - What you were trying to do when the problem occurred")
+        print("  - Any specific error messages you saw")
+        print("  - When the problem started")
         
         return 0 if success else 1
         

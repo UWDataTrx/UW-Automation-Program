@@ -24,15 +24,22 @@ The diagnostic tool will check for:
 - ✅ Configuration files
 - ✅ Recent error logs
 
-### Step 3: Share Information for Support
+### Step 3: Automatic Report Submission
 
-When reporting an issue, please include:
+✅ **Your diagnostic report is automatically sent to support!**
 
-1. **The complete `diagnostic_report.txt` file**
+When you run the diagnostic tool, it will:
+- Generate a detailed report of your system
+- **Automatically upload it to the support team**
+- Create a summary file for quick review
+- Show you a unique filename for reference
+
+If you need immediate assistance, please contact support with:
+
+1. **The unique filename** shown in the diagnostic results
 2. **Specific error messages** you're seeing (screenshots help!)
 3. **What you were trying to do** when the problem occurred
-4. **What files you were processing** (file names, sizes)
-5. **Any recent changes** to your system or Excel installation
+4. **When the problem started** (today, last week, after an update, etc.)
 
 ## Common Issues and Quick Fixes
 
