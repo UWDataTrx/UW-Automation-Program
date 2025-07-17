@@ -9,17 +9,17 @@ def process_logic_block(df_block):
     """
     arr = df_block.to_numpy()
     col_idx = {col: i for i, col in enumerate(df_block.columns)}
-    
+
     # Extract and prepare data
     logic_data = _extract_logic_data(arr, col_idx)
-    
+
     # Early return if no reversals to process
     if not np.any(logic_data["is_reversal"]):
         return pd.DataFrame(arr, columns=df_block.columns)
-    
+
     # Process reversals with reduced nesting
     _process_reversals(arr, col_idx, logic_data)
-    
+
     return pd.DataFrame(arr, columns=df_block.columns)
 
 
@@ -33,7 +33,7 @@ def _extract_logic_data(arr, col_idx):
         "ndc": arr[:, col_idx["NDC"]].astype(str),
         "member": arr[:, col_idx["MemberID"]].astype(str),
         "datefilled": pd.to_datetime(arr[:, col_idx["DATEFILLED"]], errors="coerce"),
-        "abs_qty": np.abs(qty)
+        "abs_qty": np.abs(qty),
     }
 
 
@@ -41,21 +41,21 @@ def _process_reversals(arr, col_idx, logic_data):
     """Process reversals with matching logic, using guard clauses to reduce nesting."""
     rev_idx = np.where(logic_data["is_reversal"])[0]
     claim_idx = (
-        np.where(logic_data["is_claim"])[0] 
-        if np.any(logic_data["is_claim"]) 
+        np.where(logic_data["is_claim"])[0]
+        if np.any(logic_data["is_claim"])
         else np.array([], dtype=int)
     )
-    
+
     match_context = {
         "arr": arr,
         "col_idx": col_idx,
         "logic_data": logic_data,
-        "claim_idx": claim_idx
+        "claim_idx": claim_idx,
     }
-    
+
     for i in rev_idx:
         found_match = _try_find_match(match_context, i)
-        
+
         # Mark unmatched reversals as 'OR'
         if not found_match:
             arr[i, col_idx["Logic"]] = "OR"
@@ -67,18 +67,18 @@ def _try_find_match(match_context, reversal_idx):
     col_idx = match_context["col_idx"]
     logic_data = match_context["logic_data"]
     claim_idx = match_context["claim_idx"]
-    
+
     # Guard clause: no claims to match against
     if claim_idx.size == 0:
         return False
-    
+
     # Find potential matches
     matches = _find_matching_claims(logic_data, claim_idx, reversal_idx)
-    
+
     # Guard clause: no matches found
     if not np.any(matches):
         return False
-    
+
     # Mark both reversal and matching claim as 'OR'
     arr[reversal_idx, col_idx["Logic"]] = "OR"
     arr[claim_idx[matches][0], col_idx["Logic"]] = "OR"
@@ -92,13 +92,15 @@ def _find_matching_claims(logic_data, claim_idx, reversal_idx):
         & (logic_data["member"][claim_idx] == logic_data["member"][reversal_idx])
         & (logic_data["abs_qty"][claim_idx] == logic_data["abs_qty"][reversal_idx])
     )
-    
+
     # Add date constraint (within 30 days)
     date_diffs = np.abs(
-        (logic_data["datefilled"][claim_idx] - logic_data["datefilled"][reversal_idx]).days
+        (
+            logic_data["datefilled"][claim_idx] - logic_data["datefilled"][reversal_idx]
+        ).days
     )
     matches &= date_diffs <= 30
-    
+
     return matches
 
 

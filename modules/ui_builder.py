@@ -17,24 +17,24 @@ from config.app_config import DisruptionConfig, AppConstants
 
 class UIBuilder:
     """Handles the construction of the main application UI."""
-    
+
     def __init__(self, app_instance):
         self.app = app_instance
-        
+
     def build_complete_ui(self):
         """Build the complete user interface."""
         self._setup_window()
         self._build_ui_components()
         self._setup_default_template()
         self._show_welcome_message()
-        
+
     def _setup_window(self):
         """Configure the main window properties."""
         self.app.root.title("Reprice Automation")
         self.app.root.configure(fg_color=LIGHT_COLORS["dark_blue"])
         self.app.root.resizable(True, True)
         self.app.root.geometry("900x900")
-        
+
     def _build_ui_components(self):
         """Build all UI components."""
         self._create_title()
@@ -42,7 +42,7 @@ class UIBuilder:
         self._create_notes_frame()
         self._create_disruption_frame()
         self._create_progress_frame()
-        
+
     def _create_title(self):
         """Create the title label."""
         self.app.title_label = ctk.CTkLabel(
@@ -85,7 +85,9 @@ class UIBuilder:
             self.app.button_frame, "Import File From Tool", self.app.import_file2
         )
         self.app.file2_button.grid(row=2, column=0, pady=10, padx=10, sticky="ew")
-        self.app.file2_label = UIFactory.create_standard_label(self.app.button_frame, "")
+        self.app.file2_label = UIFactory.create_standard_label(
+            self.app.button_frame, ""
+        )
         self.app.file2_label.grid(row=2, column=2, pady=20, padx=10)
 
         # Select Template
@@ -93,7 +95,9 @@ class UIBuilder:
             self.app.button_frame, "Select Template File", self.app.import_template_file
         )
         self.app.template_button.grid(row=3, column=0, pady=10, padx=10, sticky="ew")
-        self.app.template_label = UIFactory.create_standard_label(self.app.button_frame, "")
+        self.app.template_label = UIFactory.create_standard_label(
+            self.app.button_frame, ""
+        )
         self.app.template_label.grid(row=3, column=2, pady=20, padx=10)
 
     def _create_action_buttons(self):
@@ -114,7 +118,9 @@ class UIBuilder:
         self.app.toggle_theme_button = UIFactory.create_standard_button(
             self.app.button_frame, "Switch to Dark Mode", self.toggle_dark_mode
         )
-        self.app.toggle_theme_button.grid(row=4, column=2, pady=10, padx=10, sticky="ew")
+        self.app.toggle_theme_button.grid(
+            row=4, column=2, pady=10, padx=10, sticky="ew"
+        )
 
         # Shared Log Button
         self.app.shared_log_button = UIFactory.create_standard_button(
@@ -135,13 +141,13 @@ class UIBuilder:
             self.app.button_frame, "Generate SHARx LBL", self.app.sharx_lbl
         )
         self.app.sharx_lbl_button.grid(row=5, column=0, pady=10, padx=10, sticky="ew")
-        
+
         # EPLS LBL button
         self.app.epls_lbl_button = UIFactory.create_standard_button(
             self.app.button_frame, "Generate EPLS LBL", self.app.epls_lbl
         )
         self.app.epls_lbl_button.grid(row=5, column=1, pady=10, padx=10, sticky="ew")
-        
+
         # Start Process button
         self.app.start_process_button = ctk.CTkButton(
             self.app.button_frame,
@@ -153,7 +159,9 @@ class UIBuilder:
             fg_color=LIGHT_COLORS["mint"],
             text_color="#000000",
         )
-        self.app.start_process_button.grid(row=5, column=2, pady=10, padx=10, sticky="ew")
+        self.app.start_process_button.grid(
+            row=5, column=2, pady=10, padx=10, sticky="ew"
+        )
 
     def _create_notes_frame(self):
         """Create the notes frame with important information."""
@@ -178,8 +186,9 @@ class UIBuilder:
         disruption_labels = DisruptionConfig.get_disruption_labels()
         for idx, label in enumerate(disruption_labels):
             btn = UIFactory.create_standard_button(
-                self.app.dis_frame, label, 
-                lambda label_text=label: self.app.start_disruption(label_text)
+                self.app.dis_frame,
+                label,
+                lambda label_text=label: self.app.start_disruption(label_text),
             )
             btn.grid(row=0, column=idx, padx=10, pady=10, sticky="ew")
 
@@ -198,24 +207,22 @@ class UIBuilder:
             self.app.prog_frame, textvariable=self.app.progress_label_var
         )
         self.app.progress_label.pack(padx=10, pady=(0, 10), anchor="w")
-        
+
     def _setup_default_template(self):
         """Set up default template if it exists."""
         default_template = Path("_Rx Repricing_wf.xlsx")
         if default_template.exists():
             self.app.template_file_path = str(default_template)
-            if hasattr(self.app, 'template_label'):
-                self.app.template_label.configure(
-                    text=default_template.name
-                )
+            if hasattr(self.app, "template_label"):
+                self.app.template_label.configure(text=default_template.name)
         else:
             self.app.template_file_path = None
-            
+
     def _show_welcome_message(self):
         """Show a personalized welcome message with a random joke and emoji."""
         user = getpass.getuser()
         welcome_messages = AppConstants.WELCOME_MESSAGES
-        
+
         msg = welcome_messages.get(
             user, f"Welcome, {user}! Ready to use the Repricing Automation Toolkit?"
         )
@@ -225,13 +232,15 @@ class UIBuilder:
             joke = pyjokes.get_joke()
         except Exception:
             joke = "Have a great day!"
-            
-        chosen_emoji = emoji.emojize(random.choice(AppConstants.EMOJIS), language="alias")
+
+        chosen_emoji = emoji.emojize(
+            random.choice(AppConstants.EMOJIS), language="alias"
+        )
         full_msg = f"{msg}\n\n{joke} {chosen_emoji}"
-        
+
         # Show after UI is built
         self.app.root.after(500, lambda: messagebox.showinfo("Welcome", full_msg))
-        
+
     def toggle_dark_mode(self):
         """Toggle between light and dark modes."""
         current = ctk.get_appearance_mode().lower()
@@ -240,14 +249,14 @@ class UIBuilder:
             self._switch_to_dark_mode()
         else:
             self._switch_to_light_mode()
-            
+
     def _switch_to_dark_mode(self):
         """Switch to dark mode."""
         ctk.set_appearance_mode("dark")
         self.app.apply_theme_colors(DARK_COLORS)
         if self.app.toggle_theme_button:
             self.app.toggle_theme_button.configure(text="Switch to Light Mode")
-            
+
     def _switch_to_light_mode(self):
         """Switch to light mode."""
         ctk.set_appearance_mode("light")

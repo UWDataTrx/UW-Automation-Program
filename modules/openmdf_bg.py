@@ -3,7 +3,11 @@ import logging
 import os
 import sys
 from pathlib import Path
+
+# Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import required utility functions
 from utils.utils import (
     load_file_paths,
     standardize_pharmacy_ids,
@@ -17,6 +21,8 @@ from utils.utils import (
     write_shared_log,
 )
 from utils.excel_utils import safe_excel_write, check_disk_space
+
+# Import audit helper functions
 from modules.audit_helper import (
     make_audit_entry,
     log_user_session_start,
@@ -66,7 +72,9 @@ def process_data():
 
         if "reprice" not in paths or not paths["reprice"]:
             logger.warning("No reprice/template file provided.")
-            make_audit_entry("openmdf_bg.py", "No reprice/template file provided.", "FILE_ERROR")
+            make_audit_entry(
+                "openmdf_bg.py", "No reprice/template file provided.", "FILE_ERROR"
+            )
             write_shared_log(
                 "openmdf_bg.py", "No reprice/template file provided.", status="ERROR"
             )
@@ -84,7 +92,11 @@ def process_data():
                 logger.error(
                     f"Sheet 'Claims Table' not found in {paths['reprice']}. Sheets: {xl.sheet_names}"
                 )
-                make_audit_entry("openmdf_bg.py", f"Sheet 'Claims Table' not found. Available sheets: {xl.sheet_names}", "DATA_ERROR")
+                make_audit_entry(
+                    "openmdf_bg.py",
+                    f"Sheet 'Claims Table' not found. Available sheets: {xl.sheet_names}",
+                    "DATA_ERROR",
+                )
                 write_shared_log(
                     "openmdf_bg.py",
                     f"Sheet 'Claims Table' not found in {paths['reprice']}. Sheets: {xl.sheet_names}",
@@ -93,25 +105,27 @@ def process_data():
                 log_user_session_end("openmdf_bg.py")
                 return False
             claims = xl.parse(
-            "Claims Table",
-            usecols=[
-                "SOURCERECORDID",
-                "NDC",
-                "MemberID",
-                "DATEFILLED",
-                "FormularyTier",
-                "Rxs",
-                "Logic",
-                "PHARMACYNPI",
-                "NABP",
-                "Pharmacy Name",
-                "Universal Rebates",
-                "Exclusive Rebates",
-            ],
-        )
+                "Claims Table",
+                usecols=[
+                    "SOURCERECORDID",
+                    "NDC",
+                    "MemberID",
+                    "DATEFILLED",
+                    "FormularyTier",
+                    "Rxs",
+                    "Logic",
+                    "PHARMACYNPI",
+                    "NABP",
+                    "Pharmacy Name",
+                    "Universal Rebates",
+                    "Exclusive Rebates",
+                ],
+            )
         except Exception as e:
             logger.error(f"Failed to read Claims Table: {e}")
-            make_audit_entry("openmdf_bg.py", f"Failed to read Claims Table: {e}", "FILE_ERROR")
+            make_audit_entry(
+                "openmdf_bg.py", f"Failed to read Claims Table: {e}", "FILE_ERROR"
+            )
             write_shared_log(
                 "openmdf_bg.py", f"Failed to read Claims Table: {e}", status="ERROR"
             )
@@ -119,9 +133,15 @@ def process_data():
             return False
     except Exception as e:
         logger.error(f"Failed to load configuration or reprice file: {e}")
-        make_audit_entry("openmdf_bg.py", f"Failed to load configuration or reprice file: {e}", "FILE_ERROR")
+        make_audit_entry(
+            "openmdf_bg.py",
+            f"Failed to load configuration or reprice file: {e}",
+            "FILE_ERROR",
+        )
         write_shared_log(
-            "openmdf_bg.py", f"Failed to load configuration or reprice file: {e}", status="ERROR"
+            "openmdf_bg.py",
+            f"Failed to load configuration or reprice file: {e}",
+            status="ERROR",
         )
         log_user_session_end("openmdf_bg.py")
         return False
@@ -135,7 +155,9 @@ def process_data():
         log_file_access("openmdf_bg.py", paths["medi_span"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read medi_span file: {paths['medi_span']} | {e}")
-        make_audit_entry("openmdf_bg.py", f"Failed to read medi_span file: {e}", "FILE_ERROR")
+        make_audit_entry(
+            "openmdf_bg.py", f"Failed to read medi_span file: {e}", "FILE_ERROR"
+        )
         write_shared_log(
             "openmdf_bg.py",
             f"Failed to read medi_span file: {paths['medi_span']} | {e}",
@@ -150,7 +172,9 @@ def process_data():
         log_file_access("openmdf_bg.py", paths["mdf_disrupt"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read mdf_disrupt file: {paths['mdf_disrupt']} | {e}")
-        make_audit_entry("openmdf_bg.py", f"Failed to read mdf_disrupt file: {e}", "FILE_ERROR")
+        make_audit_entry(
+            "openmdf_bg.py", f"Failed to read mdf_disrupt file: {e}", "FILE_ERROR"
+        )
         write_shared_log(
             "openmdf_bg.py",
             f"Failed to read mdf_disrupt file: {paths['mdf_disrupt']} | {e}",
@@ -165,7 +189,9 @@ def process_data():
         log_file_access("openmdf_bg.py", paths["n_disrupt"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read n_disrupt file: {paths['n_disrupt']} | {e}")
-        make_audit_entry("openmdf_bg.py", f"Failed to read n_disrupt file: {e}", "FILE_ERROR")
+        make_audit_entry(
+            "openmdf_bg.py", f"Failed to read n_disrupt file: {e}", "FILE_ERROR"
+        )
         write_shared_log(
             "openmdf_bg.py",
             f"Failed to read n_disrupt file: {paths['n_disrupt']} | {e}",
@@ -181,7 +207,9 @@ def process_data():
         log_file_access("openmdf_bg.py", paths["e_disrupt"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read e_disrupt file: {paths['e_disrupt']} | {e}")
-        make_audit_entry("openmdf_bg.py", f"Failed to read e_disrupt file: {e}", "FILE_ERROR")
+        make_audit_entry(
+            "openmdf_bg.py", f"Failed to read e_disrupt file: {e}", "FILE_ERROR"
+        )
         write_shared_log(
             "openmdf_bg.py",
             f"Failed to read e_disrupt file: {paths['e_disrupt']} | {e}",
@@ -304,21 +332,33 @@ def process_data():
             output_path = output_filename
 
     # Write LBL output unconditionally (no --output-lbl flag required)
-    
+
     # Check disk space before attempting to write
     if not check_disk_space(".", 500):  # Require 500MB free space
         logger.error("Insufficient disk space for Excel operations")
-        make_audit_entry("openmdf_bg.py", "Insufficient disk space for Excel operations", "SYSTEM_ERROR")
-        write_shared_log("openmdf_bg.py", "Insufficient disk space for Excel operations", status="ERROR")
+        make_audit_entry(
+            "openmdf_bg.py",
+            "Insufficient disk space for Excel operations",
+            "SYSTEM_ERROR",
+        )
+        write_shared_log(
+            "openmdf_bg.py",
+            "Insufficient disk space for Excel operations",
+            status="ERROR",
+        )
         log_user_session_end("openmdf_bg.py")
         return False
-    
+
     try:
         writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
     except Exception as e:
         logger.error(f"Failed to create Excel writer for {output_path}: {e}")
-        make_audit_entry("openmdf_bg.py", f"Failed to create Excel writer: {e}", "FILE_ERROR")
-        write_shared_log("openmdf_bg.py", f"Failed to create Excel writer: {e}", status="ERROR")
+        make_audit_entry(
+            "openmdf_bg.py", f"Failed to create Excel writer: {e}", "FILE_ERROR"
+        )
+        write_shared_log(
+            "openmdf_bg.py", f"Failed to create Excel writer: {e}", status="ERROR"
+        )
         log_user_session_end("openmdf_bg.py")
         return False
 
@@ -344,7 +384,7 @@ def process_data():
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
             # Add Result column with "NA" value
             na_pharmacies_output["Result"] = "NA"
-            
+
             # Use pandas to write to Excel, which is simpler and more reliable
             try:
                 # Try to append to existing file
@@ -352,24 +392,32 @@ def process_data():
                     # Read existing data
                     existing_df = pd.read_excel(output_file_path)
                     # Concatenate with new data
-                    combined_df = pd.concat([existing_df, na_pharmacies_output], ignore_index=True)
+                    combined_df = pd.concat(
+                        [existing_df, na_pharmacies_output], ignore_index=True
+                    )
                     # Remove duplicates
                     combined_df = combined_df.drop_duplicates()
                 else:
                     combined_df = na_pharmacies_output
-                
+
                 # Write to Excel using safe method
                 if not safe_excel_write(combined_df, output_file_path, index=False):
-                    logger.error(f"Safe write failed for {output_file_path}, trying fallback")
+                    logger.error(
+                        f"Safe write failed for {output_file_path}, trying fallback"
+                    )
                     # Fallback to direct pandas write
                     combined_df.to_excel(output_file_path, index=False)
-                logger.info(f"NA pharmacies written to '{output_file_path}' with Result column.")
-                
+                logger.info(
+                    f"NA pharmacies written to '{output_file_path}' with Result column."
+                )
+
             except Exception as e:
                 logger.error(f"Error updating pharmacy validation file: {e}")
                 # Fallback - just write the new data
                 na_pharmacies_output.to_excel(output_file_path, index=False)
-                logger.info(f"NA pharmacies written to '{output_file_path}' (fallback mode).")
+                logger.info(
+                    f"NA pharmacies written to '{output_file_path}' (fallback mode)."
+                )
 
     summary = pd.DataFrame(
         {
@@ -503,35 +551,51 @@ def process_data():
     try:
         writer.close()
         logger.info(f"Excel writer closed successfully for {output_path}")
-        
+
         # Validate the output file was created correctly
         if not os.path.exists(output_path):
             raise FileNotFoundError(f"Output file was not created: {output_path}")
-        
+
         # Quick validation of the Excel file
         try:
             pd.read_excel(output_path, nrows=1)
             logger.info(f"Output file validation successful: {output_path}")
         except Exception as validation_error:
             logger.error(f"Output file validation failed: {validation_error}")
-            make_audit_entry("openmdf_bg.py", f"Output file validation failed: {validation_error}", "FILE_ERROR")
-            write_shared_log("openmdf_bg.py", f"Output file validation failed: {validation_error}", status="ERROR")
+            make_audit_entry(
+                "openmdf_bg.py",
+                f"Output file validation failed: {validation_error}",
+                "FILE_ERROR",
+            )
+            write_shared_log(
+                "openmdf_bg.py",
+                f"Output file validation failed: {validation_error}",
+                status="ERROR",
+            )
             # Don't return False here as the file might still be usable
-        
+
     except Exception as e:
         logger.error(f"Failed to close Excel writer: {e}")
-        make_audit_entry("openmdf_bg.py", f"Failed to close Excel writer: {e}", "FILE_ERROR")
-        write_shared_log("openmdf_bg.py", f"Failed to close Excel writer: {e}", status="ERROR")
+        make_audit_entry(
+            "openmdf_bg.py", f"Failed to close Excel writer: {e}", "FILE_ERROR"
+        )
+        write_shared_log(
+            "openmdf_bg.py", f"Failed to close Excel writer: {e}", status="ERROR"
+        )
         log_user_session_end("openmdf_bg.py")
         return False
-    
+
     # Log successful completion
     logger.info(f"Open MDF BG processing completed. Output file: {output_path}")
-    make_audit_entry("openmdf_bg.py", f"Successfully generated Open MDF BG report: {output_path}", "INFO")
+    make_audit_entry(
+        "openmdf_bg.py",
+        f"Successfully generated Open MDF BG report: {output_path}",
+        "INFO",
+    )
     log_file_access("openmdf_bg.py", str(output_path), "CREATED")
     write_shared_log("openmdf_bg.py", "Processing complete.")
     log_user_session_end("openmdf_bg.py")
-    
+
     # Final cleanup and completion message
     try:
         import tkinter as tk
@@ -543,7 +607,7 @@ def process_data():
         root.destroy()
     except Exception:
         pass
-    
+
     return True
 
 

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 # Load the audit log path from config
 config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-with open(config_path, 'r') as f:
+with open(config_path, "r") as f:
     file_paths = json.load(f)
 shared_log_path = os.path.expandvars(file_paths["audit_log"])
 
@@ -18,6 +18,7 @@ shared_log_path = os.path.expandvars(file_paths["audit_log"])
 @dataclass
 class LogicMaintenanceConfig:
     """Configuration for logic and maintenance filtering."""
+
     logic_col: str = "Logic"
     min_logic: int = 5
     max_logic: int = 10
@@ -227,7 +228,7 @@ def filter_logic_and_maintenance(df, config=None):
     """
     if config is None:
         config = LogicMaintenanceConfig()
-    
+
     return df[
         (df[config.logic_col] >= config.min_logic)
         & (df[config.logic_col] <= config.max_logic)

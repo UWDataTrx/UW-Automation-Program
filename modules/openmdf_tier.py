@@ -3,7 +3,11 @@ import logging
 import os
 import sys
 from pathlib import Path
+
+# Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import required utility functions
 from utils.utils import (
     load_file_paths,
     standardize_pharmacy_ids,
@@ -16,6 +20,8 @@ from utils.utils import (
     filter_products_and_alternative,
     write_shared_log,
 )
+
+# Import audit helper functions
 from modules.audit_helper import (
     make_audit_entry,
     log_user_session_start,
@@ -70,7 +76,9 @@ def load_openmdf_tier_data(file_paths):
         claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table")
     except Exception as e:
         logger.error(f"Error loading claims: {e}")
-        make_audit_entry("openmdf_tier.py", f"Claims Table fallback error: {e}", "FILE_ERROR")
+        make_audit_entry(
+            "openmdf_tier.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
+        )
         claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
 
     print(f"claims shape: {claims.shape}")
@@ -78,7 +86,9 @@ def load_openmdf_tier_data(file_paths):
 
     # Load reference tables
     try:
-        medi = pd.read_excel(file_paths["medi_span"])[["NDC", "Maint Drug?", "Product Name"]]
+        medi = pd.read_excel(file_paths["medi_span"])[
+            ["NDC", "Maint Drug?", "Product Name"]
+        ]
         print(f"medi shape: {medi.shape}")
     except Exception as e:
         logger.error(f"Failed to read medi_span file: {file_paths['medi_span']} | {e}")
@@ -95,7 +105,9 @@ def load_openmdf_tier_data(file_paths):
         ]
         print(f"mdf shape: {mdf.shape}")
     except Exception as e:
-        logger.error(f"Failed to read mdf_disrupt file: {file_paths['mdf_disrupt']} | {e}")
+        logger.error(
+            f"Failed to read mdf_disrupt file: {file_paths['mdf_disrupt']} | {e}"
+        )
         write_shared_log(
             "openmdf_tier.py",
             f"Failed to read mdf_disrupt file: {file_paths['mdf_disrupt']} | {e}",
@@ -104,9 +116,9 @@ def load_openmdf_tier_data(file_paths):
         return None
 
     try:
-        exclusive = pd.read_excel(file_paths["e_disrupt"], sheet_name="Alternatives NDC")[
-            ["NDC", "Tier", "Alternative"]
-        ]
+        exclusive = pd.read_excel(
+            file_paths["e_disrupt"], sheet_name="Alternatives NDC"
+        )[["NDC", "Tier", "Alternative"]]
         print(f"exclusive shape: {exclusive.shape}")
     except Exception as e:
         logger.error(f"Failed to read e_disrupt file: {file_paths['e_disrupt']} | {e}")
@@ -137,7 +149,7 @@ def load_openmdf_tier_data(file_paths):
 def process_openmdf_data_pipeline(claims, reference_data, network):
     """Process the data pipeline for Open MDF tier disruption."""
     medi, mdf, exclusive = reference_data
-    
+
     # Merge reference data
     df = claims.merge(medi, on="NDC", how="left")
     print(f"After merge with medi: {df.shape}")
@@ -216,7 +228,7 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
             # Add Result column with "NA" value
             na_pharmacies_output["Result"] = "NA"
-            
+
             # Use pandas to write to Excel, which is simpler and more reliable
             try:
                 # Try to append to existing file
@@ -224,28 +236,36 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
                     # Read existing data
                     existing_df = pd.read_excel(output_file_path)
                     # Concatenate with new data
-                    combined_df = pd.concat([existing_df, na_pharmacies_output], ignore_index=True)
+                    combined_df = pd.concat(
+                        [existing_df, na_pharmacies_output], ignore_index=True
+                    )
                     # Remove duplicates
                     combined_df = combined_df.drop_duplicates()
                 else:
                     combined_df = na_pharmacies_output
-                
+
                 # Write to Excel
                 combined_df.to_excel(output_file_path, index=False)
-                logger.info(f"NA pharmacies written to '{output_file_path}' with Result column.")
-                
+                logger.info(
+                    f"NA pharmacies written to '{output_file_path}' with Result column."
+                )
+
             except Exception as e:
                 logger.error(f"Error updating pharmacy validation file: {e}")
                 # Fallback - just write the new data
                 na_pharmacies_output.to_excel(output_file_path, index=False)
-                logger.info(f"NA pharmacies written to '{output_file_path}' (fallback mode).")
+                logger.info(
+                    f"NA pharmacies written to '{output_file_path}' (fallback mode)."
+                )
                 # Fallback to original method
                 writer = pd.ExcelWriter(output_file_path, engine="openpyxl")
                 na_pharmacies_output.to_excel(
                     writer, sheet_name="Validations", index=False, engine="openpyxl"
                 )
                 writer.close()
-                logger.info(f"NA pharmacies written to '{output_file_path}' sheet (fallback).")
+                logger.info(
+                    f"NA pharmacies written to '{output_file_path}' sheet (fallback)."
+                )
 
     return df
 
@@ -347,6 +367,7 @@ def create_openmdf_network_analysis(df):
     logger.debug(f"Initial network_df contents: {network_df.head(10).to_dict()}")
 
     import re
+
     filter_phrases = [
         "CVS",
         "Walgreens",
@@ -359,9 +380,7 @@ def create_openmdf_network_analysis(df):
         "Williams Bro",
         "Publix",
     ]
-    filter_phrases_escaped = [
-        re.escape(phrase.lower()) for phrase in filter_phrases
-    ]
+    filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
     regex_pattern = "|".join([f"\\b{p}\\b" for p in filter_phrases_escaped])
     network_df = network_df[
         ~network_df["Pharmacy Name"]
@@ -395,13 +414,15 @@ def create_openmdf_network_analysis(df):
         )  # Ensure index columns are included in the output
         logger.debug(f"Network pivot shape: {network_pivot.shape}")
         logger.debug(f"Network pivot contents: {network_pivot.head(10).to_dict()}")
-        
+
         return network_df, network_pivot
-    
+
     return network_df, None
 
 
-def write_openmdf_excel_sheets(writer, df, summary_df, tier_pivots, network_df, network_pivot):
+def write_openmdf_excel_sheets(
+    writer, df, summary_df, tier_pivots, network_df, network_pivot
+):
     """Write all sheets to the Excel file."""
     # Write Summary sheet
     summary_df.to_excel(writer, sheet_name="Summary", index=False)
@@ -475,13 +496,13 @@ def process_data():
     # Start audit session
     log_user_session_start("openmdf_tier.py")
     write_shared_log("openmdf_tier.py", "Processing started.")
-    
+
     # Output filename from CLI arg or default
     output_filename = "LBL for Disruption.xlsx"
     if len(sys.argv) > 1:
         output_filename = sys.argv[1]
     output_path = Path(output_filename).resolve()
-    
+
     try:
         # Get the config file path relative to the project root
         config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
@@ -489,12 +510,16 @@ def process_data():
 
         result = load_openmdf_tier_data(file_paths)
         if result is None:
-            make_audit_entry("openmdf_tier.py", "Claims loading failed - early exit", "DATA_ERROR")
+            make_audit_entry(
+                "openmdf_tier.py", "Claims loading failed - early exit", "DATA_ERROR"
+            )
             return  # Early exit if claims loading failed
         claims, medi, mdf, exclusive, network = result
 
         # Log file access
-        log_file_access("openmdf_tier.py", file_paths.get("reprice", "unknown"), "LOADING")
+        log_file_access(
+            "openmdf_tier.py", file_paths.get("reprice", "unknown"), "LOADING"
+        )
 
         reference_data = (medi, mdf, exclusive)
         df = process_openmdf_data_pipeline(claims, reference_data, network)
@@ -507,9 +532,13 @@ def process_data():
         # Totals for summary
         total_claims = df["Rxs"].sum()
         total_members = df["MemberID"].nunique()
-        
+
         # Log data processing metrics
-        make_audit_entry("openmdf_tier.py", f"Processed {total_claims} claims for {total_members} members", "INFO")
+        make_audit_entry(
+            "openmdf_tier.py",
+            f"Processed {total_claims} claims for {total_members} members",
+            "INFO",
+        )
 
         # Excel writer setup
         writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
@@ -520,7 +549,9 @@ def process_data():
         tier_pivots, tab_members, tab_rxs = process_openmdf_tier_pivots(df, tiers)
 
         # Summary calculations
-        summary_df = create_openmdf_summary_dataframe(tab_members, tab_rxs, total_claims, total_members)
+        summary_df = create_openmdf_summary_dataframe(
+            tab_members, tab_rxs, total_claims, total_members
+        )
         summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
         # Write tier pivots after Summary
@@ -568,17 +599,21 @@ def process_data():
 
         writer.close()
         # Log successful completion
-        make_audit_entry("openmdf_tier.py", f"Successfully generated Open MDF Tier report: {output_filename}", "INFO")
+        make_audit_entry(
+            "openmdf_tier.py",
+            f"Successfully generated Open MDF Tier report: {output_filename}",
+            "INFO",
+        )
         log_file_access("openmdf_tier.py", str(output_path), "CREATED")
-        
+
         show_openmdf_completion_message(output_path)
-        
+
     except Exception as e:
         # Log detailed error information
-        make_audit_entry("openmdf_tier.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR")
-        write_shared_log(
-            "openmdf_tier.py", f"Processing failed: {e}", status="ERROR"
+        make_audit_entry(
+            "openmdf_tier.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR"
         )
+        write_shared_log("openmdf_tier.py", f"Processing failed: {e}", status="ERROR")
         raise
     finally:
         # End audit session

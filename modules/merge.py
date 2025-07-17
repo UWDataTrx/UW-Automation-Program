@@ -19,6 +19,7 @@ except ImportError:
         """Fallback logging function when utils.utils is not available"""
         print(f"[{status}] {script_name}: {message}")
 
+
 # Configure logging
 logging.basicConfig(
     filename="merge_log.log",

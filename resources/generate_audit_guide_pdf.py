@@ -6,27 +6,27 @@ import markdown
 from weasyprint import HTML
 from pathlib import Path
 
+
 def generate_audit_guide_pdf():
     """Generate PDF from the AUDIT_SYSTEM_GUIDE.md file."""
-    
+
     # Get the current directory
     current_dir = Path(__file__).parent
-    
+
     # Input and output file paths
     md_file = current_dir / "AUDIT_SYSTEM_GUIDE.md"
     pdf_file = current_dir / "AUDIT_SYSTEM_GUIDE.pdf"
-    
+
     try:
         # Read the markdown file
-        with open(md_file, 'r', encoding='utf-8') as f:
+        with open(md_file, "r", encoding="utf-8") as f:
             md_content = f.read()
-        
+
         # Convert markdown to HTML
         html_content = markdown.markdown(
-            md_content, 
-            extensions=['codehilite', 'fenced_code', 'tables', 'toc']
+            md_content, extensions=["codehilite", "fenced_code", "tables", "toc"]
         )
-        
+
         # Create a complete HTML document with styling
         full_html = f"""
         <!DOCTYPE html>
@@ -156,23 +156,24 @@ def generate_audit_guide_pdf():
         </body>
         </html>
         """
-        
+
         # Generate PDF using WeasyPrint
         HTML(string=full_html).write_pdf(str(pdf_file))
-        
+
         print(f"✅ PDF generated successfully: {pdf_file}")
         print(f"📄 File size: {pdf_file.stat().st_size / 1024:.1f} KB")
-        
+
         return str(pdf_file)
-        
+
     except ImportError:
         print("❌ Missing required packages. Please install:")
         print("pip install markdown weasyprint")
         return None
-        
+
     except Exception as e:
         print(f"❌ Error generating PDF: {e}")
         return None
+
 
 if __name__ == "__main__":
     generate_audit_guide_pdf()

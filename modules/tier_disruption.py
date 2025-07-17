@@ -4,7 +4,11 @@ import re
 import logging
 from pathlib import Path
 import os
+
+# Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import required utility functions
 from utils.utils import (
     load_file_paths,
     standardize_pharmacy_ids,
@@ -17,6 +21,8 @@ from utils.utils import (
     filter_products_and_alternative,
     write_shared_log,
 )
+
+# Import audit helper functions
 from modules.audit_helper import (
     make_audit_entry,
     log_user_session_start,
@@ -92,7 +98,9 @@ def load_tier_disruption_data(file_paths):
         claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table")
     except Exception as e:
         logger.error(f"Error loading claims: {e}")
-        make_audit_entry("tier_disruption.py", f"Claims Table fallback error: {e}", "FILE_ERROR")
+        make_audit_entry(
+            "tier_disruption.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
+        )
         claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
 
     print(f"claims shape: {claims.shape}")
@@ -128,19 +136,15 @@ def load_tier_disruption_data(file_paths):
 def process_tier_data_pipeline(claims, reference_data, network):
     """Process the data pipeline for tier disruption."""
     medi, u, e = reference_data
-    
+
     # Merge reference data
     df = claims.merge(medi, on="NDC", how="left")
     print(f"After merge with medi: {df.shape}")
 
-    df = df.merge(
-        u.rename(columns={"Tier": "Universal Tier"}), on="NDC", how="left"
-    )
+    df = df.merge(u.rename(columns={"Tier": "Universal Tier"}), on="NDC", how="left")
     print(f"After merge with u: {df.shape}")
 
-    df = df.merge(
-        e.rename(columns={"Tier": "Exclusive Tier"}), on="NDC", how="left"
-    )
+    df = df.merge(e.rename(columns={"Tier": "Exclusive Tier"}), on="NDC", how="left")
     print(f"After merge with e: {df.shape}")
 
     # Standardize IDs and perform network merge
@@ -198,7 +202,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
             # Add Result column with "NA" value
             na_pharmacies_output["Result"] = "NA"
-            
+
             # Use pandas to write to Excel, which is simpler and more reliable
             try:
                 # Try to append to existing file
@@ -206,22 +210,32 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                     # Read existing data
                     existing_df = pd.read_excel(output_file_path)
                     # Concatenate with new data
-                    combined_df = pd.concat([existing_df, na_pharmacies_output], ignore_index=True)
+                    combined_df = pd.concat(
+                        [existing_df, na_pharmacies_output], ignore_index=True
+                    )
                     # Remove duplicates
                     combined_df = combined_df.drop_duplicates()
                 else:
                     combined_df = na_pharmacies_output
-                
+
                 # Write to Excel
                 combined_df.to_excel(output_file_path, index=False)
-                logger.info(f"NA pharmacies written to '{output_file_path}' with Result column.")
-                
+                logger.info(
+                    f"NA pharmacies written to '{output_file_path}' with Result column."
+                )
+
             except Exception as e:
                 logger.error(f"Error updating pharmacy validation file: {e}")
-                make_audit_entry("tier_disruption.py", f"Pharmacy validation file update error: {e}", "FILE_ERROR")
+                make_audit_entry(
+                    "tier_disruption.py",
+                    f"Pharmacy validation file update error: {e}",
+                    "FILE_ERROR",
+                )
                 # Fallback - just write the new data
                 na_pharmacies_output.to_excel(output_file_path, index=False)
-                logger.info(f"NA pharmacies written to '{output_file_path}' (fallback mode).")
+                logger.info(
+                    f"NA pharmacies written to '{output_file_path}' (fallback mode)."
+                )
 
     return df
 
@@ -270,7 +284,7 @@ def process_exclusions(df):
     ex_pt = ex_pt.rename(columns={"Rxs": "Total Rxs", "MemberID": "Unique Members"})
     exc_rxs = exclusions["Rxs"].sum()
     exc_members = exclusions["MemberID"].nunique()
-    
+
     return ex_pt, exc_rxs, exc_members
 
 
@@ -377,9 +391,7 @@ def create_network_analysis(df):
         "Williams Bro",
         "Publix",
     ]
-    filter_phrases_escaped = [
-        re.escape(phrase.lower()) for phrase in filter_phrases
-    ]
+    filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
     regex_pattern = "|".join([f"\\b{p}\\b" for p in filter_phrases_escaped])
     network_df = network_df[
         ~network_df["Pharmacy Name"]
@@ -413,13 +425,15 @@ def create_network_analysis(df):
         )  # Ensure index columns are included in the output
         logger.debug(f"Network pivot shape: {network_pivot.shape}")
         logger.debug(f"Network pivot contents: {network_pivot.head(10).to_dict()}")
-        
+
         return network_df, network_pivot
-    
+
     return network_df, None
 
 
-def write_excel_sheets(writer, df, summary_df, tier_pivots, ex_pt, exc_members, network_df, network_pivot):
+def write_excel_sheets(
+    writer, df, summary_df, tier_pivots, ex_pt, exc_members, network_df, network_pivot
+):
     """Write all sheets to the Excel file."""
     # Write Summary sheet
     summary_df.to_excel(writer, sheet_name="Summary", index=False)
@@ -495,13 +509,13 @@ def process_data():
     # Start audit session
     log_user_session_start("tier_disruption.py")
     write_shared_log("tier_disruption.py", "Processing started.")
-    
+
     # Output filename from CLI arg or default
     output_filename = "LBL for Disruption.xlsx"
     if len(sys.argv) > 1:
         output_filename = sys.argv[1]
     output_path = Path(output_filename).resolve()
-    
+
     try:
         # Get the config file path relative to the project root
         config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
@@ -509,12 +523,16 @@ def process_data():
 
         result = load_tier_disruption_data(file_paths)
         if result is None:
-            make_audit_entry("tier_disruption.py", "Claims loading failed - early exit", "DATA_ERROR")
+            make_audit_entry(
+                "tier_disruption.py", "Claims loading failed - early exit", "DATA_ERROR"
+            )
             return  # Early exit if claims loading failed
         claims, medi, u, e, network = result
 
         # Log file access
-        log_file_access("tier_disruption.py", file_paths.get("reprice", "unknown"), "LOADING")
+        log_file_access(
+            "tier_disruption.py", file_paths.get("reprice", "unknown"), "LOADING"
+        )
 
         reference_data = (medi, u, e)
         df = process_tier_data_pipeline(claims, reference_data, network)
@@ -524,9 +542,13 @@ def process_data():
         # Totals for summary
         total_claims = df["Rxs"].sum()
         total_members = df["MemberID"].nunique()
-        
+
         # Log data processing metrics
-        make_audit_entry("tier_disruption.py", f"Processed {total_claims} claims for {total_members} members", "INFO")
+        make_audit_entry(
+            "tier_disruption.py",
+            f"Processed {total_claims} claims for {total_members} members",
+            "INFO",
+        )
 
         # Excel writer setup
         writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
@@ -542,7 +564,9 @@ def process_data():
         tab_rxs["Exclusions"] = exc_rxs
 
         # Summary calculations
-        summary_df = create_summary_dataframe(tab_members, tab_rxs, total_claims, total_members)
+        summary_df = create_summary_dataframe(
+            tab_members, tab_rxs, total_claims, total_members
+        )
         summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
         # Write tier pivots and Exclusions after Summary
@@ -592,16 +616,24 @@ def process_data():
         reorder_excel_sheets(writer)
 
         writer.close()
-        
+
         # Log successful completion
-        make_audit_entry("tier_disruption.py", f"Successfully generated tier disruption report: {output_filename}", "INFO")
+        make_audit_entry(
+            "tier_disruption.py",
+            f"Successfully generated tier disruption report: {output_filename}",
+            "INFO",
+        )
         log_file_access("tier_disruption.py", str(output_path), "CREATED")
-        
+
         show_completion_message(output_path)
-        
+
     except Exception as e:
         # Log detailed error information
-        make_audit_entry("tier_disruption.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR")
+        make_audit_entry(
+            "tier_disruption.py",
+            f"Processing failed with error: {str(e)}",
+            "SYSTEM_ERROR",
+        )
         write_shared_log(
             "tier_disruption.py", f"Processing failed: {e}", status="ERROR"
         )

@@ -38,36 +38,34 @@ def safe_excel_write(df: pd.DataFrame, output_path: str, **kwargs) -> bool:
         # Create a temporary file first
         temp_dir = Path(output_path).parent
         with tempfile.NamedTemporaryFile(
-            suffix='.xlsx', 
-            dir=temp_dir, 
-            delete=False
+            suffix=".xlsx", dir=temp_dir, delete=False
         ) as temp_file:
             temp_path = temp_file.name
-        
+
         # Write to temporary file first
         df.to_excel(temp_path, **kwargs)
-        
+
         # Validate the temporary file
         if not validate_excel_file(temp_path):
             os.unlink(temp_path)
             logger.error(f"Generated Excel file failed validation: {temp_path}")
             return False
-        
+
         # If output file exists, create backup
         if os.path.exists(output_path):
             backup_path = f"{output_path}.backup"
             shutil.copy2(output_path, backup_path)
             logger.info(f"Created backup: {backup_path}")
-        
+
         # Atomic move from temp to final location
         shutil.move(temp_path, output_path)
         logger.info(f"Successfully wrote Excel file: {output_path}")
         return True
-        
+
     except Exception as e:
         logger.error(f"Safe Excel write failed: {e}")
         # Clean up temp file if it exists
-        temp_path_to_clean = locals().get('temp_path')
+        temp_path_to_clean = locals().get("temp_path")
         if temp_path_to_clean and os.path.exists(temp_path_to_clean):
             try:
                 os.unlink(temp_path_to_clean)
@@ -84,7 +82,9 @@ def check_disk_space(path: str, required_mb: int = 100) -> bool:
         stat = shutil.disk_usage(path)
         free_mb = stat.free / (1024 * 1024)
         if free_mb < required_mb:
-            logger.warning(f"Low disk space: {free_mb:.1f}MB available, {required_mb}MB required")
+            logger.warning(
+                f"Low disk space: {free_mb:.1f}MB available, {required_mb}MB required"
+            )
             return False
         return True
     except Exception as e:

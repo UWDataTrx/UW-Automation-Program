@@ -9,7 +9,7 @@ from datetime import datetime
 
 # Load the audit log path from config
 config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-with open(config_path, 'r') as f:
+with open(config_path, "r") as f:
     file_paths = json.load(f)
 shared_log_path = os.path.expandvars(file_paths["audit_log"])
 

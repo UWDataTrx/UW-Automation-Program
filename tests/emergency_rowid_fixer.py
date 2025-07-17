@@ -3,8 +3,8 @@ Emergency RowID Error Fix for DataProcessing Module
 Fixes the 'RowID' column error that occurs during merged_file.xlsx processing.
 
 This fix addresses the specific error:
-SYSTEM ERROR - DataProcessing | User: BrendanReamer on L01275-AN | 
-Python: 3.13.5 | OS: Windows 11 | Context: File: merged_file.xlsx | 
+SYSTEM ERROR - DataProcessing | User: BrendanReamer on L01275-AN |
+Python: 3.13.5 | OS: Windows 11 | Context: File: merged_file.xlsx |
 Error: Error processing merged file: 'RowID' | Stack: 'RowID'...
 """
 
@@ -19,49 +19,51 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.append(str(project_root))
 
+
 def fix_data_processor_rowid_issue():
     """Apply emergency fix to the DataProcessor module for RowID issues."""
-    
+
     print("=== Emergency RowID Fix for DataProcessor ===")
-    
+
     # Path to the data processor module
     data_processor_path = project_root / "modules" / "data_processor.py"
-    
+
     if not data_processor_path.exists():
         print(f"❌ DataProcessor module not found at: {data_processor_path}")
         return False
-    
+
     print(f"📁 Found DataProcessor at: {data_processor_path}")
-    
+
     # Read the current file
-    with open(data_processor_path, 'r', encoding='utf-8') as f:
+    with open(data_processor_path, "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     # Create backup
-    backup_path = data_processor_path.with_suffix('.py.backup')
-    with open(backup_path, 'w', encoding='utf-8') as f:
+    backup_path = data_processor_path.with_suffix(".py.backup")
+    with open(backup_path, "w", encoding="utf-8") as f:
         f.write(content)
     print(f"💾 Backup created: {backup_path}")
-    
+
     # Apply the fix
     fixed_content = apply_rowid_fixes_to_content(content)
-    
+
     # Write the fixed content
-    with open(data_processor_path, 'w', encoding='utf-8') as f:
+    with open(data_processor_path, "w", encoding="utf-8") as f:
         f.write(fixed_content)
-    
+
     print("✅ RowID fixes applied to DataProcessor module")
     print("\nFixes applied:")
     print("- Added comprehensive error handling for RowID creation")
     print("- Added validation for required columns before sorting")
     print("- Added fallback methods for data processing")
     print("- Enhanced logging for troubleshooting")
-    
+
     return True
+
 
 def apply_rowid_fixes_to_content(content):
     """Apply RowID fixes to the DataProcessor module content."""
-    
+
     # Fix 1: Replace the load_and_validate_data method with a more robust version
     old_load_method = '''    def load_and_validate_data(self, file_path):
         """Load and validate the merged file data."""
@@ -84,7 +86,7 @@ def apply_rowid_fixes_to_content(content):
             logging.error(error_msg)
             write_shared_log("DataProcessor", error_msg, "ERROR")
             raise'''
-    
+
     new_load_method = '''    def load_and_validate_data(self, file_path):
         """Load and validate the merged file data with enhanced error handling."""
         try:
@@ -218,64 +220,65 @@ def apply_rowid_fixes_to_content(content):
                     df["RowID"] = pd.Series(range(len(df)), index=df.index)
                     logging.info("Created RowID using pandas Series (final fallback)")
                     return df'''
-    
+
     # Replace the method in the content
     if old_load_method in content:
         content = content.replace(old_load_method, new_load_method)
         print("✅ Updated load_and_validate_data method")
     else:
         print("⚠️  Could not find exact load_and_validate_data method to replace")
-    
+
     # Fix 2: Add error handling to the save_processed_outputs method
-    old_save_pattern = '''            df_sorted.drop(columns=["RowID"], inplace=True, errors="ignore")'''
-    new_save_pattern = '''            # Safe RowID removal with enhanced error handling
+    old_save_pattern = """            df_sorted.drop(columns=["RowID"], inplace=True, errors="ignore")"""
+    new_save_pattern = """            # Safe RowID removal with enhanced error handling
             try:
                 if "RowID" in df_sorted.columns:
                     df_sorted.drop(columns=["RowID"], inplace=True)
                     logging.info("Successfully removed RowID column before saving")
             except Exception as e:
                 logging.warning(f"Could not remove RowID column: {e}")
-                # Continue without removing RowID - it's not critical for output'''
-    
+                # Continue without removing RowID - it's not critical for output"""
+
     if old_save_pattern in content:
         content = content.replace(old_save_pattern, new_save_pattern)
         print("✅ Updated RowID removal logic")
-    
+
     # Fix 3: Add imports if needed
     if "import pandas as pd" not in content:
         content = "import pandas as pd\n" + content
         print("✅ Added pandas import")
-    
+
     if "import numpy as np" not in content:
         content = "import numpy as np\n" + content
         print("✅ Added numpy import")
-    
+
     return content
+
 
 def fix_app_py_rowid_issue():
     """Apply emergency fix to the main app.py file for RowID issues."""
-    
+
     print("\n=== Emergency RowID Fix for App.py ===")
-    
+
     # Path to the main app module
     app_path = project_root / "app.py"
-    
+
     if not app_path.exists():
         print(f"❌ App.py not found at: {app_path}")
         return False
-    
+
     print(f"📁 Found app.py at: {app_path}")
-    
+
     # Read the current file
-    with open(app_path, 'r', encoding='utf-8') as f:
+    with open(app_path, "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     # Create backup
-    backup_path = app_path.with_suffix('.py.backup')
-    with open(backup_path, 'w', encoding='utf-8') as f:
+    backup_path = app_path.with_suffix(".py.backup")
+    with open(backup_path, "w", encoding="utf-8") as f:
         f.write(content)
     print(f"💾 Backup created: {backup_path}")
-    
+
     # Fix the _load_and_validate_data method in app.py
     old_app_method = '''    def _load_and_validate_data(self, file_path):
         """Load and validate the merged file data."""
@@ -292,7 +295,7 @@ def fix_app_py_rowid_issue():
         df["RowID"] = np.arange(len(df))
         
         return df'''
-    
+
     new_app_method = '''    def _load_and_validate_data(self, file_path):
         """Load and validate the merged file data with enhanced error handling."""
         try:
@@ -380,24 +383,25 @@ def fix_app_py_rowid_issue():
             if 'RowID' not in df.columns:
                 df["RowID"] = df.index
             return df'''
-    
+
     # Replace the method in the content
     if old_app_method in content:
         content = content.replace(old_app_method, new_app_method)
         print("✅ Updated _load_and_validate_data method in app.py")
     else:
         print("⚠️  Could not find exact _load_and_validate_data method in app.py")
-    
+
     # Write the fixed content
-    with open(app_path, 'w', encoding='utf-8') as f:
+    with open(app_path, "w", encoding="utf-8") as f:
         f.write(content)
-    
+
     print("✅ RowID fixes applied to app.py")
     return True
 
+
 def create_emergency_fix_script():
     """Create an emergency script that can be run by users experiencing the RowID error."""
-    
+
     emergency_script = '''"""
 EMERGENCY ROWID ERROR FIX
 Run this script if you encounter the error:
@@ -501,59 +505,61 @@ if __name__ == "__main__":
     emergency_fix_merged_file()
     input("\\nPress Enter to close...")
 '''
-    
+
     emergency_path = project_root / "emergency_rowid_fix.py"
-    with open(emergency_path, 'w', encoding='utf-8') as f:
+    with open(emergency_path, "w", encoding="utf-8") as f:
         f.write(emergency_script)
-    
+
     print(f"💊 Emergency fix script created: {emergency_path}")
     return emergency_path
 
+
 def main():
     """Main function to apply all RowID error fixes."""
-    
+
     print("🚨 EMERGENCY ROWID ERROR FIXER 🚨")
     print("=" * 50)
     print("This will fix the DataProcessing RowID error:")
     print("'Error processing merged file: 'RowID''")
     print()
-    
+
     success_count = 0
-    
+
     # Fix 1: DataProcessor module
     if fix_data_processor_rowid_issue():
         success_count += 1
-    
+
     # Fix 2: App.py module
     if fix_app_py_rowid_issue():
         success_count += 1
-    
+
     # Fix 3: Create emergency user script
     emergency_script_path = create_emergency_fix_script()
     if emergency_script_path:
         success_count += 1
-    
-    print(f"\n{'='*50}")
+
+    print(f"\n{'=' * 50}")
     print(f"✅ Applied {success_count}/3 fixes successfully")
-    
+
     if success_count == 3:
         print("\n🎉 ALL FIXES APPLIED SUCCESSFULLY!")
         print("\nWhat was fixed:")
         print("1. ✅ Enhanced DataProcessor with robust RowID handling")
         print("2. ✅ Enhanced App.py with comprehensive error handling")
         print("3. ✅ Created emergency user fix script")
-        
+
         print(f"\n📋 For User: BrendanReamer")
         print("The RowID error should now be resolved.")
         print("If the error persists, run: emergency_rowid_fix.py")
-        
+
         print(f"\n📁 Backup files created:")
         print("- modules/data_processor.py.backup")
         print("- app.py.backup")
-        
+
     else:
         print("\n⚠️  Some fixes could not be applied.")
         print("Manual intervention may be required.")
+
 
 if __name__ == "__main__":
     main()
