@@ -4,9 +4,12 @@ from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.styles import NamedStyle
 import logging
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from utils.utils import write_shared_log
+
+# Add the project root directory to the Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 # Configure logging
 logging.basicConfig(
