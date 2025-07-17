@@ -19,6 +19,18 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Check for required packages and install if needed
+echo Checking for required packages...
+python -c "import psutil" 2>nul
+if errorlevel 1 (
+    echo Installing psutil package...
+    pip install psutil
+    if errorlevel 1 (
+        echo WARNING: Could not install psutil - some system checks will be limited
+        echo Continuing with diagnostic...
+    )
+)
+
 REM Run the diagnostic tool
 echo Running diagnostic checks...
 echo.
