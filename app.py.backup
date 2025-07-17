@@ -812,92 +812,20 @@ class App:
         logging.info("Starting merged file processing")
 
     def _load_and_validate_data(self, file_path):
-        """Load and validate the merged file data with enhanced error handling."""
-        try:
-            df = pd.read_excel(file_path)
-            logging.info(f"Loaded {len(df)} records from {file_path}")
-            self.update_progress(0.50)
+        """Load and validate the merged file data."""
+        df = pd.read_excel(file_path)
+        logging.info(f"Loaded {len(df)} records from {file_path}")
+        self.update_progress(0.50)
 
-            # Validate that we have data
-            if df.empty:
-                raise ValueError(f"The file {file_path} is empty or contains no data")
+        # Validate required columns using configuration
+        ProcessingConfig.validate_required_columns(df)
 
-            # Validate required columns using configuration with fallback
-            try:
-                ProcessingConfig.validate_required_columns(df)
-            except Exception as config_error:
-                logging.warning(f"Configuration validation failed: {config_error}")
-                # Fallback validation for essential columns
-                essential_columns = ["DATEFILLED", "SOURCERECORDID"]
-                missing_essential = [col for col in essential_columns if col not in df.columns]
-                if missing_essential:
-                    raise ValueError(f"Missing essential columns: {missing_essential}")
-
-            # Safe data preparation
-            df = self._safe_prepare_dataframe(df)
-            
-            return df
-            
-        except Exception as e:
-            error_msg = f"Error loading data from {file_path}: {str(e)}"
-            logging.error(error_msg)
-            raise Exception(f"Failed to load merged file: {error_msg}")
-    
-    def _safe_prepare_dataframe(self, df):
-        """Safely prepare DataFrame for processing."""
-        try:
-            # Create a copy to avoid modifying the original
-            df_processed = df.copy()
-            
-            # Remove existing RowID column if present
-            if 'RowID' in df_processed.columns:
-                df_processed = df_processed.drop(columns=['RowID'])
-                logging.info("Removed existing RowID column")
-            
-            # Add Logic column if missing
-            if 'Logic' not in df_processed.columns:
-                df_processed["Logic"] = ""
-                logging.info("Added missing Logic column")
-            
-            # Safe sorting
-            sort_columns = ["DATEFILLED", "SOURCERECORDID"]
-            available_sort_cols = [col for col in sort_columns if col in df_processed.columns]
-            
-            if available_sort_cols:
-                # Handle null values before sorting
-                for col in available_sort_cols:
-                    if df_processed[col].isnull().any():
-                        if col == "DATEFILLED":
-                            df_processed[col] = df_processed[col].fillna(pd.Timestamp('1900-01-01'))
-                        else:
-                            df_processed[col] = df_processed[col].fillna('UNKNOWN')
-                        logging.warning(f"Filled null values in {col}")
-                
-                df_processed = df_processed.sort_values(by=available_sort_cols, ascending=True)
-                logging.info(f"Sorted by: {available_sort_cols}")
-            
-            # Safe RowID creation with multiple fallback methods
-            try:
-                df_processed["RowID"] = np.arange(len(df_processed))
-                logging.info("Created RowID using np.arange")
-            except Exception as e1:
-                try:
-                    df_processed["RowID"] = df_processed.index.values
-                    logging.warning(f"np.arange failed ({e1}), used index instead")
-                except Exception as e2:
-                    df_processed["RowID"] = list(range(len(df_processed)))
-                    logging.warning(f"Both methods failed ({e1}, {e2}), used list comprehension")
-            
-            return df_processed
-            
-        except Exception as e:
-            logging.error(f"Error in DataFrame preparation: {e}")
-            # Minimal fallback
-            if 'Logic' not in df.columns:
-                df["Logic"] = ""
-            if 'RowID' not in df.columns:
-                df["RowID"] = df.index
-            return df
+        # Prepare data for processing
+        df = df.sort_values(by=["DATEFILLED", "SOURCERECORDID"], ascending=True)
+        df["Logic"] = ""
+        df["RowID"] = np.arange(len(df))
+        
+        return df
 
     def _process_data_multiprocessing(self, df):
         """Process data using multiprocessing for improved performance."""

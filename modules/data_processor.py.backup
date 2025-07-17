@@ -24,29 +24,18 @@ class DataProcessor:
         self.app = app_instance
         
     def load_and_validate_data(self, file_path):
-        """Load and validate the merged file data with enhanced error handling."""
+        """Load and validate the merged file data."""
         try:
-            # Load the Excel file
             df = pd.read_excel(file_path)
             logging.info(f"Loaded {len(df)} records from {file_path}")
             
-            # Validate that we have data
-            if df.empty:
-                raise ValueError(f"The file {file_path} is empty or contains no data")
+            # Validate required columns using configuration
+            ProcessingConfig.validate_required_columns(df)
             
-            # Validate required columns using configuration with fallback
-            try:
-                ProcessingConfig.validate_required_columns(df)
-            except Exception as config_error:
-                logging.warning(f"Configuration validation failed: {config_error}")
-                # Fallback validation for essential columns
-                essential_columns = ["DATEFILLED", "SOURCERECORDID"]
-                missing_essential = [col for col in essential_columns if col not in df.columns]
-                if missing_essential:
-                    raise ValueError(f"Missing essential columns: {missing_essential}")
-            
-            # Prepare data for processing with enhanced error handling
-            df = self._safe_prepare_data_for_processing(df)
+            # Prepare data for processing
+            df = df.sort_values(by=["DATEFILLED", "SOURCERECORDID"], ascending=True)
+            df["Logic"] = ""
+            df["RowID"] = np.arange(len(df))
             
             return df
             
@@ -55,107 +44,6 @@ class DataProcessor:
             logging.error(error_msg)
             write_shared_log("DataProcessor", error_msg, "ERROR")
             raise
-    
-    def _safe_prepare_data_for_processing(self, df):
-        """Safely prepare data for processing with comprehensive error handling."""
-        try:
-            # Create a copy to avoid modifying the original
-            df_processed = df.copy()
-            
-            # Remove existing RowID column if present
-            if 'RowID' in df_processed.columns:
-                df_processed = df_processed.drop(columns=['RowID'])
-                logging.info("Removed existing RowID column")
-            
-            # Add Logic column if missing
-            if 'Logic' not in df_processed.columns:
-                df_processed["Logic"] = ""
-                logging.info("Added missing Logic column")
-            
-            # Safe sorting with validation
-            df_processed = self._safe_sort_dataframe(df_processed)
-            
-            # Safe RowID creation
-            df_processed = self._safe_create_rowid(df_processed)
-            
-            return df_processed
-            
-        except Exception as e:
-            logging.error(f"Error in data preparation: {e}")
-            # Return original DataFrame with minimal processing as fallback
-            if 'Logic' not in df.columns:
-                df["Logic"] = ""
-            if 'RowID' not in df.columns:
-                df["RowID"] = df.index
-            return df
-    
-    def _safe_sort_dataframe(self, df):
-        """Safely sort the DataFrame with error handling."""
-        sort_columns = ["DATEFILLED", "SOURCERECORDID"]
-        
-        try:
-            # Check which sort columns are available
-            available_sort_cols = [col for col in sort_columns if col in df.columns]
-            
-            if not available_sort_cols:
-                logging.warning("No sort columns available. Using original order.")
-                return df
-            
-            # Check for null values in sort columns and handle them
-            for col in available_sort_cols:
-                null_count = df[col].isnull().sum()
-                if null_count > 0:
-                    logging.warning(f"Found {null_count} null values in sort column '{col}'. Filling with default values.")
-                    
-                    if col == "DATEFILLED":
-                        # Fill null dates with a default date
-                        df[col] = df[col].fillna(pd.Timestamp('1900-01-01'))
-                    elif col == "SOURCERECORDID":
-                        # Fill null IDs with a default pattern
-                        df[col] = df[col].fillna('UNKNOWN_ID')
-            
-            # Perform the sort
-            df_sorted = df.sort_values(by=available_sort_cols, ascending=True)
-            logging.info(f"Successfully sorted by: {available_sort_cols}")
-            
-            return df_sorted
-            
-        except Exception as e:
-            logging.warning(f"Sorting failed: {e}. Using original order.")
-            return df
-    
-    def _safe_create_rowid(self, df):
-        """Safely create RowID column with multiple fallback methods."""
-        try:
-            # Method 1: Standard numpy arange
-            df["RowID"] = np.arange(len(df))
-            logging.info("Successfully created RowID using np.arange")
-            return df
-            
-        except Exception as e1:
-            logging.warning(f"Standard RowID creation failed: {e1}. Trying alternative methods.")
-            
-            try:
-                # Method 2: Use DataFrame index
-                df["RowID"] = df.index.values
-                logging.info("Created RowID using DataFrame index")
-                return df
-                
-            except Exception as e2:
-                logging.warning(f"Index-based RowID creation failed: {e2}. Trying manual creation.")
-                
-                try:
-                    # Method 3: Manual creation with list comprehension
-                    df["RowID"] = [i for i in range(len(df))]
-                    logging.info("Created RowID using manual list creation")
-                    return df
-                    
-                except Exception as e3:
-                    logging.error(f"All RowID creation methods failed: {e1}, {e2}, {e3}")
-                    # Final fallback: create a simple series
-                    df["RowID"] = pd.Series(range(len(df)), index=df.index)
-                    logging.info("Created RowID using pandas Series (final fallback)")
-                    return df
     
     def process_data_multiprocessing(self, df):
         """Process data using multiprocessing for improved performance."""
@@ -211,14 +99,7 @@ class DataProcessor:
             ]  # Placeholder for unmatched reversals
             
             # Clean up data
-            # Safe RowID removal with enhanced error handling
-            try:
-                if "RowID" in df_sorted.columns:
-                    df_sorted.drop(columns=["RowID"], inplace=True)
-                    logging.info("Successfully removed RowID column before saving")
-            except Exception as e:
-                logging.warning(f"Could not remove RowID column: {e}")
-                # Continue without removing RowID - it's not critical for output
+            df_sorted.drop(columns=["RowID"], inplace=True, errors="ignore")
             output_file = output_dir / "merged_file_with_OR.xlsx"
             
             # Save to multiple formats

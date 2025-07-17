@@ -1,0 +1,113 @@
+{
+  "timestamp": "2025-07-17T09:10:43.948256",
+  "file_analyzed": "merged_file.xlsx",
+  "structure_analysis": {
+    "shape": [
+      1000,
+      14
+    ],
+    "columns": [
+      "SOURCERECORDID",
+      "NDC",
+      "MemberID",
+      "DATEFILLED",
+      "QUANTITY",
+      "DAYSUPPLY",
+      "Drug Name",
+      "Pharmacy Name",
+      "Total AWP (Historical)",
+      "FormularyTier",
+      "PHARMACYNPI",
+      "NABP",
+      "Rxs",
+      "RowID"
+    ],
+    "dtypes": {
+      "SOURCERECORDID": "object",
+      "NDC": "object",
+      "MemberID": "object",
+      "DATEFILLED": "datetime64[ns]",
+      "QUANTITY": "int64",
+      "DAYSUPPLY": "int64",
+      "Drug Name": "object",
+      "Pharmacy Name": "object",
+      "Total AWP (Historical)": "float64",
+      "FormularyTier": "object",
+      "PHARMACYNPI": "int64",
+      "NABP": "int64",
+      "Rxs": "int64",
+      "RowID": "float64"
+    },
+    "memory_usage_mb": 0.3863210678100586,
+    "has_existing_rowid": true,
+    "existing_rowid_info": {
+      "dtype": "float64",
+      "unique_count": 995,
+      "has_nulls": "True",
+      "sample_values": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0
+      ]
+    },
+    "missing_required_columns": [],
+    "has_all_required": true,
+    "data_quality": {
+      "total_nulls": "15",
+      "duplicate_rows": "0",
+      "empty_columns": []
+    },
+    "sort_column_issues": {
+      "DATEFILLED": {
+        "has_nulls": "True",
+        "null_count": "5",
+        "dtype": "datetime64[ns]"
+      },
+      "SOURCERECORDID": {
+        "has_nulls": "True",
+        "null_count": "5",
+        "dtype": "object"
+      }
+    }
+  },
+  "rowid_tests": {
+    "basic_creation": {
+      "success": true,
+      "length": 1000
+    },
+    "sort_and_create": {
+      "success": true,
+      "sorted_by": [
+        "DATEFILLED",
+        "SOURCERECORDID"
+      ],
+      "length": 1000
+    },
+    "multiprocessing_test": {
+      "success": true,
+      "splits_count": 4,
+      "combined_length": 1000,
+      "original_length": 1000
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "MEDIUM",
+      "issue": "Null values in sort column: DATEFILLED",
+      "recommendation": "Clean null values in DATEFILLED before processing"
+    },
+    {
+      "priority": "MEDIUM",
+      "issue": "Null values in sort column: SOURCERECORDID",
+      "recommendation": "Clean null values in SOURCERECORDID before processing"
+    }
+  ],
+  "fix_suggestions": []
+}
