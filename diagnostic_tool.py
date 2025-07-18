@@ -466,10 +466,15 @@ class DiagnosticTool:
     def _upload_report_to_support(self, report_file):
         """Automatically upload diagnostic report to support directory."""
         try:
-            # Support directory path
-            support_dir = Path(
-                r"C:\Users\DamionMorrison\OneDrive - True Rx Health Strategists\True Community - Data Analyst\UW Python Program\Diagnostic Reports"
-            )
+            # Get support directory path from configuration
+            try:
+                from config.app_config import ProcessingConfig
+                support_dir = ProcessingConfig.get_diagnostic_reports_path()
+            except ImportError:
+                # Fallback to hardcoded path if config module is not available
+                support_dir = Path(
+                    r"C:\Users\DamionMorrison\OneDrive - True Rx Health Strategists\True Community - Data Analyst\UW Python Program\Diagnostic Reports"
+                )
 
             # Create support directory if it doesn't exist
             support_dir.mkdir(parents=True, exist_ok=True)

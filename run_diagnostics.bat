@@ -50,7 +50,9 @@ if errorlevel 1 (
 echo.
 echo To get help with any issues found:
 echo 1. Your diagnostic report has been automatically sent to support
-echo 2. If you need immediate assistance, contact support with details about:
+echo 2. Check the output above to confirm successful upload
+echo 3. If upload failed, please manually send the 'diagnostic_report.txt' file
+echo 4. For immediate assistance, contact support with details about:
 echo    - What you were trying to do when the problem occurred
 echo    - Any specific error messages you saw
 echo    - When the problem started

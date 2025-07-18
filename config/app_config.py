@@ -47,6 +47,18 @@ class ProcessingConfig:
             raise ValueError(f"Missing required columns: {missing_cols}")
         return True
 
+    @classmethod
+    def get_diagnostic_reports_path(cls):
+        """Get the diagnostic reports directory path from configuration."""
+        try:
+            config_path = Path(__file__).parent / "file_paths.json"
+            with open(config_path, "r") as f:
+                file_paths = json.load(f)
+            return Path(os.path.expandvars(file_paths["diagnostic_reports"]))
+        except (FileNotFoundError, KeyError):
+            # Fallback to default if config is missing
+            return Path(r"C:\Users\DamionMorrison\OneDrive - True Rx Health Strategists\UW Automation Program\Diagnostic Reports")
+
 
 class DisruptionConfig:
     """Configuration for disruption types to reduce conditional complexity."""
