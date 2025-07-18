@@ -1422,9 +1422,22 @@ def _try_find_match(context, reversal_idx):
     if not np.any(matches):
         return False
 
+    # Select the best match (closest date)
+    matching_claim_indices = context.claim_idx[matches]
+    if len(matching_claim_indices) > 1:
+        # Calculate date differences for all matches
+        date_diffs = np.abs(
+            (context.logic_data["datefilled"][matching_claim_indices] - 
+             context.logic_data["datefilled"][reversal_idx]).days
+        )
+        # Select the match with the smallest date difference
+        best_match_idx = matching_claim_indices[np.argmin(date_diffs)]
+    else:
+        best_match_idx = matching_claim_indices[0]
+
     # Mark both reversal and matching claim as 'OR'
     context.arr[reversal_idx, context.col_idx["Logic"]] = "OR"
-    context.arr[context.claim_idx[matches][0], context.col_idx["Logic"]] = "OR"
+    context.arr[best_match_idx, context.col_idx["Logic"]] = "OR"
     return True
 
 
