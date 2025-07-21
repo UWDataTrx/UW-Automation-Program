@@ -132,25 +132,37 @@ def log_exception(script_name, exc, status="ERROR"):
 
 def load_file_paths(json_file="file_paths.json"):
     """
-    Loads a JSON config file, replacing %OneDrive% with the user's OneDrive path.
+    Loads a JSON config file with relative paths and resolves them to absolute paths
+    based on the script's location. This makes the system user-agnostic.
     Returns a dictionary mapping keys to resolved absolute file paths.
     """
     try:
-        with open(json_file, "r") as f:
+        # Get the directory containing this utils.py file
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Build path to the config file relative to utils.py
+        config_path = os.path.join(script_dir, "..", "config", json_file)
+        
+        with open(config_path, "r") as f:
             paths = json.load(f)
-
-        # Resolve the user's OneDrive path
-        onedrive_path = os.environ.get("OneDrive")
-        if not onedrive_path:
-            raise EnvironmentError(
-                "OneDrive environment variable not found. Please ensure OneDrive is set up."
-            )
 
         resolved_paths = {}
         for key, path in paths.items():
             if path.startswith("%OneDrive%"):
-                path = path.replace("%OneDrive%", onedrive_path)
-            resolved_paths[key] = str(Path(path).resolve())
+                # Legacy OneDrive path support for backward compatibility
+                onedrive_path = os.environ.get("OneDrive")
+                if not onedrive_path:
+                    raise EnvironmentError(
+                        "OneDrive environment variable not found. Please ensure OneDrive is set up."
+                    )
+                resolved_path = path.replace("%OneDrive%", onedrive_path)
+            else:
+                # Handle relative paths - resolve relative to the script's parent directory
+                # This assumes all relative paths are relative to the UW-Automation-Program directory
+                base_dir = os.path.join(script_dir, "..")
+                resolved_path = os.path.join(base_dir, path)
+            
+            resolved_paths[key] = str(Path(resolved_path).resolve())
 
         return resolved_paths
 
