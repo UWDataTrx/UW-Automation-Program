@@ -24,7 +24,7 @@ def ensure_directory_exists(path):
         print(f"[ensure_directory_exists] Error: {e}")
 
 
-def write_audit_log(script_name, message, status="INFO"):
+def write_shared_log(script_name, message, status="INFO"):
     """
     Appends a log entry to the shared audit log in OneDrive. Rotates log if too large.
     """
@@ -67,7 +67,7 @@ def log_exception(script_name, exc, status="ERROR"):
     tb = traceback.format_exc()
     msg = f"{exc}: {tb}"
     print(f"[Exception] {msg}")
-    write_audit_log(script_name, msg, status)
+    write_shared_log(script_name, msg, status)
 
 
 def load_file_paths(json_file="file_paths.json"):

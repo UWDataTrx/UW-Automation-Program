@@ -1,3 +1,4 @@
+import pandas as pd
 import logging
 import os
 import sys
@@ -17,7 +18,7 @@ from utils.utils import (
     filter_recent_date,
     filter_logic_and_maintenance,
     filter_products_and_alternative,
-    write_audit_log,
+    write_shared_log,
 )
 
 # Import audit helper functions
@@ -57,71 +58,13 @@ included_nabp_npi = {
 
 
 # ---------------------------------------------------------------------------
-import pandas as pd
-import logging
-import os
-import sys
-from pathlib import Path
-
-# Ensure user-agnostic path resolution
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import (
-    load_file_paths,
-    standardize_pharmacy_ids,
-    standardize_network_ids,
-    merge_with_network,
-    drop_duplicates_df,
-    clean_logic_and_tier,
-    filter_recent_date,
-    filter_logic_and_maintenance,
-    filter_products_and_alternative,
-    write_audit_log,
-)
-from modules.audit_helper import (
-    make_audit_entry,
-    log_user_session_start,
-    log_user_session_end,
-    log_file_access,
-)
-
-# Logging setup
-logging.basicConfig(
-    filename="openmdf_tier.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
-
-# Load NABP/NPI list
-included_nabp_npi = {
-    "4528874": "1477571404",
-    "2365422": "1659313435",
-    "3974157": "1972560688",
-    "320793": "1164437406",
-    "4591055": "1851463087",
-    "2348046": "1942303110",
-    "4023610": "1407879588",
-    "4025385": "1588706212",
-    "4025311": "1588705446",
-    "4026806": "1285860312",
-    "4931350": "1750330775",
-    "4024585": "1396768461",
-    "4028026": "1497022438",
-    "2643749": "1326490376",
-}
-
-# Example: Load file paths and expand OneDrive
-file_paths = load_file_paths()
-claims_path = os.path.expandvars(file_paths.get("reprice", ""))
-# ...existing code...
 # Open MDF Tier processing functions
 # ---------------------------------------------------------------------------
 def load_openmdf_tier_data(file_paths):
     """Load all required data files for Open MDF tier disruption processing."""
     # Load claims with fallback
     if not file_paths.get("reprice"):
-        write_audit_log(
+        write_shared_log(
             "openmdf_tier.py",
             "No reprice/template file provided.",
             status="ERROR",
@@ -130,26 +73,26 @@ def load_openmdf_tier_data(file_paths):
         return None
 
     try:
-        claims = pd.read_excel(os.path.expandvars(file_paths["reprice"]), sheet_name="Claims Table")
+        claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table")
     except Exception as e:
         logger.error(f"Error loading claims: {e}")
         make_audit_entry(
             "openmdf_tier.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
         )
-        claims = pd.read_excel(os.path.expandvars(file_paths["reprice"]), sheet_name=0)
+        claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
 
     print(f"claims shape: {claims.shape}")
     claims.info()
 
     # Load reference tables
     try:
-        medi = pd.read_excel(os.path.expandvars(file_paths["medi_span"]))[
+        medi = pd.read_excel(file_paths["medi_span"])[
             ["NDC", "Maint Drug?", "Product Name"]
         ]
         print(f"medi shape: {medi.shape}")
     except Exception as e:
         logger.error(f"Failed to read medi_span file: {file_paths['medi_span']} | {e}")
-        write_audit_log(
+        write_shared_log(
             "openmdf_tier.py",
             f"Failed to read medi_span file: {file_paths['medi_span']} | {e}",
             status="ERROR",
@@ -157,7 +100,7 @@ def load_openmdf_tier_data(file_paths):
         return None
 
     try:
-        mdf = pd.read_excel(os.path.expandvars(file_paths["mdf_disrupt"]), sheet_name="Open MDF NDC")[
+        mdf = pd.read_excel(file_paths["mdf_disrupt"], sheet_name="Open MDF NDC")[
             ["NDC", "Tier"]
         ]
         print(f"mdf shape: {mdf.shape}")
@@ -165,7 +108,7 @@ def load_openmdf_tier_data(file_paths):
         logger.error(
             f"Failed to read mdf_disrupt file: {file_paths['mdf_disrupt']} | {e}"
         )
-        write_audit_log(
+        write_shared_log(
             "openmdf_tier.py",
             f"Failed to read mdf_disrupt file: {file_paths['mdf_disrupt']} | {e}",
             status="ERROR",
@@ -179,7 +122,7 @@ def load_openmdf_tier_data(file_paths):
         print(f"exclusive shape: {exclusive.shape}")
     except Exception as e:
         logger.error(f"Failed to read e_disrupt file: {file_paths['e_disrupt']} | {e}")
-        write_audit_log(
+        write_shared_log(
             "openmdf_tier.py",
             f"Failed to read e_disrupt file: {file_paths['e_disrupt']} | {e}",
             status="ERROR",
@@ -193,7 +136,7 @@ def load_openmdf_tier_data(file_paths):
         print(f"network shape: {network.shape}")
     except Exception as e:
         logger.error(f"Failed to read n_disrupt file: {file_paths['n_disrupt']} | {e}")
-        write_audit_log(
+        write_shared_log(
             "openmdf_tier.py",
             f"Failed to read n_disrupt file: {file_paths['n_disrupt']} | {e}",
             status="ERROR",
@@ -530,7 +473,7 @@ def reorder_openmdf_excel_sheets(writer):
 
 def show_openmdf_completion_message(output_path):
     """Show completion message and popup."""
-    write_audit_log("openmdf_tier.py", "Processing complete.")
+    write_shared_log("openmdf_tier.py", "Processing complete.")
     print(f"Processing complete. Output file: {output_path}")
     try:
         import tkinter as tk
@@ -552,7 +495,7 @@ def show_openmdf_completion_message(output_path):
 def process_data():
     # Start audit session
     log_user_session_start("openmdf_tier.py")
-    write_audit_log("openmdf_tier.py", "Processing started.")
+    write_shared_log("openmdf_tier.py", "Processing started.")
 
     # Output filename from CLI arg or default
     output_filename = "LBL for Disruption.xlsx"
@@ -670,7 +613,7 @@ def process_data():
         make_audit_entry(
             "openmdf_tier.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR"
         )
-        write_audit_log("openmdf_tier.py", f"Processing failed: {e}", status="ERROR")
+        write_shared_log("openmdf_tier.py", f"Processing failed: {e}", status="ERROR")
         raise
     finally:
         # End audit session

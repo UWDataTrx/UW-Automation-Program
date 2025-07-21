@@ -9,12 +9,12 @@ from datetime import datetime
 # Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Try to import write_audit_log, create fallback if not available
+# Try to import write_shared_log, create fallback if not available
 try:
-    from utils.utils import write_audit_log
+    from utils.utils import write_shared_log
 except ImportError:
     # Fallback function if utils.utils is not available
-    def write_audit_log(script_name, message, status="INFO"):
+    def write_shared_log(script_name, message, status="INFO"):
         """Fallback logging function when utils.utils is not available"""
         print(f"[{status}] {script_name}: {message}")
 
@@ -22,7 +22,7 @@ except ImportError:
 def make_audit_entry(script_name, message, status="INFO"):
     """Enhanced audit entry with better error handling and user tracking."""
     try:
-        write_audit_log(script_name, message, status)
+        write_shared_log(script_name, message, status)
     except Exception as e:
         logging.error(f"[AUDIT FAIL] {script_name} audit failed: {e}")
         try:

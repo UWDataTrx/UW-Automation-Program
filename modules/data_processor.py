@@ -17,10 +17,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from config.app_config import ProcessingConfig
-    from utils.utils import write_audit_log
+    from utils.utils import write_shared_log
 except ImportError:
     # Fallback if imports are not available
-    def write_audit_log(script_name, message, status="INFO"):
+    def write_shared_log(script_name, message, status="INFO"):
         """Fallback logging function when utils.utils is not available"""
         print(f"[{status}] {script_name}: {message}")
 
@@ -78,7 +78,7 @@ class DataProcessor:
         except Exception as e:
             error_msg = f"Error loading data from {file_path}: {str(e)}"
             logging.error(error_msg)
-            write_audit_log("DataProcessor", error_msg, "ERROR")
+            write_shared_log("DataProcessor", error_msg, "ERROR")
             raise
 
     def _safe_prepare_data_for_processing(self, df):
@@ -223,7 +223,7 @@ class DataProcessor:
         except Exception as e:
             error_msg = f"Error processing data with multiprocessing: {str(e)}"
             logging.error(error_msg)
-            write_audit_log("DataProcessor", error_msg, "ERROR")
+            write_shared_log("DataProcessor", error_msg, "ERROR")
             raise
 
     def save_processed_outputs(self, df, output_dir=None):
@@ -267,7 +267,7 @@ class DataProcessor:
         except Exception as e:
             error_msg = f"Error saving processed outputs: {str(e)}"
             logging.error(error_msg)
-            write_audit_log("DataProcessor", error_msg, "ERROR")
+            write_shared_log("DataProcessor", error_msg, "ERROR")
             raise
 
     def _save_to_parquet(self, df, output_dir):

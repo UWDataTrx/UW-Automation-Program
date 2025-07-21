@@ -1,3 +1,4 @@
+import pandas as pd
 import sys
 import re
 import logging
@@ -18,7 +19,7 @@ from utils.utils import (
     filter_recent_date,
     filter_logic_and_maintenance,
     filter_products_and_alternative,
-    write_audit_log,
+    write_shared_log,
 )
 
 # Import audit helper functions
@@ -57,71 +58,6 @@ included_nabp_npi = {
     "4025385": "1588706212",
     "4025311": "1588705446",
     "4026806": "1285860312",
-import pandas as pd
-import sys
-import re
-import logging
-from pathlib import Path
-import os
-
-# Ensure user-agnostic path resolution
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import (
-    load_file_paths,
-    standardize_pharmacy_ids,
-    standardize_network_ids,
-    merge_with_network,
-    drop_duplicates_df,
-    clean_logic_and_tier,
-    filter_recent_date,
-    filter_logic_and_maintenance,
-    filter_products_and_alternative,
-    write_audit_log,
-)
-from modules.audit_helper import (
-    make_audit_entry,
-    log_user_session_start,
-    log_user_session_end,
-    log_file_access,
-)
-
-# Set up logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-try:
-    import importlib.util
-    if importlib.util.find_spec("xlsxwriter") is None:
-        print(
-            "The 'xlsxwriter' module is not installed. Please install it using 'pip install xlsxwriter'."
-        )
-        sys.exit(1)
-except Exception:
-    print("Error checking for 'xlsxwriter' module.")
-    sys.exit(1)
-
-# Load NABP/NPI list
-included_nabp_npi = {
-    "4528874": "1477571404",
-    "2365422": "1659313435",
-    "3974157": "1972560688",
-    "320793": "1164437406",
-    "4591055": "1851463087",
-    "2348046": "1942303110",
-    "4023610": "1407879588",
-    "4025385": "1588706212",
-    "4025311": "1588705446",
-    "4026806": "1285860312",
-    "4931350": "1750330775",
-    "4024585": "1396768461",
-    "4028026": "1497022438",
-    "2643749": "1326490376",
-}
-
-# Example: Load file paths and expand OneDrive
-file_paths = load_file_paths()
-claims_path = os.path.expandvars(file_paths.get("reprice", ""))
-# ...existing code...
     "4931350": "1750330775",
     "4024585": "1396768461",
     "4028026": "1497022438",
@@ -150,7 +86,7 @@ def load_tier_disruption_data(file_paths):
     """Load all required data files for tier disruption processing."""
     # Load claims with fallback
     if not file_paths.get("reprice"):
-        write_audit_log(
+        write_shared_log(
             "tier_disruption.py",
             "No reprice/template file provided.",
             status="ERROR",
@@ -159,37 +95,37 @@ def load_tier_disruption_data(file_paths):
         return None
 
     try:
-        claims = pd.read_excel(os.path.expandvars(file_paths["reprice"]), sheet_name="Claims Table")
+        claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table")
     except Exception as e:
         logger.error(f"Error loading claims: {e}")
         make_audit_entry(
             "tier_disruption.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
         )
-        claims = pd.read_excel(os.path.expandvars(file_paths["reprice"]), sheet_name=0)
+        claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
 
     print(f"claims shape: {claims.shape}")
     claims.info()
 
     # Load reference tables
     medi = pd.read_excel(
-        os.path.expandvars(file_paths["medi_span"]), usecols=["NDC", "Maint Drug?", "Product Name"]
+        file_paths["medi_span"], usecols=["NDC", "Maint Drug?", "Product Name"]
     )
     print(f"medi shape: {medi.shape}")
 
     u = pd.read_excel(
-        os.path.expandvars(file_paths["u_disrupt"]), sheet_name="Universal NDC", usecols=["NDC", "Tier"]
+        file_paths["u_disrupt"], sheet_name="Universal NDC", usecols=["NDC", "Tier"]
     )
     print(f"u shape: {u.shape}")
 
     e = pd.read_excel(
-        os.path.expandvars(file_paths["e_disrupt"]),
+        file_paths["e_disrupt"],
         sheet_name="Alternatives NDC",
         usecols=["NDC", "Tier", "Alternative"],
     )
     print(f"e shape: {e.shape}")
 
     network = pd.read_excel(
-        os.path.expandvars(file_paths["n_disrupt"]),
+        file_paths["n_disrupt"],
         usecols=["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"],
     )
     print(f"network shape: {network.shape}")
@@ -552,7 +488,7 @@ def reorder_excel_sheets(writer):
 
 def show_completion_message(output_path):
     """Show completion message and popup."""
-    write_audit_log("tier_disruption.py", "Processing complete.")
+    write_shared_log("tier_disruption.py", "Processing complete.")
     print(f"Processing complete. Output file: {output_path}")
     try:
         import tkinter as tk
@@ -572,7 +508,7 @@ def show_completion_message(output_path):
 def process_data():
     # Start audit session
     log_user_session_start("tier_disruption.py")
-    write_audit_log("tier_disruption.py", "Processing started.")
+    write_shared_log("tier_disruption.py", "Processing started.")
 
     # Output filename from CLI arg or default
     output_filename = "LBL for Disruption.xlsx"
@@ -698,7 +634,7 @@ def process_data():
             f"Processing failed with error: {str(e)}",
             "SYSTEM_ERROR",
         )
-        write_audit_log(
+        write_shared_log(
             "tier_disruption.py", f"Processing failed: {e}", status="ERROR"
         )
         raise

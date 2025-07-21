@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Try to import utils functions, create fallbacks if not available
 try:
     from utils.excel_utils import write_df_to_template
-    from utils.utils import load_file_paths, write_audit_log
+    from utils.utils import load_file_paths, write_shared_log
 except ImportError:
     # Fallback functions if utils modules are not available
     def write_df_to_template(*args, **kwargs) -> None:
@@ -23,7 +23,7 @@ except ImportError:
     def load_file_paths(*args, **kwargs) -> dict:
         raise ImportError("utils.utils not available - load_file_paths not implemented")
 
-    def write_audit_log(script_name, message, status="INFO"):
+    def write_shared_log(script_name, message, status="INFO"):
         """Fallback logging function when utils.utils is not available"""
         print(f"[{status}] {script_name}: {message}")
 
@@ -76,7 +76,7 @@ def main() -> None:
 
     # Start audit session
     log_user_session_start("epls_lbl.py")
-    write_audit_log("epls_lbl.py", "Processing started.")
+    write_shared_log("epls_lbl.py", "Processing started.")
 
     try:
         # Get the config file path relative to the project root
@@ -171,7 +171,7 @@ def main() -> None:
         )
         log_file_access("epls_lbl.py", str(output_path), "CREATED")
 
-        write_audit_log("epls_lbl.py", "EPLS LBL file created successfully.")
+        write_shared_log("epls_lbl.py", "EPLS LBL file created successfully.")
         show_message(awp, ing, total, rxs)
         messagebox.showinfo("Processing Complete", "Processing complete")
 
@@ -180,7 +180,7 @@ def main() -> None:
         make_audit_entry(
             "epls_lbl.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR"
         )
-        write_audit_log("epls_lbl.py", f"An error occurred: {e}", status="ERROR")
+        write_shared_log("epls_lbl.py", f"An error occurred: {e}", status="ERROR")
         messagebox.showerror("Error", f"An error occurred: {e}")
     finally:
         # End audit session

@@ -19,12 +19,12 @@ import logging
 # Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Try to import write_audit_log, create fallback if not available
+# Try to import write_shared_log, create fallback if not available
 try:
-    from utils.utils import write_audit_log
+    from utils.utils import write_shared_log
 except ImportError:
     # Fallback function if utils.utils is not available
-    def write_audit_log(script_name, message, status="INFO"):
+    def write_shared_log(script_name, message, status="INFO"):
         """Fallback logging function when utils.utils is not available"""
         print(f"[{status}] {script_name}: {message}")
 
@@ -59,14 +59,14 @@ class TemplateProcessor:
 
             # Copy template to output location
             shutil.copy(paths["template"], paths["output"])
-            write_audit_log(
+            write_shared_log(
                 "TemplateProcessor", f"Template backup created: {paths['backup']}"
             )
 
         except Exception as e:
             error_msg = f"Failed to create template backup: {str(e)}"
             logging.error(error_msg)
-            write_audit_log("TemplateProcessor", error_msg, "ERROR")
+            write_shared_log("TemplateProcessor", error_msg, "ERROR")
             raise
 
     def format_dataframe(self, df):
@@ -118,7 +118,7 @@ class TemplateProcessor:
         except Exception as e:
             error_msg = f"Failed to prepare template data: {str(e)}"
             logging.error(error_msg)
-            write_audit_log("TemplateProcessor", error_msg, "ERROR")
+            write_shared_log("TemplateProcessor", error_msg, "ERROR")
             raise
 
     def prepare_excel_data(self, paste_data, formulas):
