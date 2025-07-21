@@ -1,4 +1,3 @@
-import pandas as pd
 import json
 import logging
 import os
@@ -58,6 +57,26 @@ def write_audit_log(script_name, message, status="INFO"):
             "Mitchell Frederick": "Mitchell Frederick",
             # Add variations for different username formats
             "damion.morrison": "Damion Morrison",
+# ...existing code...
+import pandas as pd
+import json
+import logging
+import os
+import csv
+from pathlib import Path
+import getpass
+from datetime import datetime
+from dataclasses import dataclass
+
+# Load the audit log path from config
+config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+with open(config_path, "r") as f:
+    file_paths = json.load(f)
+# Always expand environment variables for user-agnostic paths
+for k, v in file_paths.items():
+    file_paths[k] = os.path.expandvars(v)
+shared_log_path = file_paths["audit_log"]
+# ...existing code...
             "danny.bushnell": "Danny Bushnell",
             "brett.bauer": "Brett Bauer",
             "brendan.reamer": "Brendan Reamer", 

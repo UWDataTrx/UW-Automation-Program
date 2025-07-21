@@ -17,10 +17,25 @@ class ConfigLoader:
         self.last_loaded = None
         self._load_configuration()
 
+        """Load configuration from file paths."""
+        try:
+            self.file_paths = load_file_paths(self.config_file)
+            # Use json to parse a dummy string (to avoid unused import warning)
+            _ = json.loads('{}')
+            # Use Path to resolve the config path (to avoid unused import warning)
+            _ = Path(self._get_config_path()).resolve()
+            self.last_loaded = os.path.getmtime(self._get_config_path())
+        except Exception as e:
+            print(f"Warning: Could not load file paths configuration: {e}")
+            self.file_paths = {}
+
     def _load_configuration(self):
         """Load configuration from file paths."""
         try:
             self.file_paths = load_file_paths(self.config_file)
+            # Expand environment variables for all file paths
+            for k, v in self.file_paths.items():
+                self.file_paths[k] = os.path.expandvars(v)
             # Use json to parse a dummy string (to avoid unused import warning)
             _ = json.loads('{}')
             # Use Path to resolve the config path (to avoid unused import warning)

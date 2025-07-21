@@ -1,9 +1,130 @@
 import pandas as pd
-import logging
 import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import pandas as pd
+import os
+import sys
+import logging
+from pathlib import Path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.utils import (
+    load_file_paths,
+    filter_logic_and_maintenance,
+    filter_products_and_alternative,
+    standardize_pharmacy_ids,
+    standardize_network_ids,
+    merge_with_network,
+    drop_duplicates_df,
+    clean_logic_and_tier,
+    filter_recent_date,
+    write_audit_log,
+)
+from modules.audit_helper import (
+    make_audit_entry,
+    log_user_session_start,
+    log_user_session_end,
+    log_file_access,
+)
+
+# Logging setup
+logging.basicConfig(
+    filename="bg_disruption.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+# Load NABP/NPI list
+included_nabp_npi = {
+    "4528874": "1477571404",
+    "2365422": "1659313435",
+    "3974157": "1972560688",
+    "320793": "1164437406",
+    "4591055": "1851463087",
+    "2348046": "1942303110",
+    "4023610": "1407879588",
+    "4025385": "1588706212",
+    "4025311": "1588705446",
+    "4026806": "1285860312",
+    "4931350": "1750330775",
+    "4024585": "1396768461",
+    "4028026": "1497022438",
+    "2643749": "1326490376"
+}
+
+def load_data_files(file_paths):
+    """Load and return all required data files."""
+    logger.info("Loading data files...")
+    # Load claims data
+    try:
+        claims_path = os.path.expandvars(file_paths.get("reprice", ""))
+        claims = pd.read_excel(claims_path, sheet_name="Claims Table")
+    except Exception as e:
+        logger.warning(f"Claims Table fallback: {e}")
+        claims = None
+    logger.info(f"claims shape: {claims.shape if claims is not None else 'None'}")
+    return claims
+    standardize_pharmacy_ids,
+    standardize_network_ids,
+    merge_with_network,
+    drop_duplicates_df,
+    clean_logic_and_tier,
+    filter_recent_date,
+    write_audit_log,
+)
+from modules.audit_helper import (
+    make_audit_entry,
+    log_user_session_start,
+    log_user_session_end,
+    log_file_access,
+)
+
+# Logging setup
+logging.basicConfig(
+    filename="bg_disruption.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+# Load NABP/NPI list
+included_nabp_npi = {
+    "4528874": "1477571404",
+    "2365422": "1659313435",
+    "3974157": "1972560688",
+    "320793": "1164437406",
+    "4591055": "1851463087",
+    "2348046": "1942303110",
+    "4023610": "1407879588",
+    "4025385": "1588706212",
+    "4025311": "1588705446",
+    "4026806": "1285860312",
+    "4931350": "1750330775",
+    "4024585": "1396768461",
+    "4028026": "1497022438",
+    "2643749": "1326490376"
+}
+
+def load_data_files(file_paths):
+    """Load and return all required data files."""
+    logger.info("Loading data files...")
+    # Load claims data
+    try:
+        claims_path = os.path.expandvars(file_paths.get("reprice", ""))
+        claims = pd.read_excel(claims_path, sheet_name="Claims Table")
+    except Exception as e:
+        logger.warning(f"Claims Table fallback: {e}")
+        claims = None
+    logger.info(f"claims shape: {claims.shape if claims is not None else 'None'}")
+    return claims
 import sys
 from pathlib import Path
 
+# Ensure user-agnostic path resolution
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import (
     load_file_paths,
@@ -52,14 +173,13 @@ included_nabp_npi = {
 }
 
 
-def load_data_files(file_paths):
+            os.path.expandvars(file_paths["reprice"]),
     """Load and return all required data files."""
     logger.info("Loading data files...")
 
-    # Load claims data
-    try:
-        claims = pd.read_excel(
-            os.path.expandvars(file_paths["reprice"]),
+    # Example: Load claims data using os.path.expandvars
+    claims_path = os.path.expandvars(file_paths.get("reprice", ""))
+    # ...existing code...
             sheet_name="Claims Table",
             usecols=[
                 "SOURCERECORDID",

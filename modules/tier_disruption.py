@@ -1,4 +1,3 @@
-import pandas as pd
 import sys
 import re
 import logging
@@ -58,6 +57,71 @@ included_nabp_npi = {
     "4025385": "1588706212",
     "4025311": "1588705446",
     "4026806": "1285860312",
+import pandas as pd
+import sys
+import re
+import logging
+from pathlib import Path
+import os
+
+# Ensure user-agnostic path resolution
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.utils import (
+    load_file_paths,
+    standardize_pharmacy_ids,
+    standardize_network_ids,
+    merge_with_network,
+    drop_duplicates_df,
+    clean_logic_and_tier,
+    filter_recent_date,
+    filter_logic_and_maintenance,
+    filter_products_and_alternative,
+    write_audit_log,
+)
+from modules.audit_helper import (
+    make_audit_entry,
+    log_user_session_start,
+    log_user_session_end,
+    log_file_access,
+)
+
+# Set up logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+try:
+    import importlib.util
+    if importlib.util.find_spec("xlsxwriter") is None:
+        print(
+            "The 'xlsxwriter' module is not installed. Please install it using 'pip install xlsxwriter'."
+        )
+        sys.exit(1)
+except Exception:
+    print("Error checking for 'xlsxwriter' module.")
+    sys.exit(1)
+
+# Load NABP/NPI list
+included_nabp_npi = {
+    "4528874": "1477571404",
+    "2365422": "1659313435",
+    "3974157": "1972560688",
+    "320793": "1164437406",
+    "4591055": "1851463087",
+    "2348046": "1942303110",
+    "4023610": "1407879588",
+    "4025385": "1588706212",
+    "4025311": "1588705446",
+    "4026806": "1285860312",
+    "4931350": "1750330775",
+    "4024585": "1396768461",
+    "4028026": "1497022438",
+    "2643749": "1326490376",
+}
+
+# Example: Load file paths and expand OneDrive
+file_paths = load_file_paths()
+claims_path = os.path.expandvars(file_paths.get("reprice", ""))
+# ...existing code...
     "4931350": "1750330775",
     "4024585": "1396768461",
     "4028026": "1497022438",
