@@ -487,9 +487,36 @@ class DiagnosticTool:
             hostname = socket.gethostname()
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+            # Map usernames to folder names (handle common variations)
+            user_folder_mapping = {
+                "DamionMorrison": "Damion Morrison",
+                "Damion Morrison": "Damion Morrison",
+                "DannyBushnell": "Danny Bushnell", 
+                "Danny Bushnell": "Danny Bushnell",
+                "BrettBauer": "Brett Bauer",
+                "Brett Bauer": "Brett Bauer", 
+                "BrendanReamer": "Brendan Reamer",
+                "Brendan Reamer": "Brendan Reamer",
+                "MitchellFrederick": "Mitchell Frederick",
+                "Mitchell Frederick": "Mitchell Frederick",
+                # Add variations for different username formats
+                "damion.morrison": "Damion Morrison",
+                "danny.bushnell": "Danny Bushnell",
+                "brett.bauer": "Brett Bauer",
+                "brendan.reamer": "Brendan Reamer", 
+                "mitchell.frederick": "Mitchell Frederick"
+            }
+
+            # Get the correct folder name for this user
+            user_folder = user_folder_mapping.get(username, "Other Users")
+            user_specific_dir = support_dir / user_folder
+            
+            # Create user-specific directory if it doesn't exist
+            user_specific_dir.mkdir(parents=True, exist_ok=True)
+
             # Create unique filename
             unique_filename = f"diagnostic_report_{username}_{hostname}_{timestamp}.txt"
-            support_file_path = support_dir / unique_filename
+            support_file_path = user_specific_dir / unique_filename
 
             # Copy report to support directory
             import shutil
@@ -502,7 +529,7 @@ class DiagnosticTool:
 
             # Also create a summary file for quick overview
             summary_file = (
-                support_dir / f"summary_{username}_{hostname}_{timestamp}.txt"
+                user_specific_dir / f"summary_{username}_{hostname}_{timestamp}.txt"
             )
             with open(summary_file, "w", encoding="utf-8") as f:
                 f.write("Diagnostic Report Summary\n")
@@ -519,7 +546,7 @@ class DiagnosticTool:
                 f.write(f"\nFull Report: {unique_filename}\n")
 
             print(
-                f"✓ Summary also created: summary_{username}_{hostname}_{timestamp}.txt"
+                f"✓ Summary also created in {user_folder}: summary_{username}_{hostname}_{timestamp}.txt"
             )
 
             return True
