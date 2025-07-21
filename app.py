@@ -22,6 +22,7 @@ import warnings
 import xlwings as xw
 import shutil
 import psutil
+import getpass
 
 # Add project root to Python path for imports - must be done before local imports
 project_root = Path(__file__).parent
@@ -39,7 +40,7 @@ from modules.data_processor import DataProcessor  # noqa: E402
 from modules.process_manager import ProcessManager  # noqa: E402
 from modules.ui_builder import UIBuilder  # noqa: E402
 from modules.log_manager import LogManager, ThemeController  # noqa: E402
-from utils.utils import write_shared_log  # noqa: E402
+from utils.utils import write_audit_log  # noqa: E402
 from modules.audit_helper import (  # noqa: E402
     log_file_access,
     log_process_action,
@@ -175,7 +176,7 @@ class App:
             self.file1_label.configure(text=os.path.basename(file_path))
         self.file_processor.check_template(file_path)
         log_file_access("File1Import", file_path, "IMPORTED")
-        write_shared_log("File1 imported", file_path)
+        write_audit_log("File1Import", f"File IMPORTED: {file_path} by {getpass.getuser()}", "FILE_ACCESS")
 
     def _validate_gross_cost_template(self, file_path):
         """Validate GrossCost column and suggest template type using data processor."""
@@ -209,7 +210,7 @@ class App:
             if self.file2_label:
                 self.file2_label.configure(text=os.path.basename(file_path))
             log_file_access("File2Import", file_path, "IMPORTED")
-            write_shared_log("File2 imported", file_path)
+            write_audit_log("File2Import", f"File IMPORTED: {file_path} by {getpass.getuser()}", "FILE_ACCESS")
 
         except Exception as e:
             error_msg = f"Failed to import File2: {str(e)}"
@@ -234,7 +235,7 @@ class App:
             if self.template_label:
                 self.template_label.configure(text=os.path.basename(file_path))
             log_file_access("TemplateImport", file_path, "IMPORTED")
-            write_shared_log("Template file imported", file_path)
+            write_audit_log("TemplateImport", f"Template file IMPORTED: {file_path} by {getpass.getuser()}", "FILE_ACCESS")
 
         except Exception as e:
             error_msg = f"Failed to import template file: {str(e)}"
@@ -793,7 +794,7 @@ class App:
 
         threading.Thread(target=self._start_process_internal).start()
         log_process_action("RepricingProcess", "STARTED")
-        write_shared_log("Repricing process started", "")
+        write_audit_log("RepricingApp", f"Repricing process started by {getpass.getuser()}", "PROCESS_START")
 
     def validate_merge_inputs(self):
         """Validate merge inputs using data processor."""
