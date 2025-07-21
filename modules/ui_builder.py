@@ -122,7 +122,7 @@ class UIBuilder:
             row=4, column=2, pady=10, padx=10, sticky="ew"
         )
 
-        # Shared Log Button
+        # Audit Log Button
         self.app.shared_log_button = UIFactory.create_standard_button(
             self.app.button_frame, "Shared Audit Log", self.app.show_shared_log_viewer
         )

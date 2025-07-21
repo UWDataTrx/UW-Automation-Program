@@ -15,7 +15,7 @@ from utils.utils import (
     drop_duplicates_df,
     clean_logic_and_tier,
     filter_recent_date,
-    write_shared_log,
+    write_audit_log,
 )
 from modules.audit_helper import (
     make_audit_entry,
@@ -81,7 +81,7 @@ def load_data_files(file_paths):
         make_audit_entry(
             "bg_disruption.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
         )
-        write_shared_log(
+        write_audit_log(
             "bg_disruption.py", f"Claims Table fallback: {e}", status="WARNING"
         )
         claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
@@ -441,7 +441,7 @@ def process_data():
     """Main processing function - coordinates all data processing steps."""
     # Start audit session
     log_user_session_start("bg_disruption.py")
-    write_shared_log("bg_disruption.py", "Processing started.")
+    write_audit_log("bg_disruption.py", "Processing started.")
 
     try:
         import sys
@@ -457,7 +457,7 @@ def process_data():
             make_audit_entry(
                 "bg_disruption.py", "No reprice/template file provided.", "FILE_ERROR"
             )
-            write_shared_log(
+            write_audit_log(
                 "bg_disruption.py", "No reprice/template file provided.", status="ERROR"
             )
             print("Error: No reprice/template file provided.")
@@ -504,7 +504,7 @@ def process_data():
         )
         log_file_access("bg_disruption.py", output_filename, "CREATED")
 
-        write_shared_log("bg_disruption.py", "Processing complete.")
+        write_audit_log("bg_disruption.py", "Processing complete.")
         print("Processing complete")
 
     except Exception as e:

@@ -19,7 +19,7 @@ from utils.utils import (
     filter_recent_date,
     filter_logic_and_maintenance,
     filter_products_and_alternative,
-    write_shared_log,
+    write_audit_log,
 )
 
 # Import audit helper functions
@@ -86,7 +86,7 @@ def load_tier_disruption_data(file_paths):
     """Load all required data files for tier disruption processing."""
     # Load claims with fallback
     if not file_paths.get("reprice"):
-        write_shared_log(
+        write_audit_log(
             "tier_disruption.py",
             "No reprice/template file provided.",
             status="ERROR",
@@ -488,7 +488,7 @@ def reorder_excel_sheets(writer):
 
 def show_completion_message(output_path):
     """Show completion message and popup."""
-    write_shared_log("tier_disruption.py", "Processing complete.")
+    write_audit_log("tier_disruption.py", "Processing complete.")
     print(f"Processing complete. Output file: {output_path}")
     try:
         import tkinter as tk
@@ -508,7 +508,7 @@ def show_completion_message(output_path):
 def process_data():
     # Start audit session
     log_user_session_start("tier_disruption.py")
-    write_shared_log("tier_disruption.py", "Processing started.")
+    write_audit_log("tier_disruption.py", "Processing started.")
 
     # Output filename from CLI arg or default
     output_filename = "LBL for Disruption.xlsx"
@@ -634,7 +634,7 @@ def process_data():
             f"Processing failed with error: {str(e)}",
             "SYSTEM_ERROR",
         )
-        write_shared_log(
+        write_audit_log(
             "tier_disruption.py", f"Processing failed: {e}", status="ERROR"
         )
         raise

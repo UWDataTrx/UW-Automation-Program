@@ -35,7 +35,7 @@ def ensure_directory_exists(path):
         print(f"[ensure_directory_exists] Error: {e}")
 
 
-def write_shared_log(script_name, message, status="INFO"):
+def write_audit_log(script_name, message, status="INFO"):
     """
     Appends a log entry to the shared audit log in OneDrive. Rotates log if too large.
     """
@@ -44,41 +44,49 @@ def write_shared_log(script_name, message, status="INFO"):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = [timestamp, username, script_name, message, status]
 
-        write_header = not os.path.exists(shared_log_path)
-        ensure_directory_exists(shared_log_path)
+        username = getpass.getuser()
+        base_log_dir = os.path.dirname(shared_log_path)
+        user_log_dir = os.path.join(base_log_dir, username)
+        user_log_path = os.path.join(user_log_dir, "Audit_Log.csv")
 
-        # Log rotation: if file > 5MB, rotate (keep 3 backups)
+        write_header = not os.path.exists(user_log_path)
+        if not os.path.exists(user_log_dir):
+            try:
+                os.makedirs(user_log_dir)
+            except Exception as e:
+                print(f"[Audit Log] Could not create user log folder: {e}")
+
         max_size = 5 * 1024 * 1024
         if (
-            os.path.exists(shared_log_path)
-            and os.path.getsize(shared_log_path) > max_size
+            os.path.exists(user_log_path)
+            and os.path.getsize(user_log_path) > max_size
         ):
             for i in range(2, 0, -1):
-                prev = f"{shared_log_path}.{i}"
-                prev2 = f"{shared_log_path}.{i + 1}"
+                prev = f"{user_log_path}.{i}"
+                prev2 = f"{user_log_path}.{i + 1}"
                 if os.path.exists(prev):
                     os.replace(prev, prev2)
-            os.replace(shared_log_path, f"{shared_log_path}.1")
+            os.replace(user_log_path, f"{user_log_path}.1")
 
-        with open(shared_log_path, mode="a", newline="", encoding="utf-8") as file:
+        with open(user_log_path, mode="a", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             if write_header:
                 writer.writerow(["Timestamp", "User", "Script", "Message", "Status"])
             writer.writerow(log_entry)
     except Exception as e:
-        print(f"[Shared Log] Error: {e}")
+        print(f"[Audit Log] Error: {e}")
 
 
 def log_exception(script_name, exc, status="ERROR"):
     """
-    Standardized exception logging to shared log and console.
+    Standardized exception logging to audit log and console.
     """
     import traceback
 
     tb = traceback.format_exc()
     msg = f"{exc}: {tb}"
     print(f"[Exception] {msg}")
-    write_shared_log(script_name, msg, status)
+    write_audit_log(script_name, msg, status)
 
 
 def load_file_paths(json_file="file_paths.json"):

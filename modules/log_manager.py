@@ -6,6 +6,7 @@ Extracted from app.py to reduce file size and improve organization.
 import tkinter as tk
 from tkinter import scrolledtext
 import csv
+import getpass
 import os
 import sys
 import logging
@@ -16,7 +17,7 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import required modules
-from utils.utils import write_shared_log
+from utils.utils import write_audit_log
 from modules.audit_helper import (
     log_user_session_start,
     log_user_session_end,
@@ -77,14 +78,17 @@ class LogManager:
         def refresh():
             """Refresh the log display with optional filtering."""
             try:
-                if not os.path.exists(self.shared_log_path):
+                username = getpass.getuser()
+                base_log_dir = os.path.dirname(self.shared_log_path)
+                user_log_path = os.path.join(base_log_dir, username, "Audit_Log.csv")
+                if not os.path.exists(user_log_path):
                     text_area.delete(1.0, tk.END)
                     text_area.insert(
-                        tk.END, f"Shared log file not found at: {self.shared_log_path}"
+                        tk.END, f"Audit log file not found at: {user_log_path}"
                     )
                     return
 
-                with open(self.shared_log_path, "r", newline="", encoding="utf-8") as f:
+                with open(user_log_path, "r", newline="", encoding="utf-8") as f:
                     reader = csv.reader(f)
                     rows = list(reader)
 
@@ -104,8 +108,8 @@ class LogManager:
 
             except Exception as e:
                 text_area.delete(1.0, tk.END)
-                text_area.insert(tk.END, f"[ERROR] Could not read shared log:\n{e}")
-                logging.error(f"Error reading shared log: {e}")
+                text_area.insert(tk.END, f"[ERROR] Could not read audit log:\n{e}")
+                logging.error(f"Error reading audit log: {e}")
 
             # Auto-refresh every 5 seconds
             log_win.after(5000, refresh)
@@ -176,7 +180,7 @@ class ThemeController:
             self.current_theme = "light"
 
         logging.info(f"Theme switched to {self.current_theme} mode")
-        write_shared_log("ThemeController", f"Theme changed to {self.current_theme}")
+        write_audit_log("ThemeController", f"Theme changed to {self.current_theme}")
 
     def apply_initial_theme(self):
         """Apply the initial light theme."""

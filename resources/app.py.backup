@@ -285,7 +285,7 @@ class App:
         self.log_manager.show_log_viewer()
 
     def show_shared_log_viewer(self):
-        """Show shared log viewer using log manager."""
+        """Show audit log viewer using log manager."""
         self.log_manager.show_shared_log_viewer()
 
     def sharx_lbl(self):

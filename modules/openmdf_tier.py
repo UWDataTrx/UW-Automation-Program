@@ -18,7 +18,7 @@ from utils.utils import (
     filter_recent_date,
     filter_logic_and_maintenance,
     filter_products_and_alternative,
-    write_shared_log,
+    write_audit_log,
 )
 
 # Import audit helper functions
@@ -64,7 +64,7 @@ def load_openmdf_tier_data(file_paths):
     """Load all required data files for Open MDF tier disruption processing."""
     # Load claims with fallback
     if not file_paths.get("reprice"):
-        write_shared_log(
+        write_audit_log(
             "openmdf_tier.py",
             "No reprice/template file provided.",
             status="ERROR",
@@ -92,7 +92,7 @@ def load_openmdf_tier_data(file_paths):
         print(f"medi shape: {medi.shape}")
     except Exception as e:
         logger.error(f"Failed to read medi_span file: {file_paths['medi_span']} | {e}")
-        write_shared_log(
+        write_audit_log(
             "openmdf_tier.py",
             f"Failed to read medi_span file: {file_paths['medi_span']} | {e}",
             status="ERROR",
@@ -108,7 +108,7 @@ def load_openmdf_tier_data(file_paths):
         logger.error(
             f"Failed to read mdf_disrupt file: {file_paths['mdf_disrupt']} | {e}"
         )
-        write_shared_log(
+        write_audit_log(
             "openmdf_tier.py",
             f"Failed to read mdf_disrupt file: {file_paths['mdf_disrupt']} | {e}",
             status="ERROR",
@@ -122,7 +122,7 @@ def load_openmdf_tier_data(file_paths):
         print(f"exclusive shape: {exclusive.shape}")
     except Exception as e:
         logger.error(f"Failed to read e_disrupt file: {file_paths['e_disrupt']} | {e}")
-        write_shared_log(
+        write_audit_log(
             "openmdf_tier.py",
             f"Failed to read e_disrupt file: {file_paths['e_disrupt']} | {e}",
             status="ERROR",
@@ -136,7 +136,7 @@ def load_openmdf_tier_data(file_paths):
         print(f"network shape: {network.shape}")
     except Exception as e:
         logger.error(f"Failed to read n_disrupt file: {file_paths['n_disrupt']} | {e}")
-        write_shared_log(
+        write_audit_log(
             "openmdf_tier.py",
             f"Failed to read n_disrupt file: {file_paths['n_disrupt']} | {e}",
             status="ERROR",
@@ -473,7 +473,7 @@ def reorder_openmdf_excel_sheets(writer):
 
 def show_openmdf_completion_message(output_path):
     """Show completion message and popup."""
-    write_shared_log("openmdf_tier.py", "Processing complete.")
+    write_audit_log("openmdf_tier.py", "Processing complete.")
     print(f"Processing complete. Output file: {output_path}")
     try:
         import tkinter as tk
@@ -495,7 +495,7 @@ def show_openmdf_completion_message(output_path):
 def process_data():
     # Start audit session
     log_user_session_start("openmdf_tier.py")
-    write_shared_log("openmdf_tier.py", "Processing started.")
+    write_audit_log("openmdf_tier.py", "Processing started.")
 
     # Output filename from CLI arg or default
     output_filename = "LBL for Disruption.xlsx"
@@ -613,7 +613,7 @@ def process_data():
         make_audit_entry(
             "openmdf_tier.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR"
         )
-        write_shared_log("openmdf_tier.py", f"Processing failed: {e}", status="ERROR")
+        write_audit_log("openmdf_tier.py", f"Processing failed: {e}", status="ERROR")
         raise
     finally:
         # End audit session

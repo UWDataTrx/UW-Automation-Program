@@ -318,7 +318,7 @@ Run manually to analyze and optimize performance bottlenecks.
 
 ### utils.py
 - `ensure_directory_exists(path)`: Creates a directory if it does not exist.
-- `write_shared_log(script_name, message, status="INFO")`: Writes a log entry to the shared log file.
+- `write_shared_log(script_name, message, status="INFO")`: Writes a log entry to the audit log file.
 - `log_exception(script_name, exc, status="ERROR")`: Logs an exception with details.
 - `load_file_paths(json_file='file_paths.json')`: Loads file paths from a JSON config file.
 - `standardize_pharmacy_ids(df)`: Standardizes pharmacy IDs in a DataFrame.
