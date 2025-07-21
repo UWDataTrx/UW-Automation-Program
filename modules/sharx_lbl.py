@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import required utility functions
 from utils.excel_utils import write_df_to_template
-from utils.utils import load_file_paths, write_shared_log
+from utils.utils import load_file_paths, write_audit_log
 
 # Import audit helper functions
 from modules.audit_helper import (
@@ -51,7 +51,7 @@ def main():
 
     # Start audit session
     log_user_session_start("sharx_lbl.py")
-    write_shared_log("sharx_lbl.py", "Processing started.")
+    write_audit_log("sharx_lbl.py", "Processing started.")
 
     try:
         # Get the config file path relative to the project root
@@ -148,7 +148,7 @@ def main():
         )
         log_file_access("sharx_lbl.py", str(output_path), "CREATED")
 
-        write_shared_log("sharx_lbl.py", "SHARx LBL file created successfully.")
+        write_audit_log("sharx_lbl.py", "SHARx LBL file created successfully.")
         show_message(awp, ing, total, rxs)
         messagebox.showinfo("Processing Complete", "Processing complete")
 
@@ -157,7 +157,7 @@ def main():
         make_audit_entry(
             "sharx_lbl.py", f"Processing failed with error: {str(e)}", "SYSTEM_ERROR"
         )
-        write_shared_log("sharx_lbl.py", f"An error occurred: {e}", status="ERROR")
+        write_audit_log("sharx_lbl.py", f"An error occurred: {e}", status="ERROR")
         messagebox.showerror("Error", f"An error occurred: {e}")
     finally:
         # End audit session

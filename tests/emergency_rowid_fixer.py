@@ -84,7 +84,7 @@ def apply_rowid_fixes_to_content(content):
         except Exception as e:
             error_msg = f"Error loading data from {file_path}: {str(e)}"
             logging.error(error_msg)
-            write_shared_log("DataProcessor", error_msg, "ERROR")
+            write_audit_log("DataProcessor", error_msg, "ERROR")
             raise'''
 
     new_load_method = '''    def load_and_validate_data(self, file_path):
@@ -117,7 +117,7 @@ def apply_rowid_fixes_to_content(content):
         except Exception as e:
             error_msg = f"Error loading data from {file_path}: {str(e)}"
             logging.error(error_msg)
-            write_shared_log("DataProcessor", error_msg, "ERROR")
+            write_audit_log("DataProcessor", error_msg, "ERROR")
             raise
     
     def _safe_prepare_data_for_processing(self, df):

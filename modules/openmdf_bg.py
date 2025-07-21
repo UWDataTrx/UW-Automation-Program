@@ -18,7 +18,7 @@ from utils.utils import (
     filter_recent_date,
     filter_logic_and_maintenance,
     filter_products_and_alternative,
-    write_shared_log,
+    write_audit_log,
 )
 from utils.excel_utils import safe_excel_write, check_disk_space
 
@@ -61,7 +61,7 @@ included_nabp_npi = {
 def process_data():
     # Start audit session
     log_user_session_start("openmdf_bg.py")
-    write_shared_log("openmdf_bg.py", "Processing started.")
+    write_audit_log("openmdf_bg.py", "Processing started.")
 
     try:
         import sys
@@ -75,7 +75,7 @@ def process_data():
             make_audit_entry(
                 "openmdf_bg.py", "No reprice/template file provided.", "FILE_ERROR"
             )
-            write_shared_log(
+            write_audit_log(
                 "openmdf_bg.py", "No reprice/template file provided.", status="ERROR"
             )
             print("No reprice/template file provided.")
@@ -97,7 +97,7 @@ def process_data():
                     f"Sheet 'Claims Table' not found. Available sheets: {xl.sheet_names}",
                     "DATA_ERROR",
                 )
-                write_shared_log(
+                write_audit_log(
                     "openmdf_bg.py",
                     f"Sheet 'Claims Table' not found in {paths['reprice']}. Sheets: {xl.sheet_names}",
                     status="ERROR",
@@ -126,7 +126,7 @@ def process_data():
             make_audit_entry(
                 "openmdf_bg.py", f"Failed to read Claims Table: {e}", "FILE_ERROR"
             )
-            write_shared_log(
+            write_audit_log(
                 "openmdf_bg.py", f"Failed to read Claims Table: {e}", status="ERROR"
             )
             log_user_session_end("openmdf_bg.py")
@@ -138,7 +138,7 @@ def process_data():
             f"Failed to load configuration or reprice file: {e}",
             "FILE_ERROR",
         )
-        write_shared_log(
+        write_audit_log(
             "openmdf_bg.py",
             f"Failed to load configuration or reprice file: {e}",
             status="ERROR",
@@ -148,7 +148,7 @@ def process_data():
 
     # Log claim count before any filtering
     logger.info(f"Initial claims count: {claims.shape[0]}")
-    write_shared_log("openmdf_bg.py", f"Initial claims count: {claims.shape[0]}")
+    write_audit_log("openmdf_bg.py", f"Initial claims count: {claims.shape[0]}")
 
     try:
         medi = pd.read_excel(paths["medi_span"])[["NDC", "Maint Drug?", "Product Name"]]
@@ -158,7 +158,7 @@ def process_data():
         make_audit_entry(
             "openmdf_bg.py", f"Failed to read medi_span file: {e}", "FILE_ERROR"
         )
-        write_shared_log(
+        write_audit_log(
             "openmdf_bg.py",
             f"Failed to read medi_span file: {paths['medi_span']} | {e}",
             status="ERROR",
@@ -175,7 +175,7 @@ def process_data():
         make_audit_entry(
             "openmdf_bg.py", f"Failed to read mdf_disrupt file: {e}", "FILE_ERROR"
         )
-        write_shared_log(
+        write_audit_log(
             "openmdf_bg.py",
             f"Failed to read mdf_disrupt file: {paths['mdf_disrupt']} | {e}",
             status="ERROR",
@@ -192,7 +192,7 @@ def process_data():
         make_audit_entry(
             "openmdf_bg.py", f"Failed to read n_disrupt file: {e}", "FILE_ERROR"
         )
-        write_shared_log(
+        write_audit_log(
             "openmdf_bg.py",
             f"Failed to read n_disrupt file: {paths['n_disrupt']} | {e}",
             status="ERROR",
@@ -210,7 +210,7 @@ def process_data():
         make_audit_entry(
             "openmdf_bg.py", f"Failed to read e_disrupt file: {e}", "FILE_ERROR"
         )
-        write_shared_log(
+        write_audit_log(
             "openmdf_bg.py",
             f"Failed to read e_disrupt file: {paths['e_disrupt']} | {e}",
             status="ERROR",
@@ -252,29 +252,29 @@ def process_data():
     # Log claim count after merge
     print(f"Claims after merge: {df.shape}")
     logger.info(f"Claims after merge: {df.shape}")
-    write_shared_log("openmdf_bg.py", f"Claims after merge: {df.shape[0]}")
+    write_audit_log("openmdf_bg.py", f"Claims after merge: {df.shape[0]}")
 
     df = merge_with_network(df, network)
     print(f"After merge_with_network: {df.shape}")
     logger.info(f"After merge_with_network: {df.shape}")
-    write_shared_log("openmdf_bg.py", f"Claims after merge_with_network: {df.shape[0]}")
+    write_audit_log("openmdf_bg.py", f"Claims after merge_with_network: {df.shape[0]}")
 
     df = drop_duplicates_df(df)
     print(f"After drop_duplicates_df: {df.shape}")
     logger.info(f"After drop_duplicates_df: {df.shape}")
-    write_shared_log("openmdf_bg.py", f"Claims after drop_duplicates_df: {df.shape[0]}")
+    write_audit_log("openmdf_bg.py", f"Claims after drop_duplicates_df: {df.shape[0]}")
 
     df = clean_logic_and_tier(df)
     print(f"After clean_logic_and_tier: {df.shape}")
     logger.info(f"After clean_logic_and_tier: {df.shape}")
-    write_shared_log(
+    write_audit_log(
         "openmdf_bg.py", f"Claims after clean_logic_and_tier: {df.shape[0]}"
     )
 
     df = filter_products_and_alternative(df)
     print(f"After filter_products_and_alternative: {df.shape}")
     logger.info(f"After filter_products_and_alternative: {df.shape}")
-    write_shared_log(
+    write_audit_log(
         "openmdf_bg.py", f"Claims after filter_products_and_alternative: {df.shape[0]}"
     )
 
@@ -283,13 +283,13 @@ def process_data():
     df = filter_recent_date(df)
     print(f"After filter_recent_date: {df.shape}")
     logger.info(f"After filter_recent_date: {df.shape}")
-    write_shared_log("openmdf_bg.py", f"Claims after filter_recent_date: {df.shape[0]}")
+    write_audit_log("openmdf_bg.py", f"Claims after filter_recent_date: {df.shape[0]}")
 
     df["Logic"] = pd.to_numeric(df["Logic"], errors="coerce")
     df = filter_logic_and_maintenance(df)
     print(f"After filter_logic_and_maintenance: {df.shape}")
     logger.info(f"After filter_logic_and_maintenance: {df.shape}")
-    write_shared_log(
+    write_audit_log(
         "openmdf_bg.py", f"Claims after filter_logic_and_maintenance: {df.shape[0]}"
     )
 
@@ -300,7 +300,7 @@ def process_data():
     ]
     print(f"After final product exclusion: {df.shape}")
     logger.info(f"After final product exclusion: {df.shape}")
-    write_shared_log(
+    write_audit_log(
         "openmdf_bg.py", f"Claims after final product exclusion: {df.shape[0]}"
     )
 
@@ -341,7 +341,7 @@ def process_data():
             "Insufficient disk space for Excel operations",
             "SYSTEM_ERROR",
         )
-        write_shared_log(
+        write_audit_log(
             "openmdf_bg.py",
             "Insufficient disk space for Excel operations",
             status="ERROR",
@@ -356,7 +356,7 @@ def process_data():
         make_audit_entry(
             "openmdf_bg.py", f"Failed to create Excel writer: {e}", "FILE_ERROR"
         )
-        write_shared_log(
+        write_audit_log(
             "openmdf_bg.py", f"Failed to create Excel writer: {e}", status="ERROR"
         )
         log_user_session_end("openmdf_bg.py")
@@ -567,7 +567,7 @@ def process_data():
                 f"Output file validation failed: {validation_error}",
                 "FILE_ERROR",
             )
-            write_shared_log(
+            write_audit_log(
                 "openmdf_bg.py",
                 f"Output file validation failed: {validation_error}",
                 status="ERROR",
@@ -579,7 +579,7 @@ def process_data():
         make_audit_entry(
             "openmdf_bg.py", f"Failed to close Excel writer: {e}", "FILE_ERROR"
         )
-        write_shared_log(
+        write_audit_log(
             "openmdf_bg.py", f"Failed to close Excel writer: {e}", status="ERROR"
         )
         log_user_session_end("openmdf_bg.py")
@@ -593,7 +593,7 @@ def process_data():
         "INFO",
     )
     log_file_access("openmdf_bg.py", str(output_path), "CREATED")
-    write_shared_log("openmdf_bg.py", "Processing complete.")
+    write_audit_log("openmdf_bg.py", "Processing complete.")
     log_user_session_end("openmdf_bg.py")
 
     # Final cleanup and completion message

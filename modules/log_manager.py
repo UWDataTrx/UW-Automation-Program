@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import required modules
-from utils.utils import write_shared_log
+from utils.utils import write_audit_log
 from modules.audit_helper import (
     log_user_session_start,
     log_user_session_end,
@@ -176,7 +176,7 @@ class ThemeController:
             self.current_theme = "light"
 
         logging.info(f"Theme switched to {self.current_theme} mode")
-        write_shared_log("ThemeController", f"Theme changed to {self.current_theme}")
+        write_audit_log("ThemeController", f"Theme changed to {self.current_theme}")
 
     def apply_initial_theme(self):
         """Apply the initial light theme."""

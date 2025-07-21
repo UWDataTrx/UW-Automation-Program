@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import required modules
 from config.app_config import DisruptionConfig
-from utils.utils import write_shared_log
+from utils.utils import write_audit_log
 
 
 class ProcessManager:
@@ -28,7 +28,7 @@ class ProcessManager:
     def start_process_threaded(self):
         """Start the main repricing process in a separate thread."""
         threading.Thread(target=self._start_process_internal).start()
-        write_shared_log("ProcessManager", "Repricing process started")
+        write_audit_log("ProcessManager", "Repricing process started")
 
     def _start_process_internal(self):
         """Internal method to handle the repricing process."""
@@ -133,7 +133,7 @@ class ProcessManager:
                 check=True,
                 cwd=os.path.dirname(os.path.dirname(__file__)),
             )
-            write_shared_log("ProcessManager", f"{label_type} LBL generation completed")
+            write_audit_log("ProcessManager", f"{label_type} LBL generation completed")
 
         except subprocess.CalledProcessError as e:
             logging.error(f"{label_type} LBL generation failed: {e}")
@@ -142,7 +142,7 @@ class ProcessManager:
     def cancel_process(self):
         """Cancel the current process."""
         logging.info("Process cancellation requested")
-        write_shared_log("ProcessManager", "Process cancelled")
+        write_audit_log("ProcessManager", "Process cancelled")
         messagebox.showinfo("Cancelled", "Process cancellation requested.")
 
     def finish_notification(self):
@@ -159,5 +159,5 @@ class ProcessManager:
         except ImportError:
             pass  # Notification not available
 
-        write_shared_log("ProcessManager", "Batch processing completed")
+        write_audit_log("ProcessManager", "Batch processing completed")
         messagebox.showinfo("Completed", "Batch processing finished!")

@@ -14,13 +14,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from config.app_config import ProcessingConfig, AppConstants
-    from utils.utils import write_shared_log
+    from utils.utils import write_audit_log
 except ImportError:
     # Fallback if imports are not available
     ProcessingConfig = None
     AppConstants = None
 
-    def write_shared_log(script_name, message, status="INFO"):
+    def write_audit_log(script_name, message, status="INFO"):
         """Fallback logging function when utils.utils is not available"""
         print(f"[{status}] {script_name}: {message}")
 
@@ -63,7 +63,7 @@ class FileProcessor:
             )
 
             # Log the import
-            write_shared_log(
+            write_audit_log(
                 "FileProcessor", f"{file_type} imported successfully: {file_path}"
             )
 
@@ -72,7 +72,7 @@ class FileProcessor:
         except Exception as e:
             error_msg = f"Error importing {file_type}: {str(e)}"
             messagebox.showerror("Error", error_msg)
-            write_shared_log("FileProcessor", error_msg, "ERROR")
+            write_audit_log("FileProcessor", error_msg, "ERROR")
             return None
 
     def validate_file_structure(self, df, required_columns=None):
@@ -91,7 +91,7 @@ class FileProcessor:
             return True
         except ValueError as e:
             messagebox.showerror("Validation Error", str(e))
-            write_shared_log("FileProcessor", f"Validation Error: {str(e)}", "ERROR")
+            write_audit_log("FileProcessor", f"Validation Error: {str(e)}", "ERROR")
             return False
 
     def prepare_file_paths(self, template_path, opportunity_name=None):
