@@ -73,20 +73,20 @@ def load_openmdf_tier_data(file_paths):
         return None
 
     try:
-        claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table")
+        claims = pd.read_excel(os.path.expandvars(file_paths["reprice"]), sheet_name="Claims Table")
     except Exception as e:
         logger.error(f"Error loading claims: {e}")
         make_audit_entry(
             "openmdf_tier.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
         )
-        claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
+        claims = pd.read_excel(os.path.expandvars(file_paths["reprice"]), sheet_name=0)
 
     print(f"claims shape: {claims.shape}")
     claims.info()
 
     # Load reference tables
     try:
-        medi = pd.read_excel(file_paths["medi_span"])[
+        medi = pd.read_excel(os.path.expandvars(file_paths["medi_span"]))[
             ["NDC", "Maint Drug?", "Product Name"]
         ]
         print(f"medi shape: {medi.shape}")
@@ -100,7 +100,7 @@ def load_openmdf_tier_data(file_paths):
         return None
 
     try:
-        mdf = pd.read_excel(file_paths["mdf_disrupt"], sheet_name="Open MDF NDC")[
+        mdf = pd.read_excel(os.path.expandvars(file_paths["mdf_disrupt"]), sheet_name="Open MDF NDC")[
             ["NDC", "Tier"]
         ]
         print(f"mdf shape: {mdf.shape}")

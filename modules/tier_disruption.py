@@ -95,37 +95,37 @@ def load_tier_disruption_data(file_paths):
         return None
 
     try:
-        claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table")
+        claims = pd.read_excel(os.path.expandvars(file_paths["reprice"]), sheet_name="Claims Table")
     except Exception as e:
         logger.error(f"Error loading claims: {e}")
         make_audit_entry(
             "tier_disruption.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
         )
-        claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
+        claims = pd.read_excel(os.path.expandvars(file_paths["reprice"]), sheet_name=0)
 
     print(f"claims shape: {claims.shape}")
     claims.info()
 
     # Load reference tables
     medi = pd.read_excel(
-        file_paths["medi_span"], usecols=["NDC", "Maint Drug?", "Product Name"]
+        os.path.expandvars(file_paths["medi_span"]), usecols=["NDC", "Maint Drug?", "Product Name"]
     )
     print(f"medi shape: {medi.shape}")
 
     u = pd.read_excel(
-        file_paths["u_disrupt"], sheet_name="Universal NDC", usecols=["NDC", "Tier"]
+        os.path.expandvars(file_paths["u_disrupt"]), sheet_name="Universal NDC", usecols=["NDC", "Tier"]
     )
     print(f"u shape: {u.shape}")
 
     e = pd.read_excel(
-        file_paths["e_disrupt"],
+        os.path.expandvars(file_paths["e_disrupt"]),
         sheet_name="Alternatives NDC",
         usecols=["NDC", "Tier", "Alternative"],
     )
     print(f"e shape: {e.shape}")
 
     network = pd.read_excel(
-        file_paths["n_disrupt"],
+        os.path.expandvars(file_paths["n_disrupt"]),
         usecols=["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"],
     )
     print(f"network shape: {network.shape}")

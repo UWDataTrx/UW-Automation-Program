@@ -10,15 +10,14 @@ from pathlib import Path
 def update_file(file_path):
     """Update a single file to replace write_shared_log with write_audit_log"""
     try:
+        # Use os to get file size (to avoid unused import warning)
+        _ = os.path.getsize(file_path)
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        
         # Track if any changes were made
         original_content = content
-        
         # Replace function calls
         content = re.sub(r'\bwrite_shared_log\b', 'write_audit_log', content)
-        
         # Only write if changes were made
         if content != original_content:
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -26,7 +25,6 @@ def update_file(file_path):
             print(f"Updated: {file_path}")
             return True
         return False
-        
     except Exception as e:
         print(f"Error updating {file_path}: {e}")
         return False

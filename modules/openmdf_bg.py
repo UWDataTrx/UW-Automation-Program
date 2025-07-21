@@ -87,7 +87,7 @@ def process_data():
 
         # Check for required sheet name in reprice file
         try:
-            xl = pd.ExcelFile(paths["reprice"])
+            xl = pd.ExcelFile(os.path.expandvars(paths["reprice"]))
             if "Claims Table" not in xl.sheet_names:
                 logger.error(
                     f"Sheet 'Claims Table' not found in {paths['reprice']}. Sheets: {xl.sheet_names}"
@@ -151,8 +151,8 @@ def process_data():
     write_audit_log("openmdf_bg.py", f"Initial claims count: {claims.shape[0]}")
 
     try:
-        medi = pd.read_excel(paths["medi_span"])[["NDC", "Maint Drug?", "Product Name"]]
-        log_file_access("openmdf_bg.py", paths["medi_span"], "LOADED")
+        medi = pd.read_excel(os.path.expandvars(paths["medi_span"]))[["NDC", "Maint Drug?", "Product Name"]]
+        log_file_access("openmdf_bg.py", os.path.expandvars(paths["medi_span"]), "LOADED")
     except Exception as e:
         logger.error(f"Failed to read medi_span file: {paths['medi_span']} | {e}")
         make_audit_entry(
@@ -166,10 +166,10 @@ def process_data():
         log_user_session_end("openmdf_bg.py")
         return False
     try:
-        mdf = pd.read_excel(paths["mdf_disrupt"], sheet_name="Open MDF NDC")[
+        mdf = pd.read_excel(os.path.expandvars(paths["mdf_disrupt"]), sheet_name="Open MDF NDC")[
             ["NDC", "Tier"]
         ]
-        log_file_access("openmdf_bg.py", paths["mdf_disrupt"], "LOADED")
+        log_file_access("openmdf_bg.py", os.path.expandvars(paths["mdf_disrupt"]), "LOADED")
     except Exception as e:
         logger.error(f"Failed to read mdf_disrupt file: {paths['mdf_disrupt']} | {e}")
         make_audit_entry(

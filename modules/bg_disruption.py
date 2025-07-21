@@ -59,7 +59,7 @@ def load_data_files(file_paths):
     # Load claims data
     try:
         claims = pd.read_excel(
-            file_paths["reprice"],
+            os.path.expandvars(file_paths["reprice"]),
             sheet_name="Claims Table",
             usecols=[
                 "SOURCERECORDID",
@@ -84,28 +84,28 @@ def load_data_files(file_paths):
         write_audit_log(
             "bg_disruption.py", f"Claims Table fallback: {e}", status="WARNING"
         )
-        claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
+        claims = pd.read_excel(os.path.expandvars(file_paths["reprice"]), sheet_name=0)
 
     logger.info(f"claims shape: {claims.shape}")
     claims.info()
 
     # Load other data files
-    medi = pd.read_excel(file_paths["medi_span"])[
+    medi = pd.read_excel(os.path.expandvars(file_paths["medi_span"]))[
         ["NDC", "Maint Drug?", "Product Name"]
     ]
     logger.info(f"medi shape: {medi.shape}")
 
-    uni = pd.read_excel(file_paths["u_disrupt"], sheet_name="Universal NDC")[
+    uni = pd.read_excel(os.path.expandvars(file_paths["u_disrupt"]), sheet_name="Universal NDC")[
         ["NDC", "Tier"]
     ]
     logger.info(f"uni shape: {uni.shape}")
 
-    exl = pd.read_excel(file_paths["e_disrupt"], sheet_name="Alternatives NDC")[
+    exl = pd.read_excel(os.path.expandvars(file_paths["e_disrupt"]), sheet_name="Alternatives NDC")[
         ["NDC", "Tier", "Alternative"]
     ]
     logger.info(f"exl shape: {exl.shape}")
 
-    network = pd.read_excel(file_paths["n_disrupt"])[
+    network = pd.read_excel(os.path.expandvars(file_paths["n_disrupt"]))[
         ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
     ]
     logger.info(f"network shape: {network.shape}")
@@ -192,7 +192,7 @@ def handle_pharmacy_exclusions(df, file_paths):
 
         if not na_pharmacies.empty:
             # Define the writer before using it
-            output_file_path = file_paths["pharmacy_validation"]
+            output_file_path = os.path.expandvars(file_paths["pharmacy_validation"])
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
             # Add Result column with "NA" value
             na_pharmacies_output["Result"] = "NA"
