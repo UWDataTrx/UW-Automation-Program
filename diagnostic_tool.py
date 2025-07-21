@@ -547,7 +547,7 @@ def main():
             print("Issues detected - please review recommendations above.")
 
         print("\nSupport Information:")
-        print("• Your diagnostic report has been automatically sent to support")
+        # Note: The upload status is already printed by _upload_report_to_support method
         print("• If you need immediate assistance, describe:")
         print("  - What you were trying to do when the problem occurred")
         print("  - Any specific error messages you saw")

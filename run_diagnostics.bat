@@ -49,8 +49,8 @@ if errorlevel 1 (
 
 echo.
 echo To get help with any issues found:
-echo 1. Your diagnostic report has been automatically sent to support
-echo 2. Check the output above to confirm successful upload
+echo 1. Check the output above to confirm if your report was uploaded to support
+echo 2. If upload succeeded, your report is automatically available to support
 echo 3. If upload failed, please manually send the 'diagnostic_report.txt' file
 echo 4. For immediate assistance, contact support with details about:
 echo    - What you were trying to do when the problem occurred
