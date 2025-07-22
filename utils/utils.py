@@ -94,8 +94,12 @@ def load_file_paths(json_file="file_paths.json"):
     Loads a JSON config file, replacing %OneDrive% with the user's OneDrive path.
     Returns a dictionary mapping keys to resolved absolute file paths.
     """
+    json_path = None
     try:
-        with open(json_file, "r") as f:
+        # Always use the config directory for file_paths.json
+        config_dir = os.path.join(os.path.dirname(__file__), '..', 'config')
+        json_path = os.path.join(config_dir, 'file_paths.json')
+        with open(json_path, "r") as f:
             paths = json.load(f)
 
         # Resolve the user's OneDrive path
@@ -114,7 +118,7 @@ def load_file_paths(json_file="file_paths.json"):
         return resolved_paths
 
     except Exception:
-        logging.exception(f"Failed to load or resolve file paths from {json_file}")
+        logging.exception(f"Failed to load or resolve file paths from {json_path if json_path else json_file}")
         raise
 
 
