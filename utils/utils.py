@@ -57,10 +57,7 @@ def write_audit_log(script_name, message, status="INFO"):
                 print(f"[Audit Log] Could not create user log folder: {e}")
 
         max_size = 5 * 1024 * 1024
-        if (
-            os.path.exists(user_log_path)
-            and os.path.getsize(user_log_path) > max_size
-        ):
+        if os.path.exists(user_log_path) and os.path.getsize(user_log_path) > max_size:
             for i in range(2, 0, -1):
                 prev = f"{user_log_path}.{i}"
                 prev2 = f"{user_log_path}.{i + 1}"
@@ -97,8 +94,8 @@ def load_file_paths(json_file="file_paths.json"):
     json_path = None
     try:
         # Always use the config directory for file_paths.json
-        config_dir = os.path.join(os.path.dirname(__file__), '..', 'config')
-        json_path = os.path.join(config_dir, 'file_paths.json')
+        config_dir = os.path.join(os.path.dirname(__file__), "..", "config")
+        json_path = os.path.join(config_dir, "file_paths.json")
         with open(json_path, "r") as f:
             paths = json.load(f)
 
@@ -118,7 +115,9 @@ def load_file_paths(json_file="file_paths.json"):
         return resolved_paths
 
     except Exception:
-        logging.exception(f"Failed to load or resolve file paths from {json_path if json_path else json_file}")
+        logging.exception(
+            f"Failed to load or resolve file paths from {json_path if json_path else json_file}"
+        )
         raise
 
 

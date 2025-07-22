@@ -51,17 +51,29 @@ def merge_files(file1_path, file2_path):
         try:
             username = os.getlogin()
         except Exception:
-            username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            username = (
+                os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            )
         logger.info(f"Starting merge: {file1} + {file2} by user: {username}")
-        write_audit_log("merge.py", f"Starting merge: {file1} + {file2} by user: {username}", "INFO")
+        write_audit_log(
+            "merge.py", f"Starting merge: {file1} + {file2} by user: {username}", "INFO"
+        )
 
         if not file1.exists():
             logger.error(f"File not found: {file1} by user: {username}")
-            write_audit_log("merge.py", f"File not found: {file1} by user: {username}", status="ERROR")
+            write_audit_log(
+                "merge.py",
+                f"File not found: {file1} by user: {username}",
+                status="ERROR",
+            )
             return False
         if not file2.exists():
             logger.error(f"File not found: {file2} by user: {username}")
-            write_audit_log("merge.py", f"File not found: {file2} by user: {username}", status="ERROR")
+            write_audit_log(
+                "merge.py",
+                f"File not found: {file2} by user: {username}",
+                status="ERROR",
+            )
             return False
 
         # Load data (support Excel or CSV for both files)
@@ -164,19 +176,35 @@ def merge_files(file1_path, file2_path):
                         ws.cell(row=row, column=date_col_index).style = date_style
                     wb.save(merged_path)
                     logger.info("Applied date formatting successfully.")
-                    write_audit_log("merge.py", f"Applied date formatting successfully by user: {username}", "INFO")
+                    write_audit_log(
+                        "merge.py",
+                        f"Applied date formatting successfully by user: {username}",
+                        "INFO",
+                    )
                 else:
                     logger.warning("DATEFILLED column not found for formatting.")
-                    write_audit_log("merge.py", f"DATEFILLED column not found for formatting by user: {username}", status="WARNING")
+                    write_audit_log(
+                        "merge.py",
+                        f"DATEFILLED column not found for formatting by user: {username}",
+                        status="WARNING",
+                    )
             else:
                 logger.warning(
                     "Worksheet is empty or not loaded, cannot apply formatting."
                 )
-                write_audit_log("merge.py", f"Worksheet is empty or not loaded, cannot apply formatting by user: {username}", status="WARNING")
+                write_audit_log(
+                    "merge.py",
+                    f"Worksheet is empty or not loaded, cannot apply formatting by user: {username}",
+                    status="WARNING",
+                )
 
         except Exception as ex:
             logger.warning(f"Failed to apply formatting: {ex}")
-            write_audit_log("merge.py", f"Failed to apply formatting by user: {username}: {ex}", status="WARNING")
+            write_audit_log(
+                "merge.py",
+                f"Failed to apply formatting by user: {username}: {ex}",
+                status="WARNING",
+            )
 
         return True
     except Exception as e:
@@ -185,9 +213,13 @@ def merge_files(file1_path, file2_path):
         try:
             username = os.getlogin()
         except Exception:
-            username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            username = (
+                os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            )
         logger.exception(f"Merge failed: {e}")
-        write_audit_log("merge.py", f"Merge failed for user: {username}: {e}", status="ERROR")
+        write_audit_log(
+            "merge.py", f"Merge failed for user: {username}: {e}", status="ERROR"
+        )
         return False
 
 

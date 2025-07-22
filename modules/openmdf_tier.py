@@ -9,7 +9,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import required utility functions
 from utils.utils import (
-    load_file_paths,
     standardize_pharmacy_ids,
     standardize_network_ids,
     merge_with_network,
@@ -503,10 +502,29 @@ def process_data():
         output_filename = sys.argv[1]
     output_path = Path(output_filename).resolve()
 
+    # Overwrite protection: prevent output file from matching any input file
+    input_files = []
+    try:
+        from config.config_loader import ConfigManager
+
+        config_manager = ConfigManager()
+        file_paths = config_manager.get("file_paths.json")
+        for key, val in file_paths.items():
+            if val:
+                input_files.append(str(Path(val).resolve()))
+    except Exception:
+        pass
+    if str(output_path) in input_files:
+        raise RuntimeError(
+            f"Output file {output_path} matches an input file. Please choose a different output filename."
+        )
+
     try:
         # Get the config file path relative to the project root
-        config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-        file_paths = load_file_paths(str(config_path))
+        from config.config_loader import ConfigManager
+
+        config_manager = ConfigManager()
+        file_paths = config_manager.get("file_paths.json")
 
         result = load_openmdf_tier_data(file_paths)
         if result is None:

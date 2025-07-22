@@ -122,8 +122,10 @@ class LogicProcessor:
         if len(matching_claim_indices) > 1:
             # Calculate date differences for all matches
             date_diffs = np.abs(
-                (context.logic_data.datefilled[matching_claim_indices] - 
-                 context.logic_data.datefilled[reversal_idx]).days
+                (
+                    context.logic_data.datefilled[matching_claim_indices]
+                    - context.logic_data.datefilled[reversal_idx]
+                ).days
             )
             # Select the match with the smallest date difference
             best_match_idx = matching_claim_indices[np.argmin(date_diffs)]

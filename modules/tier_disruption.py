@@ -10,7 +10,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import required utility functions
 from utils.utils import (
-    load_file_paths,
     standardize_pharmacy_ids,
     standardize_network_ids,
     merge_with_network,
@@ -436,12 +435,19 @@ def write_excel_sheets(
 ):
     """Write all sheets to the Excel file."""
     from utils.utils import write_audit_log
+
     # Validate writer path
-    output_path = getattr(writer, 'path', None)
+    output_path = getattr(writer, "path", None)
     if not output_path or not str(output_path).strip():
         output_path = "Unknown_Tier_Disruption_Report.xlsx"
-        logger.warning("Output filename was empty or invalid. Defaulting to 'Unknown_Tier_Disruption_Report.xlsx'.")
-        write_audit_log("tier_disruption.py", "Output filename was empty or invalid. Defaulting to 'Unknown_Tier_Disruption_Report.xlsx'.", "WARNING")
+        logger.warning(
+            "Output filename was empty or invalid. Defaulting to 'Unknown_Tier_Disruption_Report.xlsx'."
+        )
+        write_audit_log(
+            "tier_disruption.py",
+            "Output filename was empty or invalid. Defaulting to 'Unknown_Tier_Disruption_Report.xlsx'.",
+            "WARNING",
+        )
 
     # Write Summary sheet
     summary_df.to_excel(writer, sheet_name="Summary", index=False)
@@ -476,7 +482,9 @@ def write_excel_sheets(
     logger.info(
         f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
     )
-    write_audit_log("tier_disruption.py", f"Excel report written to: {output_path}", "INFO")
+    write_audit_log(
+        "tier_disruption.py", f"Excel report written to: {output_path}", "INFO"
+    )
 
 
 def reorder_excel_sheets(writer):
@@ -521,7 +529,9 @@ def process_data():
     except Exception:
         username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
     log_user_session_start("tier_disruption.py")
-    write_audit_log("tier_disruption.py", f"Processing started by user: {username}", "INFO")
+    write_audit_log(
+        "tier_disruption.py", f"Processing started by user: {username}", "INFO"
+    )
 
     # Output filename from CLI arg or default
     output_filename = "LBL for Disruption.xlsx"
@@ -529,10 +539,29 @@ def process_data():
         output_filename = sys.argv[1]
     output_path = Path(output_filename).resolve()
 
+    # Overwrite protection: prevent output file from matching any input file
+    input_files = []
+    try:
+        from config.config_loader import ConfigManager
+
+        config_manager = ConfigManager()
+        file_paths = config_manager.get("file_paths.json")
+        for key, val in file_paths.items():
+            if val:
+                input_files.append(str(Path(val).resolve()))
+    except Exception:
+        pass
+    if str(output_path) in input_files:
+        raise RuntimeError(
+            f"Output file {output_path} matches an input file. Please choose a different output filename."
+        )
+
     try:
         # Get the config file path relative to the project root
-        config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-        file_paths = load_file_paths(str(config_path))
+        from config.config_loader import ConfigManager
+
+        config_manager = ConfigManager()
+        file_paths = config_manager.get("file_paths.json")
 
         result = load_tier_disruption_data(file_paths)
         if result is None:
@@ -546,7 +575,11 @@ def process_data():
         log_file_access(
             "tier_disruption.py", file_paths.get("reprice", "unknown"), "LOADING"
         )
-        write_audit_log("tier_disruption.py", f"User {username} loaded file: {file_paths.get('reprice', 'unknown')}", "INFO")
+        write_audit_log(
+            "tier_disruption.py",
+            f"User {username} loaded file: {file_paths.get('reprice', 'unknown')}",
+            "INFO",
+        )
         reference_data = (medi, u, e)
         df = process_tier_data_pipeline(claims, reference_data, network)
 
@@ -637,7 +670,11 @@ def process_data():
             "INFO",
         )
         log_file_access("tier_disruption.py", str(output_path), "CREATED")
-        write_audit_log("tier_disruption.py", f"Excel report written to: {output_filename} by user: {username}", "INFO")
+        write_audit_log(
+            "tier_disruption.py",
+            f"Excel report written to: {output_filename} by user: {username}",
+            "INFO",
+        )
         # ...existing code...
     except Exception as e:
         # Log detailed error information
@@ -646,7 +683,11 @@ def process_data():
             f"Processing failed with error: {str(e)}",
             "SYSTEM_ERROR",
         )
-        write_audit_log("tier_disruption.py", f"Processing failed for user: {username}: {e}", status="ERROR")
+        write_audit_log(
+            "tier_disruption.py",
+            f"Processing failed for user: {username}: {e}",
+            status="ERROR",
+        )
         raise
     finally:
         # End audit session

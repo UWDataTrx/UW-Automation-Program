@@ -48,10 +48,7 @@ def write_audit_log(script_name, message, status="INFO"):
 
         # Log rotation: if file > 5MB, rotate (keep 3 backups)
         max_size = 5 * 1024 * 1024
-        if (
-            os.path.exists(user_log_path)
-            and os.path.getsize(user_log_path) > max_size
-        ):
+        if os.path.exists(user_log_path) and os.path.getsize(user_log_path) > max_size:
             for i in range(2, 0, -1):
                 prev = f"{user_log_path}.{i}"
                 prev2 = f"{user_log_path}.{i + 1}"

@@ -25,7 +25,9 @@ def make_audit_entry(script_name, message, status="INFO"):
         try:
             username = os.getlogin()
         except Exception:
-            username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            username = (
+                os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            )
         message = f"User: {username} | {message}"
         write_audit_log(script_name, message, status)
     except Exception as e:
@@ -43,7 +45,9 @@ def log_user_session_start(script_name="Application"):
         try:
             username = os.getlogin()
         except Exception:
-            username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            username = (
+                os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            )
         computer_name = socket.gethostname()
         python_version = platform.python_version()
         os_info = f"{platform.system()} {platform.release()}"
@@ -67,9 +71,13 @@ def log_user_session_end(script_name="Application"):
         try:
             username = os.getlogin()
         except Exception:
-            username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            username = (
+                os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            )
         computer_name = socket.gethostname()
-        make_audit_entry(script_name, f"Session ended for user: {username} on {computer_name}", "END")
+        make_audit_entry(
+            script_name, f"Session ended for user: {username} on {computer_name}", "END"
+        )
         logging.info(f"Session ended for user: {username}")
     except Exception as e:
         logging.error(f"Failed to log session end: {e}")
@@ -82,8 +90,14 @@ def log_file_access(script_name, file_path, operation):
         try:
             username = os.getlogin()
         except Exception:
-            username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
-        make_audit_entry(script_name, f"User: {username} | File: {file_path} | Operation: {operation}", "FILE_ACCESS")
+            username = (
+                os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+            )
+        make_audit_entry(
+            script_name,
+            f"User: {username} | File: {file_path} | Operation: {operation}",
+            "FILE_ACCESS",
+        )
         logging.info(f"File access by user: {username} | {file_path} | {operation}")
     except Exception as e:
         logging.error(f"Failed to log file access: {e}")

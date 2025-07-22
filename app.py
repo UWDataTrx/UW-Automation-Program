@@ -176,7 +176,11 @@ class App:
             self.file1_label.configure(text=os.path.basename(file_path))
         self.file_processor.check_template(file_path)
         log_file_access("File1Import", file_path, "IMPORTED")
-        write_audit_log("File1Import", f"File IMPORTED: {file_path} by {getpass.getuser()}", "FILE_ACCESS")
+        write_audit_log(
+            "File1Import",
+            f"File IMPORTED: {file_path} by {getpass.getuser()}",
+            "FILE_ACCESS",
+        )
 
     def _validate_gross_cost_template(self, file_path):
         """Validate GrossCost column and suggest template type using data processor."""
@@ -210,7 +214,11 @@ class App:
             if self.file2_label:
                 self.file2_label.configure(text=os.path.basename(file_path))
             log_file_access("File2Import", file_path, "IMPORTED")
-            write_audit_log("File2Import", f"File IMPORTED: {file_path} by {getpass.getuser()}", "FILE_ACCESS")
+            write_audit_log(
+                "File2Import",
+                f"File IMPORTED: {file_path} by {getpass.getuser()}",
+                "FILE_ACCESS",
+            )
 
         except Exception as e:
             error_msg = f"Failed to import File2: {str(e)}"
@@ -235,7 +243,11 @@ class App:
             if self.template_label:
                 self.template_label.configure(text=os.path.basename(file_path))
             log_file_access("TemplateImport", file_path, "IMPORTED")
-            write_audit_log("TemplateImport", f"Template file IMPORTED: {file_path} by {getpass.getuser()}", "FILE_ACCESS")
+            write_audit_log(
+                "TemplateImport",
+                f"Template file IMPORTED: {file_path} by {getpass.getuser()}",
+                "FILE_ACCESS",
+            )
 
         except Exception as e:
             error_msg = f"Failed to import template file: {str(e)}"
@@ -794,7 +806,11 @@ class App:
 
         threading.Thread(target=self._start_process_internal).start()
         log_process_action("RepricingProcess", "STARTED")
-        write_audit_log("RepricingApp", f"Repricing process started by {getpass.getuser()}", "PROCESS_START")
+        write_audit_log(
+            "RepricingApp",
+            f"Repricing process started by {getpass.getuser()}",
+            "PROCESS_START",
+        )
 
     def validate_merge_inputs(self):
         """Validate merge inputs using data processor."""
@@ -1428,8 +1444,10 @@ def _try_find_match(context, reversal_idx):
     if len(matching_claim_indices) > 1:
         # Calculate date differences for all matches
         date_diffs = np.abs(
-            (context.logic_data["datefilled"][matching_claim_indices] - 
-             context.logic_data["datefilled"][reversal_idx]).days
+            (
+                context.logic_data["datefilled"][matching_claim_indices]
+                - context.logic_data["datefilled"][reversal_idx]
+            ).days
         )
         # Select the match with the smallest date difference
         best_match_idx = matching_claim_indices[np.argmin(date_diffs)]

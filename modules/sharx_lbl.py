@@ -11,7 +11,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import required utility functions
 from utils.excel_utils import write_df_to_template
-from utils.utils import load_file_paths, write_audit_log
+from utils.utils import write_audit_log
+from config.config_loader import ConfigManager
 
 # Import audit helper functions
 from modules.audit_helper import (
@@ -23,6 +24,25 @@ from modules.audit_helper import (
 
 CLAIMS_SHEET = "Claims Table"
 OUTPUT_SHEET = "Line By Line"
+
+# Overwrite protection: prevent output file from matching any input file
+output_filename = "LBL for Disruption.xlsx"
+if len(sys.argv) > 1:
+    output_filename = sys.argv[1]
+output_path = Path(output_filename).resolve()
+input_files = []
+try:
+    config_manager = ConfigManager()
+    file_paths = config_manager.get("file_paths.json")
+    for key, val in file_paths.items():
+        if val:
+            input_files.append(str(Path(val).resolve()))
+except Exception:
+    pass
+if str(output_path) in input_files:
+    raise RuntimeError(
+        f"Output file {output_path} matches an input file. Please choose a different output filename."
+    )
 
 # Setup logging
 logging.basicConfig(
@@ -55,8 +75,8 @@ def main():
 
     try:
         # Get the config file path relative to the project root
-        config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-        paths = load_file_paths(str(config_path))
+        config_manager = ConfigManager()
+        paths = config_manager.get("file_paths.json")
         # Fallback to file dialogs if required keys are missing
         if "reprice" not in paths:
             from tkinter import filedialog

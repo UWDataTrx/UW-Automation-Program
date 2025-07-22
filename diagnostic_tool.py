@@ -469,6 +469,7 @@ class DiagnosticTool:
             # Get support directory path from configuration
             try:
                 from config.app_config import ProcessingConfig
+
                 support_dir = ProcessingConfig.get_diagnostic_reports_path()
             except ImportError:
                 # Fallback to hardcoded path if config module is not available
@@ -491,10 +492,10 @@ class DiagnosticTool:
             user_folder_mapping = {
                 "DamionMorrison": "Damion Morrison",
                 "Damion Morrison": "Damion Morrison",
-                "DannyBushnell": "Danny Bushnell", 
+                "DannyBushnell": "Danny Bushnell",
                 "Danny Bushnell": "Danny Bushnell",
                 "BrettBauer": "Brett Bauer",
-                "Brett Bauer": "Brett Bauer", 
+                "Brett Bauer": "Brett Bauer",
                 "BrendanReamer": "Brendan Reamer",
                 "Brendan Reamer": "Brendan Reamer",
                 "MitchellFrederick": "Mitchell Frederick",
@@ -503,14 +504,14 @@ class DiagnosticTool:
                 "damion.morrison": "Damion Morrison",
                 "danny.bushnell": "Danny Bushnell",
                 "brett.bauer": "Brett Bauer",
-                "brendan.reamer": "Brendan Reamer", 
-                "mitchell.frederick": "Mitchell Frederick"
+                "brendan.reamer": "Brendan Reamer",
+                "mitchell.frederick": "Mitchell Frederick",
             }
 
             # Get the correct folder name for this user
             user_folder = user_folder_mapping.get(username, "Other Users")
             user_specific_dir = support_dir / user_folder
-            
+
             # Create user-specific directory if it doesn't exist
             user_specific_dir.mkdir(parents=True, exist_ok=True)
 

@@ -84,8 +84,10 @@ def _try_find_match(match_context, reversal_idx):
     if len(matching_claim_indices) > 1:
         # Calculate date differences for all matches
         date_diffs = np.abs(
-            (logic_data["datefilled"][matching_claim_indices] - 
-             logic_data["datefilled"][reversal_idx]).days
+            (
+                logic_data["datefilled"][matching_claim_indices]
+                - logic_data["datefilled"][reversal_idx]
+            ).days
         )
         # Select the match with the smallest date difference
         best_match_idx = matching_claim_indices[np.argmin(date_diffs)]

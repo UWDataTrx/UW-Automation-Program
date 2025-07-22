@@ -10,10 +10,13 @@ import os
 import getpass
 from pathlib import Path
 
+
 # Helper function to resolve file paths with user-based fallback
 def resolve_path(one_drive_template, fallback_template):
     user = getpass.getuser()
-    one_drive_path = one_drive_template.replace("%OneDrive%", f"C:/Users/{user}/OneDrive")
+    one_drive_path = one_drive_template.replace(
+        "%OneDrive%", f"C:/Users/{user}/OneDrive"
+    )
     fallback_path = fallback_template.replace("{user}", user)
     one_drive_path = os.path.expandvars(one_drive_path)
     fallback_path = os.path.expandvars(fallback_path)
@@ -24,52 +27,53 @@ def resolve_path(one_drive_template, fallback_template):
     else:
         raise FileNotFoundError(f"Neither {one_drive_path} nor {fallback_path} exists.")
 
+
 # Example usage for all file_paths.json keys
 def get_all_paths():
     return {
         "medi_span": resolve_path(
             "%OneDrive%/True Community - Data Analyst/Repricing Templates/Medispan Export 6.27.25.xlsx",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Medispan Export 6.27.25.xlsx"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Medispan Export 6.27.25.xlsx",
         ),
         "e_disrupt": resolve_path(
             "%OneDrive%/True Community - Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Exclusive - Formulary Reference Guide.xlsx",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Exclusive - Formulary Reference Guide.xlsx"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Exclusive - Formulary Reference Guide.xlsx",
         ),
         "u_disrupt": resolve_path(
             "%OneDrive%/True Community - Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Universal - Formulary Reference Guide.xlsx",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Universal - Formulary Reference Guide.xlsx"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Universal - Formulary Reference Guide.xlsx",
         ),
         "mdf_disrupt": resolve_path(
             "%OneDrive%/True Community - Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Open MDF - Formulary Reference Guide.xlsx",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Open MDF - Formulary Reference Guide.xlsx"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Open MDF - Formulary Reference Guide.xlsx",
         ),
         "n_disrupt": resolve_path(
             "%OneDrive%/True Community - Data Analyst/Repricing Templates/Disruption/Pharmacy Disruption/Rx Sense Pharmacy Network 7.25.xlsx",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/Disruption/Pharmacy Disruption/Rx Sense Pharmacy Network 7.25.xlsx"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/Disruption/Pharmacy Disruption/Rx Sense Pharmacy Network 7.25.xlsx",
         ),
         "reprice": resolve_path(
             "_Rx Repricing_wf.xlsx",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/_Rx Repricing_wf.xlsx"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/_Rx Repricing_wf.xlsx",
         ),
         "sharx": resolve_path(
             "%OneDrive%/True Community - Data Analyst/Repricing Templates/SHARx/Template_Rx Claims for SHARx.xlsx",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/SHARx/Template_Rx Claims for SHARx.xlsx"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/SHARx/Template_Rx Claims for SHARx.xlsx",
         ),
         "epls": resolve_path(
             "%OneDrive%/True Community - Data Analyst/Repricing Templates/EPLS/Client Name_Rx Claims for EPLS.xlsx",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/EPLS/Client Name_Rx Claims for EPLS.xlsx"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/Repricing Templates/EPLS/Client Name_Rx Claims for EPLS.xlsx",
         ),
         "pharmacy_validation": resolve_path(
             "%OneDrive%/True Community - Data Analyst/UW Python Program/Logs/Pharmacy_RxSense Validation.xlsx",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/UW Python Program/Logs/Pharmacy_RxSense Validation.xlsx"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/UW Python Program/Logs/Pharmacy_RxSense Validation.xlsx",
         ),
         "audit_log": resolve_path(
             "%OneDrive%/True Community - Data Analyst/UW Python Program/Logs/Shared_Log.csv",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/UW Python Program/Logs/Shared_Log.csv"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/UW Python Program/Logs/Shared_Log.csv",
         ),
         "diagnostic_reports": resolve_path(
             "%OneDrive%/True Community - Data Analyst/UW Python Program/Diagnostic Reports",
-            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/UW Python Program/Diagnostic Reports"
+            "C:/Users/{user}/OneDrive - True Rx Health Strategist/True Rx Management Services/Data Analyst/UW Python Program/Diagnostic Reports",
         ),
     }
 
@@ -122,7 +126,9 @@ class ProcessingConfig:
             return Path(os.path.expandvars(file_paths["diagnostic_reports"]))
         except (FileNotFoundError, KeyError):
             # Fallback to default if config is missing
-            return Path(r"C:\Users\DamionMorrison\OneDrive - True Rx Health Strategists\UW Automation Program\Diagnostic Reports")
+            return Path(
+                r"C:\Users\DamionMorrison\OneDrive - True Rx Health Strategists\UW Automation Program\Diagnostic Reports"
+            )
 
 
 class DisruptionConfig:

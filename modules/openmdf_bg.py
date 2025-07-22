@@ -3,13 +3,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import required utility functions
 from utils.utils import (
-    load_file_paths,
     standardize_pharmacy_ids,
     standardize_network_ids,
     merge_with_network,
@@ -20,15 +14,39 @@ from utils.utils import (
     filter_products_and_alternative,
     write_audit_log,
 )
+from config.config_loader import ConfigManager
 from utils.excel_utils import safe_excel_write, check_disk_space
-
-# Import audit helper functions
 from modules.audit_helper import (
     make_audit_entry,
     log_user_session_start,
     log_user_session_end,
     log_file_access,
 )
+
+# Import required utility functions for overwrite protection
+# from utils.utils import load_file_paths
+
+# Overwrite protection: prevent output file from matching any input file
+output_filename = "BG MDF Output.xlsx"
+if len(sys.argv) > 1:
+    output_filename = sys.argv[1]
+output_path = Path(output_filename).resolve()
+input_files = []
+try:
+    config_manager = ConfigManager()
+    file_paths = config_manager.get("file_paths.json")
+    for key, val in file_paths.items():
+        if val:
+            input_files.append(str(Path(val).resolve()))
+except Exception:
+    pass
+if str(output_path) in input_files:
+    raise RuntimeError(
+        f"Output file {output_path} matches an input file. Please choose a different output filename."
+    )
+
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Setup logging
 logging.basicConfig(
@@ -67,8 +85,8 @@ def process_data():
         import sys
 
         # Get the config file path relative to the project root
-        config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-        paths = load_file_paths(str(config_path))
+        config_manager = ConfigManager()
+        paths = config_manager.get("file_paths.json")
 
         if "reprice" not in paths or not paths["reprice"]:
             logger.warning("No reprice/template file provided.")
