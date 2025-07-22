@@ -35,6 +35,10 @@ class DataProcessor:
 
     def __init__(self, app_instance):
         self.app = app_instance
+        try:
+            self.username = os.getlogin()
+        except Exception:
+            self.username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
 
     def _read_file_flexible(self, file_path):
         """Read file supporting both CSV and Excel formats."""
@@ -51,13 +55,17 @@ class DataProcessor:
         try:
             # Load the Excel file
             df = pd.read_excel(file_path)
-            logging.info(f"Loaded {len(df)} records from {file_path}")
+            logging.info(f"Loaded {len(df)} records from {file_path} by user: {self.username}")
+            write_audit_log("data_processor.py", f"User {self.username} loaded file: {file_path}", "INFO")
 
             # Validate that we have data
             if df.empty:
+                write_audit_log("data_processor.py", f"User {self.username} attempted to load empty file: {file_path}", "WARNING")
                 raise ValueError(f"The file {file_path} is empty or contains no data")
 
             # Validate required columns using configuration with fallback
+            write_audit_log("data_processor.py", f"Validated columns for file: {file_path} by user: {self.username}", "INFO")
+            logging.info(f"Validated columns for file: {file_path} by user: {self.username}")
             try:
                 ProcessingConfig.validate_required_columns(df)
             except Exception as config_error:
@@ -76,6 +84,7 @@ class DataProcessor:
             return df
 
         except Exception as e:
+            write_audit_log("data_processor.py", f"Processing failed for user: {self.username}: {e}", "ERROR")
             error_msg = f"Error loading data from {file_path}: {str(e)}"
             logging.error(error_msg)
             write_audit_log("DataProcessor", error_msg, "ERROR")
@@ -258,7 +267,9 @@ class DataProcessor:
 
             # Save to multiple formats
             self._save_to_parquet(df_sorted, output_dir)
+            write_audit_log("DataProcessor", f"Saved Parquet file: {output_dir / 'merged_file_with_OR.parquet'}", "INFO")
             self._save_to_excel(df_sorted, output_file)
+            write_audit_log("DataProcessor", f"Saved Excel file: {output_file}", "INFO")
             self._save_to_csv(df_sorted, output_dir)
             self._save_unmatched_reversals(excel_rows_to_highlight, output_dir)
 
@@ -288,11 +299,18 @@ class DataProcessor:
         """Save data to CSV format with opportunity name."""
         try:
             opportunity_name = self._extract_opportunity_name()
+            # Validate opportunity_name
+            if not opportunity_name or not opportunity_name.strip():
+                opportunity_name = "Unknown_Opportunity"
+                logging.warning("Opportunity name was empty or invalid. Defaulting to 'Unknown_Opportunity'.")
+                write_audit_log("DataProcessor", "Opportunity name was empty or invalid. Defaulting to 'Unknown_Opportunity'.", "WARNING")
             csv_path = output_dir / f"{opportunity_name} Claim Detail.csv"
             df.drop_duplicates().to_csv(csv_path, index=False)
             logging.info(f"Saved CSV file: {csv_path}")
+            write_audit_log("DataProcessor", f"Saved CSV file: {csv_path}", "INFO")
         except Exception as e:
             logging.warning(f"Could not save CSV: {e}")
+            write_audit_log("DataProcessor", f"Could not save CSV: {e}", "ERROR")
 
     def _save_unmatched_reversals(self, excel_rows_to_highlight, output_dir):
         """Save unmatched reversals information."""
@@ -301,8 +319,10 @@ class DataProcessor:
             with open(unmatched_path, "w") as f:
                 f.write(",".join(map(str, excel_rows_to_highlight)))
             logging.info(f"Saved unmatched reversals info: {unmatched_path}")
+            write_audit_log("DataProcessor", f"Saved unmatched reversals info: {unmatched_path}", "INFO")
         except Exception as e:
             logging.warning(f"Could not save unmatched reversals: {e}")
+            write_audit_log("DataProcessor", f"Could not save unmatched reversals: {e}", "ERROR")
 
     def _extract_opportunity_name(self):
         """Extract opportunity name from file1_path."""

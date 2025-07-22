@@ -4,6 +4,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.styles import NamedStyle
 import logging
+import os
 
 # Add the project root directory to the Python path
 project_root = Path(__file__).parent.parent.resolve()
@@ -47,16 +48,20 @@ def merge_files(file1_path, file2_path):
     file1 = Path(file1_path)
     file2 = Path(file2_path)
     try:
-        logger.info(f"Starting merge: {file1} + {file2}")
-        write_audit_log("merge.py", f"Starting merge: {file1} + {file2}")
+        try:
+            username = os.getlogin()
+        except Exception:
+            username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+        logger.info(f"Starting merge: {file1} + {file2} by user: {username}")
+        write_audit_log("merge.py", f"Starting merge: {file1} + {file2} by user: {username}", "INFO")
 
         if not file1.exists():
-            logger.error(f"File not found: {file1}")
-            write_audit_log("merge.py", f"File not found: {file1}", status="ERROR")
+            logger.error(f"File not found: {file1} by user: {username}")
+            write_audit_log("merge.py", f"File not found: {file1} by user: {username}", status="ERROR")
             return False
         if not file2.exists():
-            logger.error(f"File not found: {file2}")
-            write_audit_log("merge.py", f"File not found: {file2}", status="ERROR")
+            logger.error(f"File not found: {file2} by user: {username}")
+            write_audit_log("merge.py", f"File not found: {file2} by user: {username}", status="ERROR")
             return False
 
         # Load data (support Excel or CSV for both files)
@@ -159,36 +164,30 @@ def merge_files(file1_path, file2_path):
                         ws.cell(row=row, column=date_col_index).style = date_style
                     wb.save(merged_path)
                     logger.info("Applied date formatting successfully.")
-                    write_audit_log(
-                        "merge.py", "Applied date formatting successfully."
-                    )
+                    write_audit_log("merge.py", f"Applied date formatting successfully by user: {username}", "INFO")
                 else:
                     logger.warning("DATEFILLED column not found for formatting.")
-                    write_audit_log(
-                        "merge.py",
-                        "DATEFILLED column not found for formatting.",
-                        status="WARNING",
-                    )
+                    write_audit_log("merge.py", f"DATEFILLED column not found for formatting by user: {username}", status="WARNING")
             else:
                 logger.warning(
                     "Worksheet is empty or not loaded, cannot apply formatting."
                 )
-                write_audit_log(
-                    "merge.py",
-                    "Worksheet is empty or not loaded, cannot apply formatting.",
-                    status="WARNING",
-                )
+                write_audit_log("merge.py", f"Worksheet is empty or not loaded, cannot apply formatting by user: {username}", status="WARNING")
 
         except Exception as ex:
             logger.warning(f"Failed to apply formatting: {ex}")
-            write_audit_log(
-                "merge.py", f"Failed to apply formatting: {ex}", status="WARNING"
-            )
+            write_audit_log("merge.py", f"Failed to apply formatting by user: {username}: {ex}", status="WARNING")
 
         return True
     except Exception as e:
+        # Always set username before logging error
+        username = None
+        try:
+            username = os.getlogin()
+        except Exception:
+            username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
         logger.exception(f"Merge failed: {e}")
-        write_audit_log("merge.py", f"Merge failed: {e}", status="ERROR")
+        write_audit_log("merge.py", f"Merge failed for user: {username}: {e}", status="ERROR")
         return False
 
 

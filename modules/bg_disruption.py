@@ -392,6 +392,13 @@ def create_network_data(df):
 def write_excel_report(report_data, output_filename):
     """Write the final Excel report."""
     logger.info("Writing Excel report...")
+    from utils.utils import write_audit_log
+
+    # Validate output filename
+    if not output_filename or not str(output_filename).strip():
+        output_filename = "Unknown_Disruption_Report.xlsx"
+        logger.warning("Output filename was empty or invalid. Defaulting to 'Unknown_Disruption_Report.xlsx'.")
+        write_audit_log("bg_disruption.py", "Output filename was empty or invalid. Defaulting to 'Unknown_Disruption_Report.xlsx'.", "WARNING")
 
     df, summary, tabs, network_pivot = report_data
 
@@ -421,6 +428,8 @@ def write_excel_report(report_data, output_filename):
             writer.sheets.update(dict(items))
 
     writer.close()
+    logger.info(f"Excel report written to: {output_filename}")
+    write_audit_log("bg_disruption.py", f"Excel report written to: {output_filename}", "INFO")
 
 
 def show_completion_notification():
@@ -439,16 +448,26 @@ def show_completion_notification():
 
 def process_data():
     """Main processing function - coordinates all data processing steps."""
+    # Get current username
+    try:
+        username = os.getlogin()
+    except Exception:
+        username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+
     # Start audit session
     log_user_session_start("bg_disruption.py")
-    write_audit_log("bg_disruption.py", "Processing started.")
+    write_audit_log("bg_disruption.py", f"Processing started by user: {username}", "INFO")
 
     try:
         import sys
-
         output_filename = "LBL for Disruption.xlsx"
-        if len(sys.argv) > 1:
-            output_filename = sys.argv[1]
+        if len(sys.argv) > 1 and str(sys.argv[1]).strip():
+            output_filename = str(sys.argv[1]).strip()
+        # Always ensure the output filename is valid
+        if not output_filename or not str(output_filename).strip():
+            output_filename = "LBL for Disruption.xlsx"
+            logger.warning("Output filename was empty or invalid. Defaulting to 'LBL for Disruption.xlsx'.")
+            write_audit_log("bg_disruption.py", "Output filename was empty or invalid. Defaulting to 'LBL for Disruption.xlsx'.", "WARNING")
 
         # Get the config file path relative to the project root
         config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
@@ -465,6 +484,7 @@ def process_data():
 
         # Log file access
         log_file_access("bg_disruption.py", file_paths["reprice"], "LOADING")
+        write_audit_log("bg_disruption.py", f"User {username} loaded file: {file_paths['reprice']}", "INFO")
 
         # Load all data files
         claims, medi, uni, exl, network = load_data_files(file_paths)
@@ -495,16 +515,18 @@ def process_data():
         # Write Excel report
         report_data = (df, summary, tabs, network_pivot)
         write_excel_report(report_data, output_filename)
+        # Explicitly confirm creation of LBL for Disruption.xlsx
+        if output_filename == "LBL for Disruption.xlsx":
+            write_audit_log("bg_disruption.py", f"LBL for Disruption.xlsx created successfully by user: {username}", "INFO")
 
         # Log successful completion
         make_audit_entry(
             "bg_disruption.py",
-            f"Successfully generated report: {output_filename}",
+            f"Successfully generated report: {output_filename} by user: {username}",
             "INFO",
         )
         log_file_access("bg_disruption.py", output_filename, "CREATED")
-
-        write_audit_log("bg_disruption.py", "Processing complete.")
+        write_audit_log("bg_disruption.py", f"Processing complete for user: {username}", "INFO")
         print("Processing complete")
 
     except Exception as e:

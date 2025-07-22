@@ -435,6 +435,14 @@ def write_excel_sheets(
     writer, df, summary_df, tier_pivots, ex_pt, exc_members, network_df, network_pivot
 ):
     """Write all sheets to the Excel file."""
+    from utils.utils import write_audit_log
+    # Validate writer path
+    output_path = getattr(writer, 'path', None)
+    if not output_path or not str(output_path).strip():
+        output_path = "Unknown_Tier_Disruption_Report.xlsx"
+        logger.warning("Output filename was empty or invalid. Defaulting to 'Unknown_Tier_Disruption_Report.xlsx'.")
+        write_audit_log("tier_disruption.py", "Output filename was empty or invalid. Defaulting to 'Unknown_Tier_Disruption_Report.xlsx'.", "WARNING")
+
     # Write Summary sheet
     summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
@@ -468,6 +476,7 @@ def write_excel_sheets(
     logger.info(
         f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
     )
+    write_audit_log("tier_disruption.py", f"Excel report written to: {output_path}", "INFO")
 
 
 def reorder_excel_sheets(writer):
@@ -506,9 +515,13 @@ def show_completion_message(output_path):
 # Main processing pipeline
 # ---------------------------------------------------------------------------
 def process_data():
-    # Start audit session
+    # Get current username
+    try:
+        username = os.getlogin()
+    except Exception:
+        username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
     log_user_session_start("tier_disruption.py")
-    write_audit_log("tier_disruption.py", "Processing started.")
+    write_audit_log("tier_disruption.py", f"Processing started by user: {username}", "INFO")
 
     # Output filename from CLI arg or default
     output_filename = "LBL for Disruption.xlsx"
@@ -533,7 +546,7 @@ def process_data():
         log_file_access(
             "tier_disruption.py", file_paths.get("reprice", "unknown"), "LOADING"
         )
-
+        write_audit_log("tier_disruption.py", f"User {username} loaded file: {file_paths.get('reprice', 'unknown')}", "INFO")
         reference_data = (medi, u, e)
         df = process_tier_data_pipeline(claims, reference_data, network)
 
@@ -546,7 +559,7 @@ def process_data():
         # Log data processing metrics
         make_audit_entry(
             "tier_disruption.py",
-            f"Processed {total_claims} claims for {total_members} members",
+            f"Processed {total_claims} claims for {total_members} members by user: {username}",
             "INFO",
         )
 
@@ -620,13 +633,12 @@ def process_data():
         # Log successful completion
         make_audit_entry(
             "tier_disruption.py",
-            f"Successfully generated tier disruption report: {output_filename}",
+            f"Successfully generated tier disruption report: {output_filename} by user: {username}",
             "INFO",
         )
         log_file_access("tier_disruption.py", str(output_path), "CREATED")
-
-        show_completion_message(output_path)
-
+        write_audit_log("tier_disruption.py", f"Excel report written to: {output_filename} by user: {username}", "INFO")
+        # ...existing code...
     except Exception as e:
         # Log detailed error information
         make_audit_entry(
@@ -634,9 +646,7 @@ def process_data():
             f"Processing failed with error: {str(e)}",
             "SYSTEM_ERROR",
         )
-        write_audit_log(
-            "tier_disruption.py", f"Processing failed: {e}", status="ERROR"
-        )
+        write_audit_log("tier_disruption.py", f"Processing failed for user: {username}: {e}", status="ERROR")
         raise
     finally:
         # End audit session
