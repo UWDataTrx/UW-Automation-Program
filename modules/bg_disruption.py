@@ -462,7 +462,17 @@ def process_data():
         import sys
         output_filename = "LBL for Disruption.xlsx"
         if len(sys.argv) > 1 and str(sys.argv[1]).strip():
-            output_filename = str(sys.argv[1]).strip()
+            candidate_filename = str(sys.argv[1]).strip()
+            # Prevent overwriting input files (e.g., rx repricing wf)
+            config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
+            file_paths = load_file_paths(str(config_path))
+            input_files = [str(file_paths.get("reprice", "")), str(file_paths.get("u_disrupt", "")), str(file_paths.get("e_disrupt", "")), str(file_paths.get("n_disrupt", "")), str(file_paths.get("medi_span", ""))]
+            if candidate_filename in input_files:
+                logger.warning(f"Output filename '{candidate_filename}' matches an input file. Defaulting to 'LBL for Disruption.xlsx'.")
+                write_audit_log("bg_disruption.py", f"Output filename '{candidate_filename}' matches an input file. Defaulting to 'LBL for Disruption.xlsx'.", "WARNING")
+                output_filename = "LBL for Disruption.xlsx"
+            else:
+                output_filename = candidate_filename
         # Always ensure the output filename is valid
         if not output_filename or not str(output_filename).strip():
             output_filename = "LBL for Disruption.xlsx"
