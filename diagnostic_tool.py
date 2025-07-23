@@ -27,6 +27,7 @@ from datetime import datetime
 # Explicitly initialize error logging to use the import
 modules.error_reporter.setup_error_logging()
 
+
 class DiagnosticTool:
     def __init__(self):
         self.report_lines = []

@@ -15,6 +15,7 @@ from modules.audit_helper import (
     log_user_session_end,
     log_file_access,
 )
+
 # Ensure project root is in sys.path for module imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:

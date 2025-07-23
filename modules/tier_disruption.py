@@ -30,6 +30,7 @@ from modules.audit_helper import (
     log_file_access,
 )
 import modules.error_reporter
+
 modules.error_reporter.setup_error_logging()
 
 # Set up logger
@@ -558,6 +559,8 @@ def process_data():
         raise RuntimeError(
             f"Output file {output_path} matches an input file. Please choose a different output filename."
         )
+
+
 # Get the config file path relative to the project root
 
 # Define username before use
@@ -668,7 +671,6 @@ else:
     logger.info(
         f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
     )
-
 
     # Reorder sheets so Summary follows Data
     reorder_excel_sheets(writer)

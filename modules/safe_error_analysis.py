@@ -1,4 +1,3 @@
-
 """
 Robust Error Analysis Tool
 Handles CSV parsing issues and provides comprehensive error analysis.
@@ -10,6 +9,7 @@ from datetime import datetime, timedelta
 import csv
 from pathlib import Path
 import modules.error_reporter
+
 modules.error_reporter.setup_error_logging()
 
 
