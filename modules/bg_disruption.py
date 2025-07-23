@@ -1,8 +1,10 @@
-import pandas as pd
-import logging
+
 import os
 import sys
+import logging
 from pathlib import Path
+import pandas as pd
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from modules import error_reporter
 from utils.utils import (
     filter_logic_and_maintenance,
@@ -22,11 +24,8 @@ from modules.audit_helper import (
     log_file_access,
 )
 
-error_reporter.setup_error_logging()
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 # Logging setup
+error_reporter.setup_error_logging()
 logging.basicConfig(
     filename="bg_disruption.log",
     level=logging.INFO,
@@ -58,59 +57,12 @@ def load_data_files(file_paths):
     """Load and return all required data files."""
     logger.info("Loading data files...")
 
-    # Load claims data
-    try:
-        claims = pd.read_excel(
-            file_paths["reprice"],
-            sheet_name="Claims Table",
-            usecols=[
-                "SOURCERECORDID",
-                "NDC",
-                "MemberID",
-                "DATEFILLED",
-                "FormularyTier",
-                "Rxs",
-                "Logic",
-                "PHARMACYNPI",
-                "NABP",
-                "Pharmacy Name",
-                "Universal Rebates",
-                "Exclusive Rebates",
-            ],
-        )
-    except Exception as e:
-        logger.warning(f"Claims Table fallback: {e}")
-        make_audit_entry(
-            "bg_disruption.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
-        )
-        write_audit_log(
-            "bg_disruption.py", f"Claims Table fallback: {e}", status="WARNING"
-        )
-        claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
-
-    logger.info(f"claims shape: {claims.shape}")
-    claims.info()
-
-    # Load other data files
-    medi = pd.read_excel(file_paths["medi_span"])[
-        ["NDC", "Maint Drug?", "Product Name"]
-    ]
-    logger.info(f"medi shape: {medi.shape}")
-
-    uni = pd.read_excel(file_paths["u_disrupt"], sheet_name="Universal NDC")[
-        ["NDC", "Tier"]
-    ]
-    logger.info(f"uni shape: {uni.shape}")
-
-    exl = pd.read_excel(file_paths["e_disrupt"], sheet_name="Alternatives NDC")[
-        ["NDC", "Tier", "Alternative"]
-    ]
-    logger.info(f"exl shape: {exl.shape}")
-
-    network = pd.read_excel(file_paths["n_disrupt"])[
-        ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
-    ]
-    logger.info(f"network shape: {network.shape}")
+    # Example: Load each file using pandas (adjust keys as needed)
+    claims = pd.read_excel(file_paths["claims"])
+    medi = pd.read_excel(file_paths["medi"])
+    uni = pd.read_excel(file_paths["uni"])
+    exl = pd.read_excel(file_paths["exl"])
+    network = pd.read_excel(file_paths["network"])
 
     return claims, medi, uni, exl, network
 
