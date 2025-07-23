@@ -4,7 +4,6 @@ import re
 import logging
 from pathlib import Path
 import os
-from config.config_loader import ConfigManager
 
 # Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -29,9 +28,6 @@ from modules.audit_helper import (
     log_user_session_end,
     log_file_access,
 )
-import modules.error_reporter
-
-modules.error_reporter.setup_error_logging()
 
 # Set up logger
 logging.basicConfig(level=logging.INFO)
@@ -560,138 +556,142 @@ def process_data():
             f"Output file {output_path} matches an input file. Please choose a different output filename."
         )
 
+    try:
+        # Get the config file path relative to the project root
+        from config.config_loader import ConfigManager
 
-# Get the config file path relative to the project root
+        config_manager = ConfigManager()
+        file_paths = config_manager.get("file_paths.json")
 
-# Define username before use
-try:
-    username = os.getlogin()
-except Exception:
-    username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
-    username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+        result = load_tier_disruption_data(file_paths)
+        if result is None:
+            make_audit_entry(
+                "tier_disruption.py", "Claims loading failed - early exit", "DATA_ERROR"
+            )
+            return  # Early exit if claims loading failed
+        claims, medi, u, e, network = result
 
-config_manager = ConfigManager()
-file_paths = config_manager.get("file_paths.json")
+        # Log file access
+        log_file_access(
+            "tier_disruption.py", file_paths.get("reprice", "unknown"), "LOADING"
+        )
+        write_audit_log(
+            "tier_disruption.py",
+            f"User {username} loaded file: {file_paths.get('reprice', 'unknown')}",
+            "INFO",
+        )
+        reference_data = (medi, u, e)
+        df = process_tier_data_pipeline(claims, reference_data, network)
 
-result = load_tier_disruption_data(file_paths)
-if result is None:
-    make_audit_entry(
-        "tier_disruption.py", "Claims loading failed - early exit", "DATA_ERROR"
-    )
-else:
-    claims, medi, u, e, network = result
+        df = handle_tier_pharmacy_exclusions(df, file_paths)
 
-    # Log file access
-    log_file_access(
-        "tier_disruption.py", file_paths.get("reprice", "unknown"), "LOADING"
-    )
-    write_audit_log(
-        "tier_disruption.py",
-        f"User {username} loaded file: {file_paths.get('reprice', 'unknown')}",
-        "INFO",
-    )
-    reference_data = (medi, u, e)
-    df = process_tier_data_pipeline(claims, reference_data, network)
+        # Totals for summary
+        total_claims = df["Rxs"].sum()
+        total_members = df["MemberID"].nunique()
 
-    df = handle_tier_pharmacy_exclusions(df, file_paths)
+        # Log data processing metrics
+        make_audit_entry(
+            "tier_disruption.py",
+            f"Processed {total_claims} claims for {total_members} members by user: {username}",
+            "INFO",
+        )
 
-    # Totals for summary
-    total_claims = df["Rxs"].sum()
-    total_members = df["MemberID"].nunique()
+        # Excel writer setup
+        writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
 
-    # Log data processing metrics
-    make_audit_entry(
-        "tier_disruption.py",
-        f"Processed {total_claims} claims for {total_members} members by user: {username}",
-        "INFO",
-    )
+        # Summary calculations (must be written immediately after Data)
+        tiers = create_tier_definitions()
 
-    # Excel writer setup
-    output_filename = "LBL for Disruption.xlsx"
-    if len(sys.argv) > 1:
-        output_filename = sys.argv[1]
-    output_path = Path(output_filename).resolve()
-    writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
+        tier_pivots, tab_members, tab_rxs = process_tier_pivots(df, tiers)
 
-    # Summary calculations (must be written immediately after Data)
-    tiers = create_tier_definitions()
+        # Exclusions sheet (Nonformulary)
+        ex_pt, exc_rxs, exc_members = process_exclusions(df)
+        tab_members["Exclusions"] = exc_members
+        tab_rxs["Exclusions"] = exc_rxs
 
-    tier_pivots, tab_members, tab_rxs = process_tier_pivots(df, tiers)
+        # Summary calculations
+        summary_df = create_summary_dataframe(
+            tab_members, tab_rxs, total_claims, total_members
+        )
+        summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
-    # Exclusions sheet (Nonformulary)
-    ex_pt, exc_rxs, exc_members = process_exclusions(df)
-    tab_members["Exclusions"] = exc_members
-    tab_rxs["Exclusions"] = exc_rxs
+        # Write tier pivots and Exclusions after Summary
+        for name, pt, members, _ in tier_pivots:
+            pt.to_excel(writer, sheet_name=name)
+            writer.sheets[name].write("F1", f"Total Members: {members}")
 
-    # Summary calculations
-    summary_df = create_summary_dataframe(
-        tab_members, tab_rxs, total_claims, total_members
-    )
-    summary_df.to_excel(writer, sheet_name="Summary", index=False)
+        ex_pt.to_excel(writer, sheet_name="Exclusions")
+        writer.sheets["Exclusions"].write("F1", f"Total Members: {exc_members}")
 
-    # Write tier pivots and Exclusions after Summary
-    for name, pt, members, _ in tier_pivots:
-        pt.to_excel(writer, sheet_name=name)
-        writer.sheets[name].write("F1", f"Total Members: {members}")
+        # Write the 'Data Sheet' with excluded and non-excluded pharmacies
+        data_sheet_df = df.copy()
+        data_sheet_df.to_excel(writer, sheet_name="Data", index=False)
 
-    ex_pt.to_excel(writer, sheet_name="Exclusions")
-    writer.sheets["Exclusions"].write("F1", f"Total Members: {exc_members}")
+        # Network summary for excluded pharmacies (pharmacy_is_excluded=True)
+        network_df, network_pivot = create_network_analysis(df)
+        logger.info(f"Total pharmacies in dataset: {df.shape[0]}")
+        logger.info(
+            f"Excluded pharmacies (pharmacy_is_excluded=True): {df['pharmacy_is_excluded'].sum()}"
+        )
+        logger.info(
+            f"Non-excluded pharmacies (pharmacy_is_excluded=False): {(~df['pharmacy_is_excluded']).sum()}"
+        )
+        logger.info(
+            f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
+        )
 
-    # Write the 'Data Sheet' with excluded and non-excluded pharmacies
-    data_sheet_df = df.copy()
-    data_sheet_df.to_excel(writer, sheet_name="Data", index=False)
+        # Write Network sheet
+        if network_pivot is not None:
+            network_pivot.to_excel(writer, sheet_name="Network", index=False)
 
-    # Network summary for excluded pharmacies (pharmacy_is_excluded=True)
-    network_df, network_pivot = create_network_analysis(df)
-    logger.info(f"Total pharmacies in dataset: {df.shape[0]}")
-    logger.info(
-        f"Excluded pharmacies (pharmacy_is_excluded=True): {df['pharmacy_is_excluded'].sum()}"
-    )
-    logger.info(
-        f"Non-excluded pharmacies (pharmacy_is_excluded=False): {(~df['pharmacy_is_excluded']).sum()}"
-    )
-    logger.info(
-        f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
-    )
+        # Write filtered network data
+        selected_columns = [
+            "PHARMACYNPI",
+            "NABP",
+            "MemberID",
+            "Pharmacy Name",
+            "pharmacy_is_excluded",
+            "Unique Identifier",
+        ]
+        network_df[selected_columns].to_excel(writer, sheet_name="Network", index=False)
+        logger.info(
+            f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
+        )
 
-    # Write Network sheet
-    if network_pivot is not None:
-        network_pivot.to_excel(writer, sheet_name="Network", index=False)
+        # Reorder sheets so Summary follows Data
+        reorder_excel_sheets(writer)
 
-    # Write filtered network data
-    selected_columns = [
-        "PHARMACYNPI",
-        "NABP",
-        "MemberID",
-        "Pharmacy Name",
-        "pharmacy_is_excluded",
-        "Unique Identifier",
-    ]
-    network_df[selected_columns].to_excel(writer, sheet_name="Network", index=False)
-    logger.info(
-        f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
-    )
+        writer.close()
 
-    # Reorder sheets so Summary follows Data
-    reorder_excel_sheets(writer)
-
-    writer.close()
-
-    # Log successful completion
-    make_audit_entry(
-        "tier_disruption.py",
-        f"Successfully generated tier disruption report: {output_filename} by user: {username}",
-        "INFO",
-    )
-    log_file_access("tier_disruption.py", str(output_path), "CREATED")
-    write_audit_log(
-        "tier_disruption.py",
-        f"Excel report written to: {output_filename} by user: {username}",
-        "INFO",
-    )
-
-    # End audit session
-    log_user_session_end("tier_disruption.py")
+        # Log successful completion
+        make_audit_entry(
+            "tier_disruption.py",
+            f"Successfully generated tier disruption report: {output_filename} by user: {username}",
+            "INFO",
+        )
+        log_file_access("tier_disruption.py", str(output_path), "CREATED")
+        write_audit_log(
+            "tier_disruption.py",
+            f"Excel report written to: {output_filename} by user: {username}",
+            "INFO",
+        )
+        # ...existing code...
+    except Exception as e:
+        # Log detailed error information
+        make_audit_entry(
+            "tier_disruption.py",
+            f"Processing failed with error: {str(e)}",
+            "SYSTEM_ERROR",
+        )
+        write_audit_log(
+            "tier_disruption.py",
+            f"Processing failed for user: {username}: {e}",
+            status="ERROR",
+        )
+        raise
+    finally:
+        # End audit session
+        log_user_session_end("tier_disruption.py")
 
 
 if __name__ == "__main__":

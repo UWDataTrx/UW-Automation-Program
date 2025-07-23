@@ -2,7 +2,6 @@ import sys
 from pathlib import Path
 import tkinter as tk
 import customtkinter as ctk
-import modules.error_reporter
 from tkinter import filedialog, messagebox, scrolledtext
 import subprocess
 import os
@@ -27,8 +26,6 @@ import getpass
 
 # Add project root to Python path for imports - must be done before local imports
 project_root = Path(__file__).parent
-# Explicitly initialize error logging to use the import
-modules.error_reporter.setup_error_logging()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 

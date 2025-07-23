@@ -5,26 +5,22 @@ from tkinter import messagebox
 import os
 import sys
 import pandas as pd
-import modules.error_reporter
+
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import required utility functions
 from utils.excel_utils import write_df_to_template
 from utils.utils import write_audit_log
 from config.config_loader import ConfigManager
+
+# Import audit helper functions
 from modules.audit_helper import (
     make_audit_entry,
     log_user_session_start,
     log_user_session_end,
     log_file_access,
 )
-
-# Ensure project root is in sys.path for module imports
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
-# Explicitly initialize error logging to use the import
-modules.error_reporter.setup_error_logging()
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 CLAIMS_SHEET = "Claims Table"
 OUTPUT_SHEET = "Line By Line"

@@ -1,20 +1,15 @@
 import sys
-import os
 import pandas as pd
 from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.styles import NamedStyle
 import logging
-import modules.error_reporter
+import os
 
-
-# Ensure project root is in sys.path for module imports
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
-# Explicitly initialize error logging to use the import
-modules.error_reporter.setup_error_logging()
+# Add the project root directory to the Python path
+project_root = Path(__file__).parent.parent.resolve()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 # Try to import write_audit_log, create a fallback if not available
 try:

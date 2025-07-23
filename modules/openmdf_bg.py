@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-import modules.error_reporter
 from utils.utils import (
     standardize_pharmacy_ids,
     standardize_network_ids,
@@ -24,13 +23,6 @@ from modules.audit_helper import (
     log_file_access,
 )
 
-# Ensure project root is in sys.path for module imports
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
-# Explicitly initialize error logging to use the import
-modules.error_reporter.setup_error_logging()
 # Import required utility functions for overwrite protection
 # from utils.utils import load_file_paths
 

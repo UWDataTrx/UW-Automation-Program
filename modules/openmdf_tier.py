@@ -3,7 +3,11 @@ import logging
 import os
 import sys
 from pathlib import Path
-import modules.error_reporter
+
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import required utility functions
 from utils.utils import (
     standardize_pharmacy_ids,
     standardize_network_ids,
@@ -15,18 +19,14 @@ from utils.utils import (
     filter_products_and_alternative,
     write_audit_log,
 )
+
+# Import audit helper functions
 from modules.audit_helper import (
     make_audit_entry,
     log_user_session_start,
     log_user_session_end,
     log_file_access,
 )
-
-# Ensure error logging is initialized (makes import 'used')
-modules.error_reporter.setup_error_logging()
-
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Logging setup
 logging.basicConfig(
