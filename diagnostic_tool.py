@@ -17,12 +17,15 @@ Output:
 
 import sys
 import platform
+import modules.error_reporter
 import json
 import traceback
 import importlib.util
 from pathlib import Path
 from datetime import datetime
 
+# Explicitly initialize error logging to use the import
+modules.error_reporter.setup_error_logging()
 
 class DiagnosticTool:
     def __init__(self):

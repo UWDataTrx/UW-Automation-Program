@@ -1,6 +1,10 @@
+import modules.error_reporter
 import cProfile
 import pstats
 import sys
+
+# Ensure error logging is initialized (makes import 'used')
+modules.error_reporter.setup_error_logging()
 
 if __name__ == "__main__":
     script_path = (

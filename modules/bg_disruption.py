@@ -3,8 +3,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from modules import error_reporter
 from utils.utils import (
     filter_logic_and_maintenance,
     filter_products_and_alternative,
@@ -22,6 +21,10 @@ from modules.audit_helper import (
     log_user_session_end,
     log_file_access,
 )
+
+error_reporter.setup_error_logging()
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Logging setup
 logging.basicConfig(

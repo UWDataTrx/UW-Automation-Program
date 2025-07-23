@@ -1,5 +1,14 @@
+import sys
+import os
+import modules.error_reporter
 from safe_error_analysis import get_user_errors_safe
+# Ensure project root is in sys.path for module imports
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
+# Explicitly initialize error logging to use the import
+modules.error_reporter.setup_error_logging()
 
 def generate_user_support_report(username):
     """Generate a support report for a specific user."""
