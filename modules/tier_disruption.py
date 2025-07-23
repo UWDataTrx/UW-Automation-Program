@@ -3,12 +3,7 @@ import sys
 import re
 import logging
 from pathlib import Path
-import os
 
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import required utility functions
 from utils.utils import (
     standardize_pharmacy_ids,
     standardize_network_ids,
@@ -20,14 +15,16 @@ from utils.utils import (
     filter_products_and_alternative,
     write_audit_log,
 )
-
-# Import audit helper functions
 from modules.audit_helper import (
     make_audit_entry,
     log_user_session_start,
     log_user_session_end,
     log_file_access,
 )
+
+# Add the project root directory to the Python path using pathlib
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
 
 # Set up logger
 logging.basicConfig(level=logging.INFO)
@@ -197,7 +194,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
         logger.info(f"NA pharmacies count: {na_pharmacies.shape[0]}")
 
         if not na_pharmacies.empty:
-            output_file_path = file_paths["pharmacy_validation"]
+            output_file_path = Path(file_paths["pharmacy_validation"]).resolve()
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
             # Add Result column with "NA" value
             na_pharmacies_output["Result"] = "NA"
@@ -205,7 +202,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
             # Use pandas to write to Excel, which is simpler and more reliable
             try:
                 # Try to append to existing file
-                if os.path.exists(output_file_path):
+                if output_file_path.exists():
                     # Read existing data
                     existing_df = pd.read_excel(output_file_path)
                     # Concatenate with new data
@@ -525,8 +522,12 @@ def show_completion_message(output_path):
 def process_data():
     # Get current username
     try:
+        import os
+
         username = os.getlogin()
     except Exception:
+        import os
+
         username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
     log_user_session_start("tier_disruption.py")
     write_audit_log(
@@ -609,7 +610,11 @@ def process_data():
         tab_members["Exclusions"] = exc_members
         tab_rxs["Exclusions"] = exc_rxs
 
-        # Summary calculations
+        # Write the 'Data' sheet first
+        data_sheet_df = df.copy()
+        data_sheet_df.to_excel(writer, sheet_name="Data", index=False)
+
+        # Write the 'Summary' sheet second
         summary_df = create_summary_dataframe(
             tab_members, tab_rxs, total_claims, total_members
         )
@@ -622,10 +627,6 @@ def process_data():
 
         ex_pt.to_excel(writer, sheet_name="Exclusions")
         writer.sheets["Exclusions"].write("F1", f"Total Members: {exc_members}")
-
-        # Write the 'Data Sheet' with excluded and non-excluded pharmacies
-        data_sheet_df = df.copy()
-        data_sheet_df.to_excel(writer, sheet_name="Data", index=False)
 
         # Network summary for excluded pharmacies (pharmacy_is_excluded=True)
         network_df, network_pivot = create_network_analysis(df)
@@ -657,9 +658,6 @@ def process_data():
         logger.info(
             f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
         )
-
-        # Reorder sheets so Summary follows Data
-        reorder_excel_sheets(writer)
 
         writer.close()
 

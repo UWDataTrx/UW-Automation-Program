@@ -1,9 +1,8 @@
-import os
 import shutil
 import logging
 import xlwings as xw
 import importlib.util
-from typing import Any, Tuple
+from typing import Any, Tuple, Union
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import tempfile
@@ -15,50 +14,51 @@ logger = logging.getLogger(__name__)
 EXCEL_COM_AVAILABLE = importlib.util.find_spec("win32com.client") is not None
 
 
-def validate_excel_file(file_path: str) -> bool:
+def validate_excel_file(file_path: Union[str, Path]) -> bool:
     """
     Validate if an Excel file is not corrupted and can be opened.
     Returns True if valid, False if corrupted.
     """
     try:
         # Quick validation using pandas first
-        pd.read_excel(file_path, nrows=1)
+        pd.read_excel(str(file_path), nrows=1)
         return True
     except Exception as e:
         logger.warning(f"Excel file validation failed for {file_path}: {e}")
         return False
 
 
-def safe_excel_write(df: pd.DataFrame, output_path: str, **kwargs) -> bool:
+def safe_excel_write(df: pd.DataFrame, output_path: Union[str, Path], **kwargs) -> bool:
     """
     Safely write DataFrame to Excel with atomic operations and validation.
     Returns True if successful, False otherwise.
     """
     try:
+        output_path = Path(output_path)
         # Create a temporary file first
-        temp_dir = Path(output_path).parent
+        temp_dir = output_path.parent
         with tempfile.NamedTemporaryFile(
             suffix=".xlsx", dir=temp_dir, delete=False
         ) as temp_file:
-            temp_path = temp_file.name
+            temp_path = Path(temp_file.name)
 
         # Write to temporary file first
-        df.to_excel(temp_path, **kwargs)
+        df.to_excel(str(temp_path), **kwargs)
 
         # Validate the temporary file
         if not validate_excel_file(temp_path):
-            os.unlink(temp_path)
+            temp_path.unlink(missing_ok=True)
             logger.error(f"Generated Excel file failed validation: {temp_path}")
             return False
 
         # If output file exists, create backup
-        if os.path.exists(output_path):
-            backup_path = f"{output_path}.backup"
-            shutil.copy2(output_path, backup_path)
+        if output_path.exists():
+            backup_path = output_path.with_suffix(output_path.suffix + ".backup")
+            shutil.copy2(str(output_path), str(backup_path))
             logger.info(f"Created backup: {backup_path}")
 
         # Atomic move from temp to final location
-        shutil.move(temp_path, output_path)
+        shutil.move(str(temp_path), str(output_path))
         logger.info(f"Successfully wrote Excel file: {output_path}")
         return True
 
@@ -66,20 +66,21 @@ def safe_excel_write(df: pd.DataFrame, output_path: str, **kwargs) -> bool:
         logger.error(f"Safe Excel write failed: {e}")
         # Clean up temp file if it exists
         temp_path_to_clean = locals().get("temp_path")
-        if temp_path_to_clean and os.path.exists(temp_path_to_clean):
+        if temp_path_to_clean and Path(temp_path_to_clean).exists():
             try:
-                os.unlink(temp_path_to_clean)
+                Path(temp_path_to_clean).unlink(missing_ok=True)
             except Exception:
                 pass
         return False
 
 
-def check_disk_space(path: str, required_mb: int = 100) -> bool:
+def check_disk_space(path: Union[str, Path], required_mb: int = 100) -> bool:
     """
     Check if there's sufficient disk space for Excel operations.
     """
     try:
-        stat = shutil.disk_usage(path)
+        path = Path(path)
+        stat = shutil.disk_usage(str(path))
         free_mb = stat.free / (1024 * 1024)
         if free_mb < required_mb:
             logger.warning(
@@ -92,7 +93,9 @@ def check_disk_space(path: str, required_mb: int = 100) -> bool:
         return True  # Assume OK if we can't check
 
 
-def open_workbook(path: str, visible: bool = False) -> Tuple[Any, Any, bool]:
+def open_workbook(
+    path: Union[str, Path], visible: bool = False
+) -> Tuple[Any, Any, bool]:
     """
     Open workbook via xlwings or COM fallback.
     Returns (wb, app_obj, use_com).
@@ -102,6 +105,7 @@ def open_workbook(path: str, visible: bool = False) -> Tuple[Any, Any, bool]:
     max_retries = 3
     delay = 2
     last_exc = None
+    path = str(path)
     for attempt in range(max_retries):
         try:
             app = xw.App(visible=visible, add_book=False)  # Ensure no new book is added
@@ -131,10 +135,10 @@ def open_workbook(path: str, visible: bool = False) -> Tuple[Any, Any, bool]:
             if "::" in path:
                 file_path, password = path.split("::", 1)
                 wb: Any = excel.Workbooks.Open(
-                    os.path.abspath(file_path), False, False, None, password
+                    str(Path(file_path).resolve()), False, False, None, password
                 )
             else:
-                wb: Any = excel.Workbooks.Open(os.path.abspath(path))
+                wb: Any = excel.Workbooks.Open(str(Path(path).resolve()))
         except Exception as e:
             logger.error(f"COM fallback failed to open workbook: {e}")
             raise
@@ -147,7 +151,7 @@ def open_workbook(path: str, visible: bool = False) -> Tuple[Any, Any, bool]:
 
 
 def write_df_to_sheet_async(
-    path: str,
+    path: Union[str, Path],
     sheet_name: str,
     df: pd.DataFrame,
     start_cell: str = "A2",
@@ -248,7 +252,7 @@ def close_workbook(
 
 
 def write_df_to_sheet(
-    path: str,
+    path: Union[str, Path],
     sheet_name: str,
     df: pd.DataFrame,
     start_cell: str = "A2",
@@ -325,8 +329,8 @@ def write_df_to_sheet(
 
 
 def write_df_to_template(
-    template_path: str,
-    output_path: str,
+    template_path: Union[str, Path],
+    output_path: Union[str, Path],
     sheet_name: str,
     df: pd.DataFrame,
     start_cell: str = "A2",
@@ -341,7 +345,9 @@ def write_df_to_template(
 
     If open_file is True, launch the filled workbook in Excel after writing.
     """
-    shutil.copy(template_path, output_path)
+    template_path = Path(template_path)
+    output_path = Path(output_path)
+    shutil.copy(str(template_path), str(output_path))
     write_df_to_sheet(
         path=output_path,
         sheet_name=sheet_name,
@@ -353,4 +359,15 @@ def write_df_to_template(
         visible=visible,
     )
     if open_file:
-        os.startfile(output_path)
+        try:
+            output_path_str = str(output_path)
+            import os
+
+            if hasattr(os, "startfile"):
+                os.startfile(output_path_str)
+            else:
+                import subprocess
+
+                subprocess.run(["open", output_path_str])
+        except Exception as e:
+            logger.warning(f"Could not open file after writing: {e}")

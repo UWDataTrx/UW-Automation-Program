@@ -1,13 +1,14 @@
-
 import os
 import sys
 from pathlib import Path
 import unittest
 from config.config_loader import ConfigLoader
+
 # Ensure project root is in sys.path
 project_root = Path(__file__).parent.parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+
 
 class TestFilePaths(unittest.TestCase):
     def setUp(self):
@@ -24,6 +25,7 @@ class TestFilePaths(unittest.TestCase):
             for key, path in missing:
                 print(f"Missing file for key '{key}': {path}")
         self.assertEqual(len(missing), 0, f"Missing files: {missing}")
+
 
 if __name__ == "__main__":
     unittest.main()

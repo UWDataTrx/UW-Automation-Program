@@ -12,8 +12,10 @@ import re
 import os
 import sys
 
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Add the project root directory to the Python path using pathlib
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
 
 try:
     from config.app_config import ProcessingConfig
@@ -45,24 +47,26 @@ class DataProcessor:
     def _read_file_flexible(self, file_path):
         """Read file supporting both CSV and Excel formats."""
         try:
-            if file_path.lower().endswith((".xlsx", ".xls")):
-                return pd.read_excel(file_path), "Excel"
+            file_path_obj = Path(file_path)
+            if file_path_obj.suffix.lower() in (".xlsx", ".xls"):
+                return pd.read_excel(file_path_obj), "Excel"
             else:
-                return pd.read_csv(file_path), "CSV"
+                return pd.read_csv(file_path_obj), "CSV"
         except Exception as e:
             raise Exception(f"Could not read file {file_path}: {str(e)}")
 
     def load_and_validate_data(self, file_path):
         """Load and validate the merged file data with enhanced error handling."""
         try:
+            file_path_obj = Path(file_path)
             # Load the Excel file
-            df = pd.read_excel(file_path)
+            df = pd.read_excel(file_path_obj)
             logging.info(
-                f"Loaded {len(df)} records from {file_path} by user: {self.username}"
+                f"Loaded {len(df)} records from {file_path_obj} by user: {self.username}"
             )
             write_audit_log(
                 "data_processor.py",
-                f"User {self.username} loaded file: {file_path}",
+                f"User {self.username} loaded file: {file_path_obj}",
                 "INFO",
             )
 
@@ -70,19 +74,21 @@ class DataProcessor:
             if df.empty:
                 write_audit_log(
                     "data_processor.py",
-                    f"User {self.username} attempted to load empty file: {file_path}",
+                    f"User {self.username} attempted to load empty file: {file_path_obj}",
                     "WARNING",
                 )
-                raise ValueError(f"The file {file_path} is empty or contains no data")
+                raise ValueError(
+                    f"The file {file_path_obj} is empty or contains no data"
+                )
 
             # Validate required columns using configuration with fallback
             write_audit_log(
                 "data_processor.py",
-                f"Validated columns for file: {file_path} by user: {self.username}",
+                f"Validated columns for file: {file_path_obj} by user: {self.username}",
                 "INFO",
             )
             logging.info(
-                f"Validated columns for file: {file_path} by user: {self.username}"
+                f"Validated columns for file: {file_path_obj} by user: {self.username}"
             )
             try:
                 ProcessingConfig.validate_required_columns(df)
@@ -388,10 +394,10 @@ class DataProcessor:
         if not file1_path or not file2_path:
             return False, "Both input files must be selected."
 
-        if not os.path.isfile(file1_path):
+        if not Path(file1_path).is_file():
             return False, f"File not found: {file1_path}"
 
-        if not os.path.isfile(file2_path):
+        if not Path(file2_path).is_file():
             return False, f"File not found: {file2_path}"
 
         return True, "Inputs are valid"

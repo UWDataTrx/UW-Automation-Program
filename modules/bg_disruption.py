@@ -3,8 +3,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import (
     filter_logic_and_maintenance,
     filter_products_and_alternative,
@@ -22,6 +20,9 @@ from modules.audit_helper import (
     log_user_session_end,
     log_file_access,
 )
+
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
 
 # Logging setup
 logging.basicConfig(
@@ -199,9 +200,11 @@ def handle_pharmacy_exclusions(df, file_paths):
             # Use pandas to write to Excel, which is simpler and more reliable
             try:
                 # Try to append to existing file
-                if os.path.exists(output_file_path):
+
+                output_path = Path(output_file_path)
+                if output_path.exists():
                     # Read existing data
-                    existing_df = pd.read_excel(output_file_path)
+                    existing_df = pd.read_excel(output_path)
                     # Concatenate with new data
                     combined_df = pd.concat(
                         [existing_df, na_pharmacies_output], ignore_index=True
@@ -212,9 +215,9 @@ def handle_pharmacy_exclusions(df, file_paths):
                     combined_df = na_pharmacies_output
 
                 # Write to Excel
-                combined_df.to_excel(output_file_path, index=False)
+                combined_df.to_excel(output_path, index=False)
                 logger.info(
-                    f"NA pharmacies written to '{output_file_path}' with Result column."
+                    f"NA pharmacies written to '{output_path}' with Result column."
                 )
 
             except Exception as e:
@@ -407,7 +410,8 @@ def write_excel_report(report_data, output_filename):
 
     df, summary, tabs, network_pivot = report_data
 
-    writer = pd.ExcelWriter(output_filename, engine="xlsxwriter")
+    output_path = Path(output_filename)
+    writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
     df.to_excel(writer, sheet_name="Data", index=False)
     summary.to_excel(writer, sheet_name="Summary", index=False)
 
@@ -433,9 +437,9 @@ def write_excel_report(report_data, output_filename):
             writer.sheets.update(dict(items))
 
     writer.close()
-    logger.info(f"Excel report written to: {output_filename}")
+    logger.info(f"Excel report written to: {output_path}")
     write_audit_log(
-        "bg_disruption.py", f"Excel report written to: {output_filename}", "INFO"
+        "bg_disruption.py", f"Excel report written to: {output_path}", "INFO"
     )
 
 

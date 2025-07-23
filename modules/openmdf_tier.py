@@ -1,13 +1,7 @@
 import pandas as pd
 import logging
-import os
 import sys
 from pathlib import Path
-
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import required utility functions
 from utils.utils import (
     standardize_pharmacy_ids,
     standardize_network_ids,
@@ -19,14 +13,16 @@ from utils.utils import (
     filter_products_and_alternative,
     write_audit_log,
 )
-
-# Import audit helper functions
 from modules.audit_helper import (
     make_audit_entry,
     log_user_session_start,
     log_user_session_end,
     log_file_access,
 )
+
+# Add the project root directory to the Python path using pathlib
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
 
 # Logging setup
 logging.basicConfig(
@@ -229,11 +225,13 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
             na_pharmacies_output["Result"] = "NA"
 
             # Use pandas to write to Excel, which is simpler and more reliable
+
             try:
                 # Try to append to existing file
-                if os.path.exists(output_file_path):
+                output_file_path_obj = Path(output_file_path)
+                if output_file_path_obj.exists():
                     # Read existing data
-                    existing_df = pd.read_excel(output_file_path)
+                    existing_df = pd.read_excel(output_file_path_obj)
                     # Concatenate with new data
                     combined_df = pd.concat(
                         [existing_df, na_pharmacies_output], ignore_index=True
@@ -244,9 +242,9 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
                     combined_df = na_pharmacies_output
 
                 # Write to Excel
-                combined_df.to_excel(output_file_path, index=False)
+                combined_df.to_excel(output_file_path_obj, index=False)
                 logger.info(
-                    f"NA pharmacies written to '{output_file_path}' with Result column."
+                    f"NA pharmacies written to '{output_file_path_obj}' with Result column."
                 )
 
             except Exception as e:

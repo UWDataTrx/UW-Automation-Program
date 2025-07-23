@@ -1,4 +1,4 @@
-from sharx_lbl import main
+from modules.sharx_lbl import main
 
 
 def test_sharx_main_runs():

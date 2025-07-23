@@ -204,7 +204,7 @@ class DiagnosticTool:
             self.add_line(f"Could not check memory: {e}")
 
     def check_file_permissions(self):
-        """Check file permissions in current directory."""
+        """Check file permissions in current directory using pathlib."""
         self.add_section("FILE PERMISSIONS")
 
         current_dir = Path.cwd()
@@ -213,8 +213,7 @@ class DiagnosticTool:
         # Test write permissions
         test_file = current_dir / "permission_test.tmp"
         try:
-            with open(test_file, "w") as f:
-                f.write("test")
+            test_file.write_text("test", encoding="utf-8")
             test_file.unlink()
             self.add_line("✓ Write permissions: OK")
         except Exception as e:
@@ -231,7 +230,7 @@ class DiagnosticTool:
         for pattern in excel_patterns:
             for file_path in current_dir.glob(pattern):
                 try:
-                    with open(file_path, "r+b"):
+                    with file_path.open("r+b"):
                         pass
                 except (PermissionError, IOError):
                     locked_files.append(str(file_path.name))
@@ -302,7 +301,7 @@ class DiagnosticTool:
             self.add_line(f"Error checking processes: {e}")
 
     def check_config_files(self):
-        """Check configuration files."""
+        """Check configuration files using pathlib."""
         self.add_section("CONFIGURATION FILES")
 
         config_files = [
@@ -317,8 +316,9 @@ class DiagnosticTool:
             if file_path.exists():
                 try:
                     if file_path.suffix == ".json":
-                        with open(file_path, "r") as f:
-                            json.load(f)  # Validate JSON
+                        json.loads(
+                            file_path.read_text(encoding="utf-8")
+                        )  # Validate JSON
                         self.add_line(f"✓ {config_file}: Valid")
                     else:
                         self.add_line(f"✓ {config_file}: Found")
@@ -339,7 +339,7 @@ class DiagnosticTool:
                     )
 
     def check_recent_logs(self):
-        """Check recent log files for errors."""
+        """Check recent log files for errors using pathlib."""
         self.add_section("RECENT LOGS")
 
         log_files = ["repricing_log.log", "shared_log.txt"]
@@ -353,8 +353,9 @@ class DiagnosticTool:
                     self.add_line(f"✓ {log_file}: Last modified {mod_time}")
 
                     # Check for recent errors
-                    with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
-                        lines = f.readlines()
+                    lines = log_path.read_text(
+                        encoding="utf-8", errors="ignore"
+                    ).splitlines()
 
                     # Look for errors in last 50 lines
                     recent_lines = lines[-50:] if len(lines) > 50 else lines
@@ -432,10 +433,9 @@ class DiagnosticTool:
         else:
             self.add_line("✓ No major issues detected!")
 
-        # Save report locally
+        # Save report locally using pathlib
         report_file = Path("diagnostic_report.txt")
-        with open(report_file, "w", encoding="utf-8") as f:
-            f.write("\n".join(self.report_lines))
+        report_file.write_text("\n".join(self.report_lines), encoding="utf-8")
 
         print("\nDiagnostic complete!")
         print(f"Report saved to: {report_file.absolute()}")
@@ -464,7 +464,7 @@ class DiagnosticTool:
         return len(self.issues_found) == 0
 
     def _upload_report_to_support(self, report_file):
-        """Automatically upload diagnostic report to support directory."""
+        """Automatically upload diagnostic report to support directory using pathlib."""
         try:
             # Get support directory path from configuration
             try:
@@ -478,6 +478,7 @@ class DiagnosticTool:
                 )
 
             # Create support directory if it doesn't exist
+            support_dir = Path(support_dir)
             support_dir.mkdir(parents=True, exist_ok=True)
 
             # Get user information for unique filename
@@ -519,32 +520,34 @@ class DiagnosticTool:
             unique_filename = f"diagnostic_report_{username}_{hostname}_{timestamp}.txt"
             support_file_path = user_specific_dir / unique_filename
 
-            # Copy report to support directory
-            import shutil
-
-            shutil.copy2(report_file, support_file_path)
+            # Copy report to support directory using pathlib
+            report_file = Path(report_file)
+            support_file_path.write_bytes(report_file.read_bytes())
 
             print("✓ Report automatically uploaded to support directory:")
             print(f"  Location: {support_file_path}")
             print(f"  Filename: {unique_filename}")
 
-            # Also create a summary file for quick overview
+            # Also create a summary file for quick overview using pathlib
             summary_file = (
                 user_specific_dir / f"summary_{username}_{hostname}_{timestamp}.txt"
             )
-            with open(summary_file, "w", encoding="utf-8") as f:
-                f.write("Diagnostic Report Summary\n")
-                f.write("========================\n")
-                f.write(f"User: {username}\n")
-                f.write(f"Computer: {hostname}\n")
-                f.write(f"Generated: {datetime.now()}\n")
-                f.write(f"Platform: {platform.platform()}\n")
-                f.write(f"Python Version: {sys.version.split()[0]}\n")
-                f.write(f"Issues Found: {len(self.issues_found)}\n")
-                f.write("\nIssues:\n")
-                for i, issue in enumerate(self.issues_found, 1):
-                    f.write(f"{i}. {issue}\n")
-                f.write(f"\nFull Report: {unique_filename}\n")
+            summary_content = [
+                "Diagnostic Report Summary",
+                "========================",
+                f"User: {username}",
+                f"Computer: {hostname}",
+                f"Generated: {datetime.now()}",
+                f"Platform: {platform.platform()}",
+                f"Python Version: {sys.version.split()[0]}",
+                f"Issues Found: {len(self.issues_found)}",
+                "",
+                "Issues:",
+            ]
+            for i, issue in enumerate(self.issues_found, 1):
+                summary_content.append(f"{i}. {issue}")
+            summary_content.append(f"\nFull Report: {unique_filename}")
+            summary_file.write_text("\n".join(summary_content), encoding="utf-8")
 
             print(
                 f"✓ Summary also created in {user_folder}: summary_{username}_{hostname}_{timestamp}.txt"

@@ -1,17 +1,16 @@
-# Basic ConfigLoader and ConfigManager implementation for config loading
 import os
 import json
+from pathlib import Path
 
 
 class ConfigLoader:
     @staticmethod
     def load_file_paths():
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        config_dir = os.path.join(project_root, "config")
-        json_path = os.path.join(config_dir, "file_paths.json")
+        project_root = Path(__file__).resolve().parent.parent
+        config_dir = project_root / "config"
+        json_path = config_dir / "file_paths.json"
         try:
-            with open(json_path, "r") as f:
-                paths = json.load(f)
+            paths = json.loads(json_path.read_text(encoding="utf-8"))
             for k, v in paths.items():
                 if isinstance(v, str):
                     paths[k] = os.path.expandvars(v)
@@ -24,15 +23,16 @@ class ConfigLoader:
 
 class ConfigManager:
     def __init__(self, config_dir=None):
-        self.project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.config_dir = config_dir or os.path.join(self.project_root, "config")
+        self.project_root = Path(__file__).resolve().parent.parent
+        self.config_dir = (
+            Path(config_dir) if config_dir else self.project_root / "config"
+        )
         self._configs = {}
 
     def load(self, filename):
-        path = os.path.join(self.config_dir, filename)
+        path = self.config_dir / filename
         try:
-            with open(path, "r") as f:
-                config = json.load(f)
+            config = json.loads(path.read_text(encoding="utf-8"))
             for k, v in config.items():
                 if isinstance(v, str):
                     config[k] = os.path.expandvars(v)
@@ -55,10 +55,9 @@ class ConfigManager:
         config = self.get(filename)
         config[key] = value
         self._configs[filename] = config
-        path = os.path.join(self.config_dir, filename)
+        path = self.config_dir / filename
         try:
-            with open(path, "w") as f:
-                json.dump(config, f, indent=2)
+            path.write_text(json.dumps(config, indent=2), encoding="utf-8")
         except Exception as e:
             raise RuntimeError(f"Error updating config {filename}: {e}")
 

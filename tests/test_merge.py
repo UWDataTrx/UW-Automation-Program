@@ -1,8 +1,7 @@
 from pathlib import Path
 
-import pytest
 
-from merge import merge_files
+from modules.merge import merge_files
 
 
 def test_merge_files(tmp_path):

@@ -7,16 +7,17 @@ import subprocess
 import threading
 import time
 import logging
-import os
+
 import sys
+from pathlib import Path
 from tkinter import messagebox
 
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import required modules
 from config.app_config import DisruptionConfig
 from utils.utils import write_audit_log
+
+# Add the project root directory to the Python path using pathlib
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
 
 
 class ProcessManager:
@@ -37,6 +38,8 @@ class ProcessManager:
             self.app.update_progress(0.05)
 
             # Extra safeguard: Remove any accidental LBL/disruption output during repricing
+            import os
+
             os.environ["NO_LBL_OUTPUT"] = "1"
 
             # Validate inputs
@@ -79,12 +82,17 @@ class ProcessManager:
         """Run the merge.py script with file inputs."""
         try:
             # Get the correct path to merge.py
-            merge_script_path = os.path.join(os.path.dirname(__file__), "merge.py")
+            merge_script_path = Path(__file__).parent / "merge.py"
             subprocess.run(
-                ["python", merge_script_path, self.app.file1_path, self.app.file2_path],
+                [
+                    "python",
+                    str(merge_script_path),
+                    self.app.file1_path,
+                    self.app.file2_path,
+                ],
                 check=True,
-                cwd=os.path.dirname(
-                    os.path.dirname(__file__)
+                cwd=str(
+                    Path(__file__).parent.parent
                 ),  # Set working directory to project root
             )
         except subprocess.CalledProcessError as e:
@@ -107,13 +115,14 @@ class ProcessManager:
         """Execute the disruption process with error handling."""
         try:
             # Get the correct path to the program file
-            script_path = os.path.join(os.path.dirname(__file__), program_file)
-            args = ["python", script_path]
+
+            script_path = Path(__file__).parent / program_file
+            args = ["python", str(script_path)]
             if self.app.template_file_path:
                 args.append(str(self.app.template_file_path))
 
             # Use subprocess to run the disruption script
-            subprocess.Popen(args, cwd=os.path.dirname(os.path.dirname(__file__)))
+            subprocess.Popen(args, cwd=str(Path(__file__).parent.parent))
             messagebox.showinfo(
                 "Success",
                 f"{disruption_type} disruption started in a separate process.",
@@ -127,11 +136,11 @@ class ProcessManager:
         """Run label generation scripts (SHARx or EPLS)."""
         try:
             script_name = f"{label_type.lower()}_lbl.py"
-            script_path = os.path.join(os.path.dirname(__file__), script_name)
+            script_path = Path(__file__).parent / script_name
             subprocess.run(
-                ["python", script_path],
+                ["python", str(script_path)],
                 check=True,
-                cwd=os.path.dirname(os.path.dirname(__file__)),
+                cwd=str(Path(__file__).parent.parent),
             )
             write_audit_log("ProcessManager", f"{label_type} LBL generation completed")
 

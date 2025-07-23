@@ -3,7 +3,6 @@ Robust Error Analysis Tool
 Handles CSV parsing issues and provides comprehensive error analysis.
 """
 
-import os
 import json
 from datetime import datetime, timedelta
 import csv
@@ -20,12 +19,18 @@ def safe_read_audit_log():
     config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
     with open(config_path, "r") as f:
         file_paths = json.load(f)
-    log_path = os.path.expandvars(file_paths["audit_log"])
+
+    log_path_str = file_paths["audit_log"]
+    if log_path_str.startswith("$") or "${" in log_path_str:
+        import os
+
+        log_path_str = os.path.expandvars(log_path_str)
+    log_path = Path(log_path_str)
 
     entries = []
 
     try:
-        with open(log_path, "r", encoding="utf-8", newline="") as f:
+        with log_path.open("r", encoding="utf-8", newline="") as f:
             reader = csv.reader(f)
             next(reader, None)  # Skip header row
 

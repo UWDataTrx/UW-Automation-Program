@@ -1,4 +1,4 @@
-from bg_disruption import process_data
+from modules.bg_disruption import process_data
 
 
 def test_process_bg_runs():

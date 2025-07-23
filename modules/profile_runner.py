@@ -1,6 +1,7 @@
 import cProfile
 import pstats
 import sys
+from pathlib import Path
 
 if __name__ == "__main__":
     script_path = (
@@ -9,9 +10,10 @@ if __name__ == "__main__":
     profile_output = "profile_stats.prof"
 
     print(f"Profiling {script_path}...\n")
+    script_path_obj = Path(script_path)
     cProfile.runctx(
-        "exec(compile(open(script_path).read(), script_path, 'exec'))",
-        globals(),
+        "exec(compile(script_path_obj.read_text(), str(script_path_obj), 'exec'))",
+        {**globals(), "script_path_obj": script_path_obj},
         locals(),
         profile_output,
     )

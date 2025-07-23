@@ -5,9 +5,7 @@ Extracted from app.py to reduce file size and improve organization.
 
 import customtkinter as ctk
 from tkinter import messagebox
-import random
-import pyjokes
-import emoji
+
 import getpass
 from pathlib import Path
 
@@ -209,8 +207,8 @@ class UIBuilder:
         self.app.progress_label.pack(padx=10, pady=(0, 10), anchor="w")
 
     def _setup_default_template(self):
-        """Set up default template if it exists."""
-        default_template = Path("_Rx Repricing_wf.xlsx")
+        """Set up default template if it exists using pathlib."""
+        default_template = Path("_Rx Repricing_wf.xlsx").resolve()
         if default_template.exists():
             self.app.template_file_path = str(default_template)
             if hasattr(self.app, "template_label"):
@@ -227,19 +225,8 @@ class UIBuilder:
             user, f"Welcome, {user}! Ready to use the Repricing Automation Toolkit?"
         )
 
-        # Add a random joke and emoji
-        try:
-            joke = pyjokes.get_joke()
-        except Exception:
-            joke = "Have a great day!"
-
-        chosen_emoji = emoji.emojize(
-            random.choice(AppConstants.EMOJIS), language="alias"
-        )
-        full_msg = f"{msg}\n\n{joke} {chosen_emoji}"
-
-        # Show after UI is built
-        self.app.root.after(500, lambda: messagebox.showinfo("Welcome", full_msg))
+        # Show after UI is built (no joke or emoji)
+        self.app.root.after(500, lambda: messagebox.showinfo("Welcome", msg))
 
     def toggle_dark_mode(self):
         """Toggle between light and dark modes."""

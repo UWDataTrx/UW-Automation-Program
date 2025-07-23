@@ -1,4 +1,3 @@
-
 import pdfplumber
 import pandas as pd
 import shutil
@@ -6,7 +5,10 @@ import shutil
 pdf_path = r"Prescription Drug Utilizatoin Top 50.pdf"
 csv_path = r"Prescription_Drug_Utilization_Top_50.csv"
 template_path = r"C:\Users\DamionMorrison\OneDrive - True Rx Health Strategists\True Community - Data Analyst\Repricing Templates\Savings Analysis\Claims For Analysis Template.xlsx"
-output_path = "Claims For Analysis Output.xlsx"  # Will be placed in the same directory as app.py
+output_path = (
+    "Claims For Analysis Output.xlsx"  # Will be placed in the same directory as app.py
+)
+
 
 # Extract all tables from PDF and save as CSV
 def pdf_to_csv(pdf_path, csv_path):
@@ -17,7 +19,7 @@ def pdf_to_csv(pdf_path, csv_path):
             all_text += page.extract_text() or ""
     print("First 100 lines of extracted PDF text:")
     for i, line in enumerate(all_text.splitlines()[:100]):
-        print(f"Line {i+1}: {line}")
+        print(f"Line {i + 1}: {line}")
     # Save all text to a .txt file for manual inspection
     txt_path = "Prescription_Drug_Utilization_Top_50.txt"
     with open(txt_path, "w", encoding="utf-8") as f:
@@ -26,6 +28,7 @@ def pdf_to_csv(pdf_path, csv_path):
 
     # Parse lines for drug data
     import re
+
     drug_rows = []
     # Improved parsing: split by any whitespace and extract columns by position
     debug_count = 0
@@ -44,11 +47,11 @@ def pdf_to_csv(pdf_path, csv_path):
             try:
                 ind_idx = next(i for i, p in enumerate(parts) if p in ["Y", "N"])
                 drug_name = " ".join(parts[:ind_idx])
-                num_scripts = parts[ind_idx+2]
-                paid_claims = parts[ind_idx+4]
-                paid_claims_clean = paid_claims.replace("$",""").replace(",",""")
+                num_scripts = parts[ind_idx + 2]
+                paid_claims = parts[ind_idx + 4]
+                paid_claims_clean = paid_claims.replace("$", """).replace(",",""")
                 if drug_name and num_scripts.isdigit() and paid_claims_clean.isdigit():
-                    drug_rows.append([drug_name, num_scripts, "$"+paid_claims_clean])
+                    drug_rows.append([drug_name, num_scripts, "$" + paid_claims_clean])
             except Exception:
                 continue
     # Save to CSV
@@ -56,6 +59,7 @@ def pdf_to_csv(pdf_path, csv_path):
     df.to_csv(csv_path, index=False)
     print(f"Drug data extracted and saved to {csv_path}")
     return csv_path
+
 
 # Map CSV columns to Excel template columns
 def csv_to_excel_template(csv_path, template_path, output_path):
@@ -72,6 +76,7 @@ def csv_to_excel_template(csv_path, template_path, output_path):
     template["Total Cost"] = df["Total Cost"]
     template.to_excel(output_path_full, index=False)
     print(f"Output written to {output_path_full}")
+
 
 if __name__ == "__main__":
     csv_path = pdf_to_csv(pdf_path, csv_path)

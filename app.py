@@ -25,7 +25,7 @@ import psutil
 import getpass
 
 # Add project root to Python path for imports - must be done before local imports
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
@@ -173,7 +173,7 @@ class App:
         """Set the file1 path and update UI."""
         self.file1_path = file_path
         if self.file1_label:
-            self.file1_label.configure(text=os.path.basename(file_path))
+            self.file1_label.configure(text=Path(file_path).name)
         self.file_processor.check_template(file_path)
         log_file_access("File1Import", file_path, "IMPORTED")
         write_audit_log(
@@ -212,7 +212,7 @@ class App:
 
             self.file2_path = file_path
             if self.file2_label:
-                self.file2_label.configure(text=os.path.basename(file_path))
+                self.file2_label.configure(text=Path(file_path).name)
             log_file_access("File2Import", file_path, "IMPORTED")
             write_audit_log(
                 "File2Import",
@@ -241,7 +241,7 @@ class App:
 
             self.template_file_path = file_path
             if self.template_label:
-                self.template_label.configure(text=os.path.basename(file_path))
+                self.template_label.configure(text=Path(file_path).name)
             log_file_access("TemplateImport", file_path, "IMPORTED")
             write_audit_log(
                 "TemplateImport",

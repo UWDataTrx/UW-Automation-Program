@@ -4,7 +4,6 @@ Provides tools to analyze audit logs and generate support reports for user assis
 """
 
 import pandas as pd
-import os
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -13,9 +12,14 @@ from pathlib import Path
 def get_audit_log_path():
     """Get the path to the audit log file from config."""
     config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-    with open(config_path, "r") as f:
+    with config_path.open("r") as f:
         file_paths = json.load(f)
-    return os.path.expandvars(file_paths["audit_log"])
+    log_path_str = file_paths["audit_log"]
+    if log_path_str.startswith("$") or "${" in log_path_str:
+        import os
+
+        log_path_str = os.path.expandvars(log_path_str)
+    return Path(log_path_str)
 
 
 def get_user_errors(username=None, days_back=7, error_types=None):
@@ -32,7 +36,7 @@ def get_user_errors(username=None, days_back=7, error_types=None):
     """
     try:
         log_path = get_audit_log_path()
-        if not os.path.exists(log_path):
+        if not log_path.exists():
             print(f"Audit log not found at: {log_path}")
             return pd.DataFrame()
 

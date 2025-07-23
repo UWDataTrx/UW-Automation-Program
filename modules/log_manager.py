@@ -7,22 +7,22 @@ import tkinter as tk
 from tkinter import scrolledtext
 import csv
 import getpass
-import os
 import sys
 import logging
 import json
 from pathlib import Path
 
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import required modules
 from utils.utils import write_audit_log
 from modules.audit_helper import (
     log_user_session_start,
     log_user_session_end,
     validate_user_access,
 )
+
+# Add the project root directory to the Python path using pathlib
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
 
 
 class LogManager:
@@ -34,7 +34,12 @@ class LogManager:
         config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
         with open(config_path, "r") as f:
             file_paths = json.load(f)
-        self.shared_log_path = os.path.expandvars(file_paths["audit_log"])
+        log_path_str = file_paths["audit_log"]
+        if log_path_str.startswith("$") or "${" in log_path_str:
+            import os
+
+            log_path_str = os.path.expandvars(log_path_str)
+        self.shared_log_path = str(Path(log_path_str))
 
     def show_log_viewer(self):
         """Show the live log viewer window."""
@@ -79,16 +84,17 @@ class LogManager:
             """Refresh the log display with optional filtering."""
             try:
                 username = getpass.getuser()
-                base_log_dir = os.path.dirname(self.shared_log_path)
-                user_log_path = os.path.join(base_log_dir, username, "Audit_Log.csv")
-                if not os.path.exists(user_log_path):
+
+                base_log_dir = Path(self.shared_log_path).parent
+                user_log_path = base_log_dir / username / "Audit_Log.csv"
+                if not user_log_path.exists():
                     text_area.delete(1.0, tk.END)
                     text_area.insert(
                         tk.END, f"Audit log file not found at: {user_log_path}"
                     )
                     return
 
-                with open(user_log_path, "r", newline="", encoding="utf-8") as f:
+                with user_log_path.open("r", newline="", encoding="utf-8") as f:
                     reader = csv.reader(f)
                     rows = list(reader)
 

@@ -7,11 +7,11 @@ from pathlib import Path
 import getpass
 from datetime import datetime
 
-# Load the audit log path from config
+# Load the audit log path from config using pathlib
 config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-with open(config_path, "r") as f:
+with config_path.open("r") as f:
     file_paths = json.load(f)
-shared_log_path = os.path.expandvars(file_paths["audit_log"])
+shared_log_path = Path(os.path.expandvars(file_paths["audit_log"]))
 
 
 def ensure_directory_exists(path):
@@ -19,7 +19,8 @@ def ensure_directory_exists(path):
     Ensures the directory for the given path exists.
     """
     try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        path_obj = Path(path)
+        path_obj.parent.mkdir(parents=True, exist_ok=True)
     except Exception as e:
         print(f"[ensure_directory_exists] Error: {e}")
 
@@ -34,29 +35,29 @@ def write_audit_log(script_name, message, status="INFO"):
         log_entry = [timestamp, username, script_name, message, status]
 
         # Build user-specific log path
-        base_log_dir = os.path.dirname(shared_log_path)
-        user_log_dir = os.path.join(base_log_dir, username)
-        user_log_path = os.path.join(user_log_dir, "Audit_Log.csv")
+        base_log_dir = shared_log_path.parent
+        user_log_dir = base_log_dir / username
+        user_log_path = user_log_dir / "Audit_Log.csv"
 
-        write_header = not os.path.exists(user_log_path)
+        write_header = not user_log_path.exists()
         # Only create the folder if it does not exist
-        if not os.path.exists(user_log_dir):
+        if not user_log_dir.exists():
             try:
-                os.makedirs(user_log_dir)
+                user_log_dir.mkdir(parents=True, exist_ok=True)
             except Exception as e:
                 print(f"[Audit Log] Could not create user log folder: {e}")
 
         # Log rotation: if file > 5MB, rotate (keep 3 backups)
         max_size = 5 * 1024 * 1024
-        if os.path.exists(user_log_path) and os.path.getsize(user_log_path) > max_size:
+        if user_log_path.exists() and user_log_path.stat().st_size > max_size:
             for i in range(2, 0, -1):
-                prev = f"{user_log_path}.{i}"
-                prev2 = f"{user_log_path}.{i + 1}"
-                if os.path.exists(prev):
-                    os.replace(prev, prev2)
-            os.replace(user_log_path, f"{user_log_path}.1")
+                prev = user_log_path.with_suffix(f".csv.{i}")
+                prev2 = user_log_path.with_suffix(f".csv.{i + 1}")
+                if prev.exists():
+                    prev.replace(prev2)
+            user_log_path.replace(user_log_path.with_suffix(".csv.1"))
 
-        with open(user_log_path, mode="a", newline="", encoding="utf-8") as file:
+        with user_log_path.open(mode="a", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             if write_header:
                 writer.writerow(["Timestamp", "User", "Script", "Message", "Status"])
@@ -83,7 +84,7 @@ def load_file_paths(json_file="file_paths.json"):
     Returns a dictionary mapping keys to resolved absolute file paths.
     """
     try:
-        with open(json_file, "r") as f:
+        with Path(json_file).open("r") as f:
             paths = json.load(f)
 
         # Resolve the user's OneDrive path

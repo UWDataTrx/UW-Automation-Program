@@ -2,25 +2,21 @@ import logging
 import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox
-import os
 import sys
 import pandas as pd
-
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import required utility functions
 from utils.excel_utils import write_df_to_template
 from utils.utils import write_audit_log
 from config.config_loader import ConfigManager
-
-# Import audit helper functions
 from modules.audit_helper import (
     make_audit_entry,
     log_user_session_start,
     log_user_session_end,
     log_file_access,
 )
+
+# Add the project root directory to the Python path using pathlib
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
 
 CLAIMS_SHEET = "Claims Table"
 OUTPUT_SHEET = "Line By Line"
@@ -89,7 +85,7 @@ def main():
                 title="Select SHARx Template File"
             )
 
-        template_path = Path(paths["sharx"])
+        template_path = Path(paths["sharx"]).resolve()
 
         # Log file access
         log_file_access("sharx_lbl.py", paths["reprice"], "LOADING")
@@ -145,7 +141,7 @@ def main():
             raise ValueError(f"Missing columns in input data: {missing_cols}")
         df = df[columns_to_keep]
 
-        output_path = Path("_Rx Claims for SHARx.xlsx")
+        output_path = Path("_Rx Claims for SHARx.xlsx").resolve()
 
         write_df_to_template(
             str(template_path),

@@ -1,22 +1,31 @@
-import os
 import csv
 import json
 from pathlib import Path
 
 # Load the audit log path from config
+
 config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-with open(config_path, "r") as f:
+with config_path.open("r") as f:
     file_paths = json.load(f)
-log_path = os.path.expandvars(file_paths["audit_log"])
+
+# Expand environment variables in the audit_log path using Path and os-independent method
+log_path_str = file_paths["audit_log"]
+if log_path_str.startswith("$") or "${" in log_path_str:
+    # If the path contains environment variables, expand them manually
+    import os
+
+    log_path_str = os.path.expandvars(log_path_str)
+log_path = Path(log_path_str)
+
 
 print(f"Audit log path: {log_path}")
-print(f"File exists: {os.path.exists(log_path)}")
+print(f"File exists: {log_path.exists()}")
 
-if os.path.exists(log_path):
-    print(f"File size: {os.path.getsize(log_path)} bytes")
+if log_path.exists():
+    print(f"File size: {log_path.stat().st_size} bytes")
 
     try:
-        with open(log_path, "r", encoding="utf-8", newline="") as f:
+        with log_path.open("r", encoding="utf-8", newline="") as f:
             reader = csv.reader(f)
             rows = list(reader)
 
@@ -39,7 +48,7 @@ if os.path.exists(log_path):
 
         # Try reading as text
         try:
-            with open(log_path, "r", encoding="utf-8") as f:
+            with log_path.open("r", encoding="utf-8") as f:
                 content = f.read()
             print(f"Raw content (last 500 chars):\n{content[-500:]}")
         except Exception as e2:

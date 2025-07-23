@@ -20,9 +20,11 @@ def resolve_path(one_drive_template, fallback_template):
     fallback_path = fallback_template.replace("{user}", user)
     one_drive_path = os.path.expandvars(one_drive_path)
     fallback_path = os.path.expandvars(fallback_path)
-    if os.path.exists(one_drive_path):
+    one_drive_path = Path(one_drive_path)
+    fallback_path = Path(fallback_path)
+    if one_drive_path.exists():
         return one_drive_path
-    elif os.path.exists(fallback_path):
+    elif fallback_path.exists():
         return fallback_path
     else:
         raise FileNotFoundError(f"Neither {one_drive_path} nor {fallback_path} exists.")
@@ -118,11 +120,10 @@ class ProcessingConfig:
 
     @classmethod
     def get_diagnostic_reports_path(cls):
-        """Get the diagnostic reports directory path from configuration."""
+        """Get the diagnostic reports directory path from configuration using pathlib."""
         try:
             config_path = Path(__file__).parent / "file_paths.json"
-            with open(config_path, "r") as f:
-                file_paths = json.load(f)
+            file_paths = json.loads(config_path.read_text(encoding="utf-8"))
             return Path(os.path.expandvars(file_paths["diagnostic_reports"]))
         except (FileNotFoundError, KeyError):
             # Fallback to default if config is missing
@@ -173,11 +174,10 @@ class AppConstants:
 
     @classmethod
     def get_audit_log_path(cls):
-        """Get the audit log path from configuration."""
+        """Get the audit log path from configuration using pathlib."""
         try:
             config_path = Path(__file__).parent / "file_paths.json"
-            with open(config_path, "r") as f:
-                file_paths = json.load(f)
+            file_paths = json.loads(config_path.read_text(encoding="utf-8"))
             return Path(os.path.expandvars(file_paths["audit_log"]))
         except (FileNotFoundError, KeyError):
             # Fallback to default if config is missing

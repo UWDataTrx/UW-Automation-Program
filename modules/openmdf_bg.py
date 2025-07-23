@@ -1,6 +1,5 @@
 import pandas as pd
 import logging
-import os
 import sys
 from pathlib import Path
 from utils.utils import (
@@ -40,13 +39,16 @@ try:
             input_files.append(str(Path(val).resolve()))
 except Exception:
     pass
-if str(output_path) in input_files:
-    raise RuntimeError(
-        f"Output file {output_path} matches an input file. Please choose a different output filename."
-    )
 
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    if str(output_path) in input_files:
+        raise RuntimeError(
+            f"Output file {output_path} matches an input file. Please choose a different output filename."
+        )
+
+
+# Add the project root directory to the Python path using pathlib
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
 
 # Setup logging
 logging.basicConfig(
@@ -404,11 +406,13 @@ def process_data():
             na_pharmacies_output["Result"] = "NA"
 
             # Use pandas to write to Excel, which is simpler and more reliable
+
             try:
                 # Try to append to existing file
-                if os.path.exists(output_file_path):
+                output_file_path_obj = Path(output_file_path)
+                if output_file_path_obj.exists():
                     # Read existing data
-                    existing_df = pd.read_excel(output_file_path)
+                    existing_df = pd.read_excel(output_file_path_obj)
                     # Concatenate with new data
                     combined_df = pd.concat(
                         [existing_df, na_pharmacies_output], ignore_index=True
@@ -419,14 +423,16 @@ def process_data():
                     combined_df = na_pharmacies_output
 
                 # Write to Excel using safe method
-                if not safe_excel_write(combined_df, output_file_path, index=False):
+                if not safe_excel_write(
+                    combined_df, str(output_file_path_obj), index=False
+                ):
                     logger.error(
-                        f"Safe write failed for {output_file_path}, trying fallback"
+                        f"Safe write failed for {output_file_path_obj}, trying fallback"
                     )
                     # Fallback to direct pandas write
-                    combined_df.to_excel(output_file_path, index=False)
+                    combined_df.to_excel(output_file_path_obj, index=False)
                 logger.info(
-                    f"NA pharmacies written to '{output_file_path}' with Result column."
+                    f"NA pharmacies written to '{output_file_path_obj}' with Result column."
                 )
 
             except Exception as e:
@@ -571,7 +577,9 @@ def process_data():
         logger.info(f"Excel writer closed successfully for {output_path}")
 
         # Validate the output file was created correctly
-        if not os.path.exists(output_path):
+
+        output_path_obj = Path(output_path)
+        if not output_path_obj.exists():
             raise FileNotFoundError(f"Output file was not created: {output_path}")
 
         # Quick validation of the Excel file

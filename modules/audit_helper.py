@@ -1,13 +1,16 @@
 import logging
-import os
 import sys
 import getpass
 import platform
 import socket
 from datetime import datetime
+from pathlib import Path
+import os  # Only for os.getlogin(), os.environ, and os.getlogin fallback
 
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Add the project root directory to the Python path using pathlib
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
 
 # Try to import write_audit_log, create fallback if not available
 try:
@@ -33,7 +36,8 @@ def make_audit_entry(script_name, message, status="INFO"):
     except Exception as e:
         logging.error(f"[AUDIT FAIL] {script_name} audit failed: {e}")
         try:
-            with open("local_fallback_log.txt", "a") as f:
+            fallback_log = Path("local_fallback_log.txt")
+            with fallback_log.open("a") as f:
                 f.write(f"{script_name}: {message} [{status}]\n")
         except Exception as inner:
             logging.error(f"[FALLBACK FAIL] Could not write fallback log: {inner}")
@@ -224,9 +228,11 @@ def log_file_error(script_name, file_path, error_message, operation=""):
         username = getpass.getuser()
 
         file_info = "Unknown"
+
         try:
-            if os.path.exists(file_path):
-                file_size = os.path.getsize(file_path)
+            file_path_obj = Path(file_path)
+            if file_path_obj.exists():
+                file_size = file_path_obj.stat().st_size
                 file_info = f"Size: {file_size} bytes"
             else:
                 file_info = "File not found"

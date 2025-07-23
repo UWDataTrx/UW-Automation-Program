@@ -1,23 +1,12 @@
-"""
-Template processing module for handling Excel template operations.
-Extracted from app.py to improve cohesion and reduce file size.
-
-This module provides:
-- Template backup creation
-- Excel data formatting
-- Column filtering for templates
-- Data preparation for Excel export
-"""
-
 import pandas as pd
 import shutil
-import os
 import sys
 from pathlib import Path
 import logging
 
-# Add the project root directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the project root directory to the Python path using pathlib
+project_root = Path(__file__).resolve().parent.parent
+sys.path.append(str(project_root))
 
 # Try to import write_audit_log, create fallback if not available
 try:
@@ -44,24 +33,27 @@ class TemplateProcessor:
     def create_template_backup(self, paths):
         """Create backup of template and prepare output file."""
         try:
+            # Ensure all paths are Path objects
+            template = Path(paths["template"])
+            backup = Path(paths["backup"])
+            output = Path(paths["output"])
+
             # Backup original template
-            shutil.copy(paths["template"], paths["backup"])
-            logging.info(f"Template backed up to {paths['backup']}")
+            shutil.copy(str(template), str(backup))
+            logging.info(f"Template backed up to {backup}")
 
             # Remove old output if it exists
-            if paths["output"].exists():
+            if output.exists():
                 try:
-                    os.remove(paths["output"])
+                    output.unlink()
                 except PermissionError:
                     raise RuntimeError(
-                        f"Cannot overwrite {paths['output']} — please close it in Excel."
+                        f"Cannot overwrite {output} — please close it in Excel."
                     )
 
             # Copy template to output location
-            shutil.copy(paths["template"], paths["output"])
-            write_audit_log(
-                "TemplateProcessor", f"Template backup created: {paths['backup']}"
-            )
+            shutil.copy(str(template), str(output))
+            write_audit_log("TemplateProcessor", f"Template backup created: {backup}")
 
         except Exception as e:
             error_msg = f"Failed to create template backup: {str(e)}"
@@ -143,7 +135,7 @@ class TemplateProcessor:
 
         template = Path(template_path)
         if not template.exists():
-            raise FileNotFoundError(f"Template file not found: {template_path}")
+            raise FileNotFoundError(f"Template file not found: {template}")
 
         if template.suffix != ".xlsx":
             raise ValueError("Template must be an Excel file (.xlsx)")
