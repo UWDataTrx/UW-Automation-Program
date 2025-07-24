@@ -13,6 +13,8 @@ class ConfigLoader:
         project_root = Path(__file__).resolve().parent.parent
         config_dir = project_root / "config"
         json_path = config_dir / "file_paths.json"
+        # Get OneDrive environment variable
+        onedrive_env = os.environ.get("OneDrive", "")
         try:
             paths = json.loads(json_path.read_text(encoding="utf-8"))
             for k, v in paths.items():
