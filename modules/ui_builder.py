@@ -1,13 +1,11 @@
-"""
-UI Builder module for constructing the main application interface.
-Extracted from app.py to reduce file size and improve organization.
-"""
-
 import customtkinter as ctk
 from tkinter import messagebox
-
 import getpass
+import sys
 from pathlib import Path
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 from ui.ui_components import UIFactory, LIGHT_COLORS, DARK_COLORS
 from config.app_config import DisruptionConfig, AppConstants
@@ -29,7 +27,12 @@ class UIBuilder:
     def _setup_window(self):
         """Configure the main window properties."""
         self.app.root.title("Reprice Automation")
-        self.app.root.configure(fg_color=LIGHT_COLORS["dark_blue"])
+        # Use bg_color for CTk root window if fg_color is not supported
+        try:
+            self.app.root.configure(bg_color=LIGHT_COLORS["dark_blue"])
+        except Exception:
+            # Fallback for standard Tk root
+            self.app.root.configure(bg=LIGHT_COLORS["dark_blue"])
         self.app.root.resizable(True, True)
         self.app.root.geometry("900x900")
 
@@ -154,7 +157,7 @@ class UIBuilder:
             font=("Cambria", 20, "bold"),
             height=40,
             width=200,
-            fg_color=LIGHT_COLORS["mint"],
+            bg_color=LIGHT_COLORS["mint"],
             text_color="#000000",
         )
         self.app.start_process_button.grid(

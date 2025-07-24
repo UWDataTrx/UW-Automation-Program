@@ -1,8 +1,11 @@
-import pandas as pd
-import logging
-import os
 import sys
 from pathlib import Path
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+import pandas as pd  
+import logging
+import os  # noqa: E402
 from utils.utils import (
     filter_logic_and_maintenance,
     filter_products_and_alternative,
@@ -20,9 +23,6 @@ from modules.audit_helper import (
     log_user_session_end,
     log_file_access,
 )
-
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
 
 # Logging setup
 logging.basicConfig(

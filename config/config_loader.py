@@ -24,9 +24,8 @@ class ConfigLoader:
 class ConfigManager:
     def __init__(self, config_dir=None):
         self.project_root = Path(__file__).resolve().parent.parent
-        self.config_dir = (
-            Path(config_dir) if config_dir else self.project_root / "config"
-        )
+        from project_settings import PROJECT_ROOT
+        self.config_dir = Path(config_dir) if config_dir else PROJECT_ROOT / "config"
         self._configs = {}
 
     def load(self, filename):

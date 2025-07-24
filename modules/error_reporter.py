@@ -2,7 +2,9 @@ import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
-
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 # Dynamically load error log path from file_paths.json
 

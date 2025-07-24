@@ -13,15 +13,14 @@ from modules.audit_helper import (
     log_user_session_end,
     log_file_access,
 )
+from project_settings import PROJECT_ROOT
 
-# Add the project root directory to the Python path using pathlib
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+
 
 CLAIMS_SHEET = "Claims Table"
 OUTPUT_SHEET = "Line By Line"
-
-# Overwrite protection: prevent output file from matching any input file
 output_filename = "LBL for Disruption.xlsx"
 if len(sys.argv) > 1:
     output_filename = sys.argv[1]

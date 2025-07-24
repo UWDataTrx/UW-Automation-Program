@@ -1,8 +1,3 @@
-"""
-Log management module for handling various logging and viewer operations.
-Extracted from app.py to reduce file size and improve organization.
-"""
-
 import tkinter as tk
 from tkinter import scrolledtext
 import csv
@@ -11,7 +6,9 @@ import sys
 import logging
 import json
 from pathlib import Path
-
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 from utils.utils import write_audit_log
 from modules.audit_helper import (
@@ -19,10 +16,6 @@ from modules.audit_helper import (
     log_user_session_end,
     validate_user_access,
 )
-
-# Add the project root directory to the Python path using pathlib
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
 
 
 class LogManager:

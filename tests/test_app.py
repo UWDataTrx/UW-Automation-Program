@@ -1,5 +1,4 @@
 import json
-import os
 import tkinter as tk
 
 import pandas as pd
@@ -21,7 +20,7 @@ def tmp_work_dir(tmp_path, monkeypatch):
 def test_save_default_creates_config(tmp_work_dir):
     # When no config.json exists, ConfigManager.save_default() should create one
     # under the current directory (tmp_work_dir).
-    cm = ConfigManager()
+    ConfigManager()
     config_path = tmp_work_dir / "config.json"
 
     assert config_path.exists(), "Config file was not created."

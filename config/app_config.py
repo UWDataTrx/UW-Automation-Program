@@ -1,14 +1,12 @@
-"""
-Configuration module for the Repricing Automation application.
-Contains configuration classes and constants.
-"""
-
 import multiprocessing
 import json
 import os
-
 import getpass
+import sys
 from pathlib import Path
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 
 # Helper function to resolve file paths with user-based fallback

@@ -37,7 +37,7 @@ class UIFactory:
             command=command,
             font=FONT_SELECT,
             height=40,
-            fg_color=fg_color,
+            bg_color=fg_color,
             text_color="#000000",
         )
 
@@ -58,7 +58,7 @@ class UIFactory:
     @staticmethod
     def create_standard_frame(parent):
         """Create a standardized frame with common styling."""
-        return ctk.CTkFrame(parent, fg_color=LIGHT_COLORS["grey_blue"])
+        return ctk.CTkFrame(parent, bg_color=LIGHT_COLORS["grey_blue"])
 
     @staticmethod
     def create_standard_label(parent, text, width=None):
@@ -82,7 +82,10 @@ class ThemeManager:
     @staticmethod
     def _apply_root_colors(app_instance, colors):
         """Apply colors to the root window."""
-        app_instance.root.configure(fg_color=colors["dark_blue"])
+        try:
+            app_instance.root.configure(bg_color=colors["dark_blue"])
+        except Exception:
+            app_instance.root.configure(bg=colors["dark_blue"])
 
     @staticmethod
     def _apply_frame_colors(app_instance, colors):
@@ -91,7 +94,7 @@ class ThemeManager:
         for frame_name in frames:
             frame = getattr(app_instance, frame_name, None)
             if frame:
-                frame.configure(fg_color=colors["grey_blue"])
+                frame.configure(bg_color=colors["grey_blue"])
 
     @staticmethod
     def _apply_button_colors(app_instance, colors):
@@ -111,7 +114,7 @@ class ThemeManager:
         for btn_name in button_widgets:
             btn = getattr(app_instance, btn_name, None)
             if btn:
-                btn.configure(fg_color=colors["mint"], text_color="#000000")
+                btn.configure(bg_color=colors["mint"], text_color="#000000")
 
     @staticmethod
     def _apply_special_component_colors(app_instance, colors):
@@ -119,7 +122,7 @@ class ThemeManager:
         # Apply colors to special buttons
         if hasattr(app_instance, "exit_button"):
             app_instance.exit_button.configure(
-                fg_color=colors["button_red"], text_color="#000000"
+                bg_color=colors["button_red"], text_color="#000000"
             )
 
         # Apply colors to progress components

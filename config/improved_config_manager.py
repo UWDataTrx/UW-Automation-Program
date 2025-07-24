@@ -26,8 +26,9 @@ class AppSettings:
     @classmethod
     def default(cls) -> "AppSettings":
         """Create default settings."""
+        from project_settings import PROJECT_ROOT
         return cls(
-            last_folder=str(Path.cwd()),
+            last_folder=str(PROJECT_ROOT),
             theme="light",
             auto_save=True,
             log_level="INFO",

@@ -1,12 +1,11 @@
-"""
-Error Analysis and Support Helper
-Provides tools to analyze audit logs and generate support reports for user assistance.
-"""
-
 import pandas as pd
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+import sys
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 
 def get_audit_log_path():

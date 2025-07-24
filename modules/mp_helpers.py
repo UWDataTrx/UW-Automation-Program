@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
-
+import sys
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 def process_logic_block(df_block):
     """

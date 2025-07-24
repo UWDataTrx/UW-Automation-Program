@@ -1,21 +1,17 @@
-"""
-Data processing module for handling CSV/Excel data operations.
-Extracted from app.py to improve cohesion and reduce file size.
-"""
-
-import pandas as pd
-import numpy as np
-import logging
-import multiprocessing
-from pathlib import Path
-import re
-import os
 import sys
-
-
+from pathlib import Path
 # Add the project root directory to the Python path using pathlib
 project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
+
+import pandas as pd  # noqa: E402
+import numpy as np  # noqa: E402
+import logging  # noqa: E402
+import multiprocessing  # noqa: E402
+import re  # noqa: E402
+import os  # noqa: E402
+
 
 try:
     from config.app_config import ProcessingConfig

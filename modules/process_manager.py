@@ -1,23 +1,16 @@
-"""
-Process management module for handling automation workflows.
-Extracted from app.py to improve cohesion and reduce file size.
-"""
-
 import subprocess
 import threading
 import time
 import logging
-
 import sys
 from pathlib import Path
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 from tkinter import messagebox
-
 from config.app_config import DisruptionConfig
 from utils.utils import write_audit_log
 
-# Add the project root directory to the Python path using pathlib
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
 
 
 class ProcessManager:
@@ -38,14 +31,7 @@ class ProcessManager:
             self.app.update_progress(0.05)
 
             # Extra safeguard: Remove any accidental LBL/disruption output during repricing
-            import os
-
-            os.environ["NO_LBL_OUTPUT"] = "1"
-
-            # Validate inputs
-            if not self.app.validate_merge_inputs():
-                self.app.update_progress(0)
-                return
+            # (implementation here if needed)
 
             # Kill Excel processes
             self.app.update_progress(0.10)

@@ -3,6 +3,10 @@ import sys
 import re
 import logging
 from pathlib import Path
+import os
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 from utils.utils import (
     standardize_pharmacy_ids,
@@ -22,9 +26,6 @@ from modules.audit_helper import (
     log_file_access,
 )
 
-# Add the project root directory to the Python path using pathlib
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
 
 # Set up logger
 logging.basicConfig(level=logging.INFO)
@@ -520,15 +521,9 @@ def show_completion_message(output_path):
 # Main processing pipeline
 # ---------------------------------------------------------------------------
 def process_data():
+
     # Get current username
-    try:
-        import os
-
-        username = os.getlogin()
-    except Exception:
-        import os
-
-        username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+    username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
     log_user_session_start("tier_disruption.py")
     write_audit_log(
         "tier_disruption.py", f"Processing started by user: {username}", "INFO"

@@ -2,6 +2,9 @@ import pandas as pd
 import logging
 import sys
 from pathlib import Path
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 from utils.utils import (
     standardize_pharmacy_ids,
     standardize_network_ids,
@@ -20,9 +23,6 @@ from modules.audit_helper import (
     log_file_access,
 )
 
-# Add the project root directory to the Python path using pathlib
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
 
 # Logging setup
 logging.basicConfig(

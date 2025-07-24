@@ -1,16 +1,16 @@
-import logging
+
 import sys
-import getpass
-import platform
-import socket
-from datetime import datetime
 from pathlib import Path
-import os  # Only for os.getlogin(), os.environ, and os.getlogin fallback
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+import logging  # noqa: E402
+import getpass  # noqa: E402
+import platform  # noqa: E402
+import socket  # noqa: E402
+from datetime import datetime  # noqa: E402
+import os  # Only for os.getlogin(), os.environ, and os.getlogin fallback  # noqa: E402
 
-
-# Add the project root directory to the Python path using pathlib
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
 
 # Try to import write_audit_log, create fallback if not available
 try:

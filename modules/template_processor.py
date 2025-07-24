@@ -4,9 +4,10 @@ import sys
 from pathlib import Path
 import logging
 
-# Add the project root directory to the Python path using pathlib
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
+# Add the project root directory to the Python path using PROJECT_ROOT
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 # Try to import write_audit_log, create fallback if not available
 try:

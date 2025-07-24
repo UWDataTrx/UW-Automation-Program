@@ -1,17 +1,10 @@
-"""
-File processing module for handling file operations and validation.
-Extracted from app.py to improve cohesion and reduce file size.
-"""
-
 import pandas as pd
 from pathlib import Path
 import sys
 from tkinter import messagebox
-
-
-# Add the project root directory to the Python path using pathlib
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 try:
     from config.app_config import ProcessingConfig, AppConstants

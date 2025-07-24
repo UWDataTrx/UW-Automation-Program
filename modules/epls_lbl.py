@@ -1,15 +1,15 @@
-import logging
-import tkinter as tk
-from pathlib import Path
-
-from tkinter import messagebox
 import sys
-import pandas as pd
+from pathlib import Path
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+
+import logging  # noqa: E402
+import tkinter as tk  # noqa: E402
+from tkinter import messagebox  # noqa: E402
+import pandas as pd  # noqa: E402
 
 
-# Add the project root directory to the Python path using pathlib
-project_root = Path(__file__).resolve().parent.parent
-sys.path.append(str(project_root))
 
 try:
     from utils.excel_utils import write_df_to_template

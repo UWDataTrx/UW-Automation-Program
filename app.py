@@ -1,47 +1,44 @@
+
 import sys
+import os
+import threading
+import time
+import json
+import re
+import getpass
+import subprocess
+import warnings
+import multiprocessing
 from pathlib import Path
+from typing import Optional
+import numpy as np
+import pandas as pd
+import psutil
+import logging
 import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog, messagebox, scrolledtext
-import subprocess
-import os
-import logging
-import threading
-import multiprocessing
-import pandas as pd
-from typing import Optional
-import numpy as np
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
-import json
-import time
-import re
-import importlib
-import importlib.util
-import warnings
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 import xlwings as xw
 import shutil
-import psutil
-import getpass
+import importlib
+import importlib.util
 
-# Add project root to Python path for imports - must be done before local imports
-project_root = Path(__file__).parent.resolve()
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
-# Import main modules (after path setup) - imports must be here, not at top
-# pylint: disable=wrong-import-position
-# flake8: noqa: E402
-# type: ignore
-from config.app_config import ProcessingConfig, AppConstants  # noqa: E402
-from modules.file_processor import FileProcessor  # noqa: E402
-from modules.template_processor import TemplateProcessor  # noqa: E402
-from modules.data_processor import DataProcessor  # noqa: E402
-from modules.process_manager import ProcessManager  # noqa: E402
-from modules.ui_builder import UIBuilder  # noqa: E402
-from modules.log_manager import LogManager, ThemeController  # noqa: E402
-from utils.utils import write_audit_log  # noqa: E402
-from modules.audit_helper import (  # noqa: E402
+# Import main modules (after path setup)
+from config.app_config import ProcessingConfig, AppConstants
+from modules.file_processor import FileProcessor
+from modules.template_processor import TemplateProcessor
+from modules.data_processor import DataProcessor
+from modules.process_manager import ProcessManager
+from modules.ui_builder import UIBuilder
+from modules.log_manager import LogManager, ThemeController
+from utils.utils import write_audit_log
+from modules.audit_helper import (
     log_file_access,
     log_process_action,
     log_system_error,

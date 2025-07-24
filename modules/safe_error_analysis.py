@@ -1,12 +1,11 @@
-"""
-Robust Error Analysis Tool
-Handles CSV parsing issues and provides comprehensive error analysis.
-"""
-
 import json
 from datetime import datetime, timedelta
 import csv
+import sys
 from pathlib import Path
+from project_settings import PROJECT_ROOT
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
 
 
 def safe_read_audit_log():
