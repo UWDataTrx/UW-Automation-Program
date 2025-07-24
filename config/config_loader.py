@@ -15,8 +15,13 @@ class ConfigLoader:
         json_path = config_dir / "file_paths.json"
         try:
             paths = json.loads(json_path.read_text(encoding="utf-8"))
+            onedrive_env = os.environ.get("OneDrive") or os.environ.get("ONEDRIVE")
+            if not onedrive_env:
+                raise RuntimeError("OneDrive environment variable not set. Please ensure OneDrive is installed and synced, or set the OneDrive path manually.")
             for k, v in paths.items():
                 if isinstance(v, str):
+                    # Replace %OneDrive% placeholder if present
+                    v = v.replace("%OneDrive%", onedrive_env)
                     paths[k] = os.path.expandvars(v)
             return paths
         except FileNotFoundError:
