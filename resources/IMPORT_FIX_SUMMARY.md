@@ -40,10 +40,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Try to import utils functions, create fallbacks if not available
 try:
-    from utils.utils import write_shared_log
+    from utils.utils import write_audit_log
 except ImportError:
     # Fallback function if utils.utils is not available
-    def write_shared_log(script_name, message, status="INFO"):
+    def write_audit_log(script_name, message, status="INFO"):
         """Fallback logging function when utils.utils is not available"""
         print(f"[{status}] {script_name}: {message}")
 ```

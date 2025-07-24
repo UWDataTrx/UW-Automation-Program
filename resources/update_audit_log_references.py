@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to update all references from write_shared_log to write_audit_log across the codebase
+Script to update all references from write_audit_log to write_audit_log across the codebase
 """
 
 import os
@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def update_file(file_path):
-    """Update a single file to replace write_shared_log with write_audit_log"""
+    """Update a single file to replace write_audit_log with write_audit_log"""
     try:
         # Use os to get file size (to avoid unused import warning)
         _ = os.path.getsize(file_path)

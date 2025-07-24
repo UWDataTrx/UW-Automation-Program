@@ -15,7 +15,7 @@ from datetime import datetime  # noqa: E402
 config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
 with config_path.open("r") as f:
     file_paths = json.load(f)
-shared_log_path = Path(os.path.expandvars(file_paths["audit_log"]))
+audit_log_path = Path(os.path.expandvars(file_paths["audit_log"]))
 
 
 def ensure_directory_exists(path):
@@ -39,7 +39,7 @@ def write_audit_log(script_name, message, status="INFO"):
         log_entry = [timestamp, username, script_name, message, status]
 
         # Build user-specific log path
-        base_log_dir = shared_log_path.parent
+        base_log_dir = audit_log_path.parent
         user_log_dir = base_log_dir / username
         user_log_path = user_log_dir / "Audit_Log.csv"
 

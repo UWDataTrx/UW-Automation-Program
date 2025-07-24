@@ -93,7 +93,7 @@ The main entry point and GUI for the toolkit. Handles user interaction, file imp
   - `start_process_threaded`, `start_process`, `_start_process_internal`: Launch and manage the main repricing process, including threading for responsiveness.
   - `start_disruption`: Triggers disruption analysis based on user selection.
   - `sharx_lbl`, `epls_lbl`: Generate SHARx/EPLS line-by-line outputs.
-  - `show_log_viewer`, `show_shared_log_viewer`: Display logs to the user.
+  - `show_log_viewer`, `show_audit_log_viewer`: Display logs to the user.
   - `toggle_dark_mode`: Switches between light and dark UI themes.
   - `cancel_process`: Allows the user to cancel a running process.
   - `write_audit_log`: Records actions/errors for audit purposes.
@@ -266,7 +266,7 @@ Run manually to analyze and optimize performance bottlenecks.
 - `App.check_template(self, file_path)`: Validates the template file for required structure.
 - `App.sharx_lbl(self)`: Generates SHARx line-by-line output from processed data.
 - `App.epls_lbl(self)`: Generates EPLS line-by-line output from processed data.
-- `App.show_shared_log_viewer(self)`: Displays the shared audit log to the user.
+- `App.show_audit_log_viewer(self)`: Displays the audit log to the user.
 - `App._build_ui(self)`: Constructs all GUI elements (buttons, frames, labels, etc.).
 - `App.import_file1(self)`: Handles importing the first data file.
 - `App.import_file2(self)`: Handles importing the second data file.
@@ -318,7 +318,7 @@ Run manually to analyze and optimize performance bottlenecks.
 
 ### utils.py
 - `ensure_directory_exists(path)`: Creates a directory if it does not exist.
-- `write_shared_log(script_name, message, status="INFO")`: Writes a log entry to the audit log file.
+- `write_audit_log(script_name, message, status="INFO")`: Writes a log entry to the audit log file.
 - `log_exception(script_name, exc, status="ERROR")`: Logs an exception with details.
 - `load_file_paths(json_file='file_paths.json')`: Loads file paths from a JSON config file.
 - `standardize_pharmacy_ids(df)`: Standardizes pharmacy IDs in a DataFrame.

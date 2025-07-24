@@ -3,7 +3,7 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox, scrolledtext
 import subprocess
 import os
-from utils.utils import write_shared_log
+from utils.utils import write_audit_log
 from modules.audit_helper import log_file_access, log_process_action, log_system_error, log_file_error
 import logging
 import threading
@@ -121,7 +121,7 @@ class App:
     # - apply_theme_colors -> ThemeController
     # - check_template -> FileProcessor
     # - sharx_lbl, epls_lbl -> ProcessManager
-    # - show_shared_log_viewer -> LogManager
+    # - show_audit_log_viewer -> LogManager
 
     # Example: Remove apply_theme_colors from App, and use self.theme_controller.apply_theme_colors instead.
 
@@ -158,7 +158,7 @@ class App:
             self.file1_label.configure(text=os.path.basename(file_path))
         self.file_processor.check_template(file_path)
         log_file_access("File1Import", file_path, "IMPORTED")
-        write_shared_log("File1 imported", file_path)
+        write_audit_log("File1 imported", file_path)
 
     def _validate_gross_cost_template(self, file_path):
         """Validate GrossCost column and suggest template type using data processor."""
@@ -178,7 +178,7 @@ class App:
             if self.file2_label:
                 self.file2_label.configure(text=os.path.basename(file_path))
             log_file_access("File2Import", file_path, "IMPORTED")
-            write_shared_log("File2 imported", file_path)
+            write_audit_log("File2 imported", file_path)
             
         except Exception as e:
             error_msg = f"Failed to import File2: {str(e)}"
@@ -200,7 +200,7 @@ class App:
             if self.template_label:
                 self.template_label.configure(text=os.path.basename(file_path))
             log_file_access("TemplateImport", file_path, "IMPORTED")
-            write_shared_log("Template file imported", file_path)
+            write_audit_log("Template file imported", file_path)
             
         except Exception as e:
             error_msg = f"Failed to import template file: {str(e)}"
@@ -284,9 +284,9 @@ class App:
         """Show log viewer using log manager."""
         self.log_manager.show_log_viewer()
 
-    def show_shared_log_viewer(self):
+    def show_audit_log_viewer(self):
         """Show audit log viewer using log manager."""
-        self.log_manager.show_shared_log_viewer()
+        self.log_manager.show_audit_log_viewer()
 
     def sharx_lbl(self):
         """Generate SHARx LBL (method not implemented in ProcessManager)."""
@@ -718,7 +718,7 @@ class App:
         
         threading.Thread(target=self._start_process_internal).start()
         log_process_action("RepricingProcess", "STARTED")
-        write_shared_log("Repricing process started", "")
+        write_audit_log("Repricing process started", "")
 
     def validate_merge_inputs(self):
         """Validate merge inputs using data processor."""

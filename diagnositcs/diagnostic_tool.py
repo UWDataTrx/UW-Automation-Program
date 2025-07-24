@@ -342,7 +342,7 @@ class DiagnosticTool:
         """Check recent log files for errors."""
         self.add_section("RECENT LOGS")
 
-        log_files = ["repricing_log.log", "shared_log.txt"]
+        log_files = ["repricing_log.log", "audit_log.csv"]
 
         for log_file in log_files:
             log_path = Path(log_file)
