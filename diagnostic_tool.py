@@ -1,27 +1,13 @@
-#!/usr/bin/env python3
-"""
-UW Automation Program - Diagnostic Tool
-=======================================
-
-This script collects system information and performs health checks
-to help diagnose issues users might be experiencing.
-
-Usage:
-    python diagnostic_tool.py
-
-Output:
-    - Creates diagnostic_report.txt with detailed system information
-    - Displays summary in console
-    - Checks for common issues and provides recommendations
-"""
-
 import sys
-import platform
-import json
-import traceback
-import importlib.util
 from pathlib import Path
-from datetime import datetime
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+import platform  # noqa: E402
+import json  # noqa: E402
+import traceback  # noqa: E402
+import importlib.util  # noqa: E402
+from datetime import datetime  # noqa: E402
 
 
 class DiagnosticTool:
