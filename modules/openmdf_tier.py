@@ -117,8 +117,7 @@ def load_openmdf_tier_data(file_paths):
     try:
         exclusive = pd.read_excel(
             file_paths["e_disrupt"], sheet_name="Alternatives NDC"
-        )[["NDC", "Tier", "Alternative"]]
-        print(f"exclusive shape: {exclusive.shape}")
+        )[[ "NDC", "Tier", "Alternative"]]
     except Exception as e:
         logger.error(f"Failed to read e_disrupt file: {file_paths['e_disrupt']} | {e}")
         write_audit_log(

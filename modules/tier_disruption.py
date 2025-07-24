@@ -526,16 +526,19 @@ def process_data():
 
     # Get current username
     username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
+    logger.info(f"Session started for user: {username}")
     log_user_session_start("tier_disruption.py")
     write_audit_log(
         "tier_disruption.py", f"Processing started by user: {username}", "INFO"
     )
+    logger.info("Loading data files...")
 
     # Output filename from CLI arg or default
     output_filename = "LBL for Disruption.xlsx"
     if len(sys.argv) > 1:
         output_filename = sys.argv[1]
     output_path = Path(output_filename).resolve()
+    logger.info(f"Output file will be: {output_path}")
 
     # Overwrite protection: prevent output file from matching any input file
     input_files = []
@@ -547,9 +550,12 @@ def process_data():
         for key, val in file_paths.items():
             if val:
                 input_files.append(str(Path(val).resolve()))
-    except Exception:
+        logger.info(f"Loaded file paths from config: {file_paths}")
+    except Exception as e:
+        logger.error(f"Failed to load config or file paths: {e}")
         pass
     if str(output_path) in input_files:
+        logger.error(f"Output file {output_path} matches an input file. Aborting.")
         raise RuntimeError(
             f"Output file {output_path} matches an input file. Please choose a different output filename."
         )
@@ -561,13 +567,21 @@ def process_data():
         config_manager = ConfigManager()
         file_paths = config_manager.get("file_paths.json")
 
+        logger.info("Loading tier disruption data files...")
         result = load_tier_disruption_data(file_paths)
         if result is None:
+            logger.error("Claims loading failed - early exit")
             make_audit_entry(
                 "tier_disruption.py", "Claims loading failed - early exit", "DATA_ERROR"
             )
             return  # Early exit if claims loading failed
         claims, medi, u, e, network = result
+
+        logger.info(f"Claims loaded: {claims.shape}")
+        logger.info(f"Medi loaded: {medi.shape}")
+        logger.info(f"Universal NDC loaded: {u.shape}")
+        logger.info(f"Alternatives NDC loaded: {e.shape}")
+        logger.info(f"Network loaded: {network.shape}")
 
         # Log file access
         log_file_access(
@@ -579,13 +593,18 @@ def process_data():
             "INFO",
         )
         reference_data = (medi, u, e)
+        logger.info("Processing tier data pipeline...")
         df = process_tier_data_pipeline(claims, reference_data, network)
+        logger.info(f"After processing pipeline: {df.shape}")
 
+        logger.info("Handling pharmacy exclusions...")
         df = handle_tier_pharmacy_exclusions(df, file_paths)
+        logger.info(f"After exclusions: {df.shape}")
 
         # Totals for summary
         total_claims = df["Rxs"].sum()
         total_members = df["MemberID"].nunique()
+        logger.info(f"Total claims: {total_claims}, Total members: {total_members}")
 
         # Log data processing metrics
         make_audit_entry(
@@ -595,37 +614,44 @@ def process_data():
         )
 
         # Excel writer setup
+        logger.info("Setting up Excel writer...")
         writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
 
         # Summary calculations (must be written immediately after Data)
         tiers = create_tier_definitions()
-
+        logger.info("Processing tier pivots...")
         tier_pivots, tab_members, tab_rxs = process_tier_pivots(df, tiers)
 
         # Exclusions sheet (Nonformulary)
+        logger.info("Processing exclusions...")
         ex_pt, exc_rxs, exc_members = process_exclusions(df)
         tab_members["Exclusions"] = exc_members
         tab_rxs["Exclusions"] = exc_rxs
 
         # Write the 'Data' sheet first
+        logger.info("Writing Data sheet...")
         data_sheet_df = df.copy()
         data_sheet_df.to_excel(writer, sheet_name="Data", index=False)
 
         # Write the 'Summary' sheet second
+        logger.info("Writing Summary sheet...")
         summary_df = create_summary_dataframe(
             tab_members, tab_rxs, total_claims, total_members
         )
         summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
         # Write tier pivots and Exclusions after Summary
+        logger.info("Writing tier pivot sheets...")
         for name, pt, members, _ in tier_pivots:
             pt.to_excel(writer, sheet_name=name)
             writer.sheets[name].write("F1", f"Total Members: {members}")
 
+        logger.info("Writing Exclusions sheet...")
         ex_pt.to_excel(writer, sheet_name="Exclusions")
         writer.sheets["Exclusions"].write("F1", f"Total Members: {exc_members}")
 
         # Network summary for excluded pharmacies (pharmacy_is_excluded=True)
+        logger.info("Processing network analysis...")
         network_df, network_pivot = create_network_analysis(df)
         logger.info(f"Total pharmacies in dataset: {df.shape[0]}")
         logger.info(
@@ -640,9 +666,11 @@ def process_data():
 
         # Write Network sheet
         if network_pivot is not None:
+            logger.info("Writing Network pivot sheet...")
             network_pivot.to_excel(writer, sheet_name="Network", index=False)
 
         # Write filtered network data
+        logger.info("Writing filtered network data...")
         selected_columns = [
             "PHARMACYNPI",
             "NABP",
@@ -657,6 +685,7 @@ def process_data():
         )
 
         writer.close()
+        logger.info(f"Excel report written to: {output_path}")
 
         # Log successful completion
         make_audit_entry(
@@ -670,7 +699,17 @@ def process_data():
             f"Excel report written to: {output_filename} by user: {username}",
             "INFO",
         )
-        # ...existing code...
+        print(f"Processing complete. Output file: {output_path}")
+        try:
+            import tkinter as tk
+            from tkinter import messagebox
+
+            root = tk.Tk()
+            root.withdraw()
+            messagebox.showinfo("Processing Complete", "Processing complete")
+            root.destroy()
+        except Exception:
+            pass
     except Exception as e:
         # Log detailed error information
         make_audit_entry(
@@ -691,4 +730,5 @@ def process_data():
 
 if __name__ == "__main__":
     process_data()
-    print("Data processing complete")
+    # Always show terminal notification at the end
+    print("Processing complete.")

@@ -85,8 +85,11 @@ included_nabp_npi = {
 
 def process_data():
     # Start audit session
+
+    logger.info(f"Session started for user: {Path.home().name}")
     log_user_session_start("openmdf_bg.py")
     write_audit_log("openmdf_bg.py", "Processing started.")
+    logger.info("Loading data files...")
 
     try:
         import sys
@@ -108,6 +111,8 @@ def process_data():
             return False
 
         # Log file access
+
+        logger.info(f"File access by user: {Path.home().name} | {paths['reprice']} | LOADING")
         log_file_access("openmdf_bg.py", paths["reprice"], "LOADING")
 
         # Check for required sheet name in reprice file
@@ -146,6 +151,7 @@ def process_data():
                     "Exclusive Rebates",
                 ],
             )
+            logger.info(f"claims shape: {claims.shape}")
         except Exception as e:
             logger.error(f"Failed to read Claims Table: {e}")
             make_audit_entry(
@@ -177,6 +183,7 @@ def process_data():
 
     try:
         medi = pd.read_excel(paths["medi_span"])[["NDC", "Maint Drug?", "Product Name"]]
+        logger.info(f"medi shape: {medi.shape}")
         log_file_access("openmdf_bg.py", paths["medi_span"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read medi_span file: {paths['medi_span']} | {e}")
@@ -194,6 +201,7 @@ def process_data():
         mdf = pd.read_excel(paths["mdf_disrupt"], sheet_name="Open MDF NDC")[
             ["NDC", "Tier"]
         ]
+        logger.info(f"mdf shape: {mdf.shape}")
         log_file_access("openmdf_bg.py", paths["mdf_disrupt"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read mdf_disrupt file: {paths['mdf_disrupt']} | {e}")
@@ -211,6 +219,7 @@ def process_data():
         network = pd.read_excel(paths["n_disrupt"])[
             ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
         ]
+        logger.info(f"network shape: {network.shape}")
         log_file_access("openmdf_bg.py", paths["n_disrupt"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read n_disrupt file: {paths['n_disrupt']} | {e}")
@@ -229,6 +238,7 @@ def process_data():
         exclusive = pd.read_excel(paths["e_disrupt"], sheet_name="Alternatives NDC")[
             ["NDC", "Tier", "Alternative"]
         ]
+        logger.info(f"exclusive shape: {exclusive.shape}")
         log_file_access("openmdf_bg.py", paths["e_disrupt"], "LOADED")
     except Exception as e:
         logger.error(f"Failed to read e_disrupt file: {paths['e_disrupt']} | {e}")
@@ -243,23 +253,19 @@ def process_data():
         log_user_session_end("openmdf_bg.py")
         return False
 
+    logger.info("Merging data files...")
     df = claims.merge(medi, on="NDC", how="left")
-    print(f"After merge with medi: {df.shape}")
     logger.info(f"After merge with medi: {df.shape}")
     df = df.merge(mdf, on="NDC", how="left")
-    print(f"After merge with mdf: {df.shape}")
     logger.info(f"After merge with mdf: {df.shape}")
     # Merge in Alternatives for 'Alternative' column
     df = df.merge(
         exclusive.rename(columns={"Tier": "Exclusive Tier"}), on="NDC", how="left"
     )
-    print(f"After merge with exclusive: {df.shape}")
     logger.info(f"After merge with exclusive: {df.shape}")
     df = standardize_pharmacy_ids(df)
-    print(f"After standardize_pharmacy_ids: {df.shape}")
     logger.info(f"After standardize_pharmacy_ids: {df.shape}")
     network = standardize_network_ids(network)
-    print(f"After standardize_network_ids: {network.shape}")
     logger.info(f"After standardize_network_ids: {network.shape}")
 
     # Ensure pharmacy_id exists
@@ -272,47 +278,39 @@ def process_data():
         )
 
     logger.info(f"Columns in df before merging: {df.columns.tolist()}")
-    print(f"Columns in df before merging: {df.columns.tolist()}")
 
-    # Log claim count after merge
-    print(f"Claims after merge: {df.shape}")
     logger.info(f"Claims after merge: {df.shape}")
     write_audit_log("openmdf_bg.py", f"Claims after merge: {df.shape[0]}")
 
     df = merge_with_network(df, network)
-    print(f"After merge_with_network: {df.shape}")
     logger.info(f"After merge_with_network: {df.shape}")
     write_audit_log("openmdf_bg.py", f"Claims after merge_with_network: {df.shape[0]}")
 
+    logger.info("Processing and filtering data...")
     df = drop_duplicates_df(df)
-    print(f"After drop_duplicates_df: {df.shape}")
     logger.info(f"After drop_duplicates_df: {df.shape}")
     write_audit_log("openmdf_bg.py", f"Claims after drop_duplicates_df: {df.shape[0]}")
 
     df = clean_logic_and_tier(df)
-    print(f"After clean_logic_and_tier: {df.shape}")
     logger.info(f"After clean_logic_and_tier: {df.shape}")
     write_audit_log(
         "openmdf_bg.py", f"Claims after clean_logic_and_tier: {df.shape[0]}"
     )
 
     df = filter_products_and_alternative(df)
-    print(f"After filter_products_and_alternative: {df.shape}")
     logger.info(f"After filter_products_and_alternative: {df.shape}")
     write_audit_log(
         "openmdf_bg.py", f"Claims after filter_products_and_alternative: {df.shape[0]}"
     )
 
     df["DATEFILLED"] = pd.to_datetime(df["DATEFILLED"], errors="coerce")
-    print(f"After DATEFILLED to_datetime: {df.shape}")
+    logger.info(f"After DATEFILLED to_datetime: {df.shape}")
     df = filter_recent_date(df)
-    print(f"After filter_recent_date: {df.shape}")
     logger.info(f"After filter_recent_date: {df.shape}")
     write_audit_log("openmdf_bg.py", f"Claims after filter_recent_date: {df.shape[0]}")
 
     df["Logic"] = pd.to_numeric(df["Logic"], errors="coerce")
     df = filter_logic_and_maintenance(df)
-    print(f"After filter_logic_and_maintenance: {df.shape}")
     logger.info(f"After filter_logic_and_maintenance: {df.shape}")
     write_audit_log(
         "openmdf_bg.py", f"Claims after filter_logic_and_maintenance: {df.shape[0]}"
@@ -323,7 +321,6 @@ def process_data():
             r"albuterol|ventolin|epinephrine", case=False, regex=True
         )
     ]
-    print(f"After final product exclusion: {df.shape}")
     logger.info(f"After final product exclusion: {df.shape}")
     write_audit_log(
         "openmdf_bg.py", f"Claims after final product exclusion: {df.shape[0]}"
@@ -332,6 +329,7 @@ def process_data():
     df["FormularyTier"] = df["FormularyTier"].astype(str).str.strip().str.upper()
     total_members = df["MemberID"].nunique()
     total_claims = df["Rxs"].sum()
+    logger.info("Creating data filters...")
 
     uni_pos = df[(df["Tier"] == 1) & (df["FormularyTier"].isin(["B", "BRAND"]))]
     uni_neg = df[
@@ -344,7 +342,9 @@ def process_data():
         return data, data["MemberID"].nunique()
 
     uni_pos, uni_pos_members = pivot_and_count(uni_pos)
+    logger.info(f"uni_pos shape: {uni_pos.shape}")
     uni_neg, uni_neg_members = pivot_and_count(uni_neg)
+    logger.info(f"uni_neg shape: {uni_neg.shape}")
 
     # Output filename from CLI arg or default
     import re
@@ -375,6 +375,7 @@ def process_data():
         return False
 
     try:
+        logger.info("Writing Excel report...")
         writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
     except Exception as e:
         logger.error(f"Failed to create Excel writer for {output_path}: {e}")
@@ -582,7 +583,7 @@ def process_data():
     # Close writer with error handling
     try:
         writer.close()
-        logger.info(f"Excel writer closed successfully for {output_path}")
+        logger.info(f"Excel report written to: {output_path}")
 
         # Validate the output file was created correctly
 
@@ -620,6 +621,7 @@ def process_data():
         return False
 
     # Log successful completion
+    logger.info(f"Session ended for user: {Path.home().name}")
     logger.info(f"Open MDF BG processing completed. Output file: {output_path}")
     make_audit_entry(
         "openmdf_bg.py",
@@ -631,6 +633,7 @@ def process_data():
     log_user_session_end("openmdf_bg.py")
 
     # Final cleanup and completion message
+    print(f"Processing complete. Output file: {output_path}")
     try:
         import tkinter as tk
         from tkinter import messagebox
