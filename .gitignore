@@ -169,4 +169,6 @@ cython_debug/
 *.log
 
 # Project-specific files
+file_paths.json
 mover.py
+

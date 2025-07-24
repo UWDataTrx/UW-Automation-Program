@@ -448,6 +448,9 @@ def process_data():
                     f"NA pharmacies written to '{output_file_path}' (fallback mode)."
                 )
 
+    # Write main data to 'Claims Data' sheet
+    df.to_excel(writer, sheet_name="Claims Data", index=False)
+
     summary = pd.DataFrame(
         {
             "Formulary": ["Open MDF Positive", "Open MDF Negative"],
@@ -562,14 +565,14 @@ def process_data():
         f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
     )
 
-    # Reorder sheets so Summary follows Data
+    # Reorder sheets so Summary follows Claims Data
     sheets = writer.sheets  # This is a dict: {sheet_name: worksheet_object}
     names = list(sheets.keys())
-    if "Data" in names and "Summary" in names:
-        data_idx = names.index("Data")
+    if "Claims Data" in names and "Summary" in names:
+        data_idx = names.index("Claims Data")
         summary_idx = names.index("Summary")
         if summary_idx != data_idx + 1:
-            # Move "Summary" sheet immediately after "Data"
+            # Move "Summary" sheet immediately after "Claims Data"
             items = list(sheets.items())
             summary_item = items.pop(summary_idx)
             items.insert(data_idx + 1, summary_item)
