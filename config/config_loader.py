@@ -15,8 +15,40 @@ class ConfigLoader:
         json_path = config_dir / "file_paths.json"
         try:
             paths = json.loads(json_path.read_text(encoding="utf-8"))
+            # Fallback: allow user to specify OneDrive path in environment or config
+            user_onedrive_path = os.environ.get("USER_ONEDRIVE_PATH")
+            if not user_onedrive_path:
+                # Try to load from config/user_onedrive_path.txt if it exists
+                user_onedrive_config = config_dir / "user_onedrive_path.txt"
+                if user_onedrive_config.exists():
+                    user_onedrive_path = user_onedrive_config.read_text(encoding="utf-8").strip()
+            # Try to find the correct OneDrive folder
+            user_profile = os.environ.get("USERPROFILE")
+            possible_onedrive_folders = []
+            if user_onedrive_path:
+                possible_onedrive_folders.append(user_onedrive_path)
+            if user_profile:
+                possible_onedrive_folders.append(os.path.join(user_profile, "OneDrive - True Rx Health Strategists"))
+                possible_onedrive_folders.append(os.path.join(user_profile, "OneDrive"))
+            # Also check environment variable
+            env_onedrive = os.environ.get("OneDrive") or os.environ.get("ONEDRIVE")
+            if env_onedrive:
+                possible_onedrive_folders.insert(0, env_onedrive)
+            # Pick the first that exists
+            onedrive_env = None
+            for folder in possible_onedrive_folders:
+                if folder and os.path.exists(folder):
+                    onedrive_env = folder
+                    break
+            if not onedrive_env:
+                raise RuntimeError(
+                    "Could not find OneDrive folder. Please ensure OneDrive is installed and synced, or set the OneDrive path manually. "
+                    "You can set the USER_ONEDRIVE_PATH environment variable or create a config/user_onedrive_path.txt file with the correct path."
+                )
             for k, v in paths.items():
                 if isinstance(v, str):
+                    # Replace %OneDrive% placeholder if present
+                    v = v.replace("%OneDrive%", onedrive_env)
                     paths[k] = os.path.expandvars(v)
             return paths
         except FileNotFoundError:
