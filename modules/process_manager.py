@@ -1,15 +1,20 @@
-import subprocess
-import threading
-import time
-import logging
 import sys
 from pathlib import Path
-from project_settings import PROJECT_ROOT
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
-from tkinter import messagebox
-from config.app_config import DisruptionConfig
-from utils.utils import write_audit_log
+# Ensure project root is in sys.path before importing project_settings
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+    from project_settings import PROJECT_ROOT
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.append(str(PROJECT_ROOT))
+        
+import subprocess  # noqa: E402
+import threading  # noqa: E402
+import time  # noqa: E402
+import logging  # noqa: E402
+from tkinter import messagebox  # noqa: E402
+from config.app_config import DisruptionConfig  # noqa: E402
+from utils.utils import write_audit_log  # noqa: E402
 
 
 

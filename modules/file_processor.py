@@ -1,10 +1,12 @@
 import pandas as pd
-from pathlib import Path
 import sys
-from tkinter import messagebox
-from project_settings import PROJECT_ROOT
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+import pathlib
+from pathlib import Path
+# Ensure project root is in sys.path before importing other modules
+project_root = pathlib.Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+from tkinter import messagebox  # noqa: E402
 
 try:
     from config.app_config import ProcessingConfig, AppConstants

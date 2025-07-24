@@ -2,10 +2,12 @@ import pandas as pd
 import logging
 import sys
 from pathlib import Path
-from project_settings import PROJECT_ROOT
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
-from utils.utils import (
+# Ensure project root is in sys.path before importing project_settings
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+from project_settings import PROJECT_ROOT  # noqa: E402
+from utils.utils import (  # noqa: E402
     standardize_pharmacy_ids,
     standardize_network_ids,
     merge_with_network,
@@ -16,9 +18,9 @@ from utils.utils import (
     filter_products_and_alternative,
     write_audit_log,
 )
-from config.config_loader import ConfigManager
-from utils.excel_utils import safe_excel_write, check_disk_space
-from modules.audit_helper import (
+from config.config_loader import ConfigManager  # noqa: E402
+from utils.excel_utils import safe_excel_write, check_disk_space  # noqa: E402
+from modules.audit_helper import (  # noqa: E402
     make_audit_entry,
     log_user_session_start,
     log_user_session_end,

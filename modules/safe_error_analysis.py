@@ -3,9 +3,13 @@ from datetime import datetime, timedelta
 import csv
 import sys
 from pathlib import Path
-from project_settings import PROJECT_ROOT
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+# Ensure project root is in sys.path before importing project_settings
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+    from project_settings import PROJECT_ROOT
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.append(str(PROJECT_ROOT))
 
 
 def safe_read_audit_log():

@@ -1,44 +1,44 @@
-
 import sys
-import os
-import threading
-import time
-import json
-import re
-import getpass
-import subprocess
-import warnings
-import multiprocessing
 from pathlib import Path
-from typing import Optional
-import numpy as np
-import pandas as pd
-import psutil
-import logging
-import tkinter as tk
-import customtkinter as ctk
-from tkinter import filedialog, messagebox, scrolledtext
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill
-from project_settings import PROJECT_ROOT
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
-import xlwings as xw
-import shutil
-import importlib
-import importlib.util
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+import os  # noqa: E402
+import threading  # noqa: E402
+import time  # noqa: E402
+import json  # noqa: E402
+import re  # noqa: E402
+import getpass  # noqa: E402
+import subprocess  # noqa: E402
+import warnings  # noqa: E402
+import multiprocessing  # noqa: E402
+from pathlib import Path  # noqa: E402
+from typing import Optional  # noqa: E402
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+import psutil  # noqa: E402
+import logging  # noqa: E402
+import tkinter as tk  # noqa: E402
+import customtkinter as ctk  # noqa: E402
+from tkinter import filedialog, messagebox, scrolledtext  # noqa: E402
+from openpyxl import load_workbook  # noqa: E402
+from openpyxl.styles import PatternFill  # noqa: E402
+import xlwings as xw  # noqa: E402
+import shutil  # noqa: E402
+import importlib  # noqa: E402
+import importlib.util  # noqa: E402
 
 
 # Import main modules (after path setup)
-from config.app_config import ProcessingConfig, AppConstants
-from modules.file_processor import FileProcessor
-from modules.template_processor import TemplateProcessor
-from modules.data_processor import DataProcessor
-from modules.process_manager import ProcessManager
-from modules.ui_builder import UIBuilder
-from modules.log_manager import LogManager, ThemeController
-from utils.utils import write_audit_log
-from modules.audit_helper import (
+from config.app_config import ProcessingConfig, AppConstants  # noqa: E402
+from modules.file_processor import FileProcessor  # noqa: E402
+from modules.template_processor import TemplateProcessor  # noqa: E402
+from modules.data_processor import DataProcessor  # noqa: E402
+from modules.process_manager import ProcessManager  # noqa: E402
+from modules.ui_builder import UIBuilder  # noqa: E402
+from modules.log_manager import LogManager, ThemeController  # noqa: E402
+from utils.utils import write_audit_log  # noqa: E402
+from modules.audit_helper import (  # noqa: E402
     log_file_access,
     log_process_action,
     log_system_error,

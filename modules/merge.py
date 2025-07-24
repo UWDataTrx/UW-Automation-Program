@@ -1,13 +1,15 @@
 import sys
-import os
-import pandas as pd
 from pathlib import Path
-from openpyxl import load_workbook
-from openpyxl.styles import NamedStyle
-import logging
-from project_settings import PROJECT_ROOT
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+# Ensure project root is in sys.path before importing other modules
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+import os  # noqa: E402
+import pandas as pd  # noqa: E402
+from openpyxl import load_workbook  # noqa: E402
+from openpyxl.styles import NamedStyle  # noqa: E402
+import logging  # noqa: E402
+
 
 # Try to import write_audit_log, create a fallback if not available
 try:

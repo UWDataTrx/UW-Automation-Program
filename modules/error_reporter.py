@@ -1,10 +1,14 @@
 import sys
+from pathlib import Path
 import traceback
 from datetime import datetime
-from pathlib import Path
-from project_settings import PROJECT_ROOT
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+
+# Ensure project root is in sys.path before importing other modules
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+
 
 # Dynamically load error log path from file_paths.json
 

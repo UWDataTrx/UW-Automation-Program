@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
-from project_settings import PROJECT_ROOT
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 import logging  # noqa: E402
 import tkinter as tk  # noqa: E402

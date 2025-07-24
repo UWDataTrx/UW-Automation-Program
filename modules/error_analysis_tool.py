@@ -1,11 +1,12 @@
 import pandas as pd
 import json
 from datetime import datetime, timedelta
-from pathlib import Path
 import sys
-from project_settings import PROJECT_ROOT
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+from pathlib import Path
+# Ensure project root is in sys.path before importing project_settings
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 
 def get_audit_log_path():

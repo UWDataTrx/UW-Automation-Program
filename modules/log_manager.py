@@ -3,15 +3,16 @@ from tkinter import scrolledtext
 import csv
 import getpass
 import sys
-import logging
-import json
 from pathlib import Path
-from project_settings import PROJECT_ROOT
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.append(str(PROJECT_ROOT))
+# Ensure project root is in sys.path before importing other modules
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+import logging  # noqa: E402
+import json  # noqa: E402
 
-from utils.utils import write_audit_log
-from modules.audit_helper import (
+from utils.utils import write_audit_log  # noqa: E402
+from modules.audit_helper import (  # noqa: E402
     log_user_session_start,
     log_user_session_end,
     validate_user_access,

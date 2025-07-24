@@ -1,20 +1,28 @@
 import logging
 import tkinter as tk
-from pathlib import Path
-from tkinter import messagebox
 import sys
-import pandas as pd
-from utils.excel_utils import write_df_to_template
-from utils.utils import write_audit_log
-from config.config_loader import ConfigManager
-from modules.audit_helper import (
+from pathlib import Path
+# Ensure project root is in sys.path before importing project_settings
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+from project_settings import PROJECT_ROOT  # noqa: E402
+from tkinter import messagebox  # noqa: E402
+import pandas as pd  # noqa: E402
+from utils.excel_utils import write_df_to_template  # noqa: E402
+from utils.utils import write_audit_log  # noqa: E402
+from config.config_loader import ConfigManager  # noqa: E402
+from modules.audit_helper import (  # noqa: E402
     make_audit_entry,
     log_user_session_start,
     log_user_session_end,
     log_file_access,
 )
-from project_settings import PROJECT_ROOT
-
+import sys  # noqa: E402
+# Ensure project root is in sys.path before importing project_settings
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
