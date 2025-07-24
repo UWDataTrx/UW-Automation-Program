@@ -91,9 +91,7 @@ def load_data_files(file_paths):
     claims.info()
 
     # Load other data files
-    medi = pd.read_excel(file_paths["medi_span"])[
-        ["NDC", "Maint Drug?", "Product Name"]
-    ]
+    medi = pd.read_excel(file_paths["medi_span"])
     logger.info(f"medi shape: {medi.shape}")
 
     uni = pd.read_excel(file_paths["u_disrupt"], sheet_name="Universal NDC")[
