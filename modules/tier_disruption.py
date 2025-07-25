@@ -533,32 +533,10 @@ def process_data():
     )
     logger.info("Loading data files...")
 
-    # Output filename from CLI arg or default
-    output_filename = "LBL for Disruption.xlsx"
-    if len(sys.argv) > 1:
-        output_filename = sys.argv[1]
-    output_path = Path(output_filename).resolve()
+
+    # Always use 'LBL for Disruption.xlsx' in the current working directory
+    output_path = Path.cwd() / "LBL for Disruption.xlsx"
     logger.info(f"Output file will be: {output_path}")
-
-    # Overwrite protection: prevent output file from matching any input file
-    input_files = []
-    try:
-        from config.config_loader import ConfigManager
-
-        config_manager = ConfigManager()
-        file_paths = config_manager.get("file_paths.json")
-        for key, val in file_paths.items():
-            if val:
-                input_files.append(str(Path(val).resolve()))
-        logger.info(f"Loaded file paths from config: {file_paths}")
-    except Exception as e:
-        logger.error(f"Failed to load config or file paths: {e}")
-        pass
-    if str(output_path) in input_files:
-        logger.error(f"Output file {output_path} matches an input file. Aborting.")
-        raise RuntimeError(
-            f"Output file {output_path} matches an input file. Please choose a different output filename."
-        )
 
     try:
         # Get the config file path relative to the project root
@@ -690,13 +668,13 @@ def process_data():
         # Log successful completion
         make_audit_entry(
             "tier_disruption.py",
-            f"Successfully generated tier disruption report: {output_filename} by user: {username}",
+            f"Successfully generated tier disruption report: {str(output_path)} by user: {username}",
             "INFO",
         )
         log_file_access("tier_disruption.py", str(output_path), "CREATED")
         write_audit_log(
             "tier_disruption.py",
-            f"Excel report written to: {output_filename} by user: {username}",
+            f"Excel report written to: {str(output_path)} by user: {username}",
             "INFO",
         )
         print(f"Processing complete. Output file: {output_path}")

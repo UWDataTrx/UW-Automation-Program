@@ -31,24 +31,9 @@ from modules.audit_helper import (  # noqa: E402
 # from utils.utils import load_file_paths
 
 # Overwrite protection: prevent output file from matching any input file
-output_filename = "BG MDF Output.xlsx"
-if len(sys.argv) > 1:
-    output_filename = sys.argv[1]
-output_path = Path(output_filename).resolve()
-input_files = []
-try:
-    config_manager = ConfigManager()
-    file_paths = config_manager.get("file_paths.json")
-    for key, val in file_paths.items():
-        if val:
-            input_files.append(str(Path(val).resolve()))
-except Exception:
-    pass
 
-    if str(output_path) in input_files:
-        raise RuntimeError(
-            f"Output file {output_path} matches an input file. Please choose a different output filename."
-        )
+# Always use 'LBL for Disruption.xlsx' in the current working directory
+output_path = Path.cwd() / "LBL for Disruption.xlsx"
 
 
 # Add the project root directory to the Python path using PROJECT_ROOT
@@ -92,7 +77,6 @@ def process_data():
     logger.info("Loading data files...")
 
     try:
-        import sys
 
         # Get the config file path relative to the project root
         config_manager = ConfigManager()
@@ -346,17 +330,9 @@ def process_data():
     uni_neg, uni_neg_members = pivot_and_count(uni_neg)
     logger.info(f"uni_neg shape: {uni_neg.shape}")
 
-    # Output filename from CLI arg or default
+
+    # Output file is always 'LBL for Disruption.xlsx' in the current working directory
     import re
-
-    output_filename = "LBL for Disruption.xlsx"
-    output_path = output_filename  # Default assignment
-    for i, arg in enumerate(sys.argv):
-        if arg in ("--output", "-o") and i + 1 < len(sys.argv):
-            output_filename = sys.argv[i + 1]
-            output_path = output_filename
-
-    # Write LBL output unconditionally (no --output-lbl flag required)
 
     # Check disk space before attempting to write
     if not check_disk_space(".", 500):  # Require 500MB free space

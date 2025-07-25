@@ -78,10 +78,7 @@ def show_message(awp, ing, total, rxs):
 def main() -> None:
     tk.Tk().withdraw()
     # Overwrite protection: prevent output file from matching any input file
-    output_filename = "LBL for Disruption.xlsx"
-    if len(sys.argv) > 1:
-        output_filename = sys.argv[1]
-    output_path = Path(output_filename).resolve()
+    output_path = Path("_Rx Claims for EPLS.xlsx").resolve()
     input_files = []
     try:
         config_manager = ConfigManager()

@@ -1,0 +1,36 @@
+name: Generate Documentation
+
+on:
+  push:
+    paths:
+      - '**.py'
+      - '**.md'
+  pull_request:
+    paths:
+      - '**.py'
+      - '**.md'
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+      - name: Install dependencies with Poetry
+        run: |
+          poetry install --no-interaction --no-root
+      - name: Generate Documentation
+        run: |
+          poetry run python resources/generate_project_documentation.py
+      - name: Upload Documentation Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/

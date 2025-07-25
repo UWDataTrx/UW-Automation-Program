@@ -497,28 +497,9 @@ def process_data():
     log_user_session_start("openmdf_tier.py")
     write_audit_log("openmdf_tier.py", "Processing started.")
 
-    # Output filename from CLI arg or default
-    output_filename = "LBL for Disruption.xlsx"
-    if len(sys.argv) > 1:
-        output_filename = sys.argv[1]
-    output_path = Path(output_filename).resolve()
 
-    # Overwrite protection: prevent output file from matching any input file
-    input_files = []
-    try:
-        from config.config_loader import ConfigManager
-
-        config_manager = ConfigManager()
-        file_paths = config_manager.get("file_paths.json")
-        for key, val in file_paths.items():
-            if val:
-                input_files.append(str(Path(val).resolve()))
-    except Exception:
-        pass
-    if str(output_path) in input_files:
-        raise RuntimeError(
-            f"Output file {output_path} matches an input file. Please choose a different output filename."
-        )
+    # Always use 'LBL for Disruption.xlsx' in the current working directory
+    output_path = Path.cwd() / "LBL for Disruption.xlsx"
 
     try:
         # Get the config file path relative to the project root
@@ -620,7 +601,7 @@ def process_data():
         # Log successful completion
         make_audit_entry(
             "openmdf_tier.py",
-            f"Successfully generated Open MDF Tier report: {output_filename}",
+            f"Successfully generated Open MDF Tier report: {str(output_path)}",
             "INFO",
         )
         log_file_access("openmdf_tier.py", str(output_path), "CREATED")

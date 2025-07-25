@@ -471,48 +471,9 @@ def process_data():
     )
 
     try:
-        import sys
+        # Always use 'LBL for Disruption.xlsx' in the current working directory
+        output_filename = str(Path.cwd() / "LBL for Disruption.xlsx")
 
-        output_filename = "LBL for Disruption.xlsx"
-        # Overwrite protection: prevent output file from matching any input file
-        candidate_filename = None
-        if len(sys.argv) > 1 and str(sys.argv[1]).strip():
-            candidate_filename = str(sys.argv[1]).strip()
-        from config.config_loader import ConfigManager
-
-        config_manager = ConfigManager()
-        file_paths = config_manager.get("file_paths.json")
-        input_files = [str(val) for val in file_paths.values() if val]
-        input_files_abs = [str(Path(f).resolve()) for f in input_files if f]
-        if candidate_filename:
-            candidate_filename_abs = str(Path(candidate_filename).resolve())
-            if candidate_filename_abs in input_files_abs:
-                logger.warning(
-                    f"Output filename '{candidate_filename}' matches an input file (by absolute path). Please choose a different output filename."
-                )
-                write_audit_log(
-                    "bg_disruption.py",
-                    f"Output filename '{candidate_filename}' matches an input file (by absolute path). Please choose a different output filename.",
-                    "ERROR",
-                )
-                raise RuntimeError(
-                    f"Output file {candidate_filename_abs} matches an input file. Please choose a different output filename."
-                )
-            else:
-                output_filename = candidate_filename
-        # Always ensure the output filename is valid
-        if not output_filename or not str(output_filename).strip():
-            output_filename = "LBL for Disruption.xlsx"
-            logger.warning(
-                "Output filename was empty or invalid. Defaulting to 'LBL for Disruption.xlsx'."
-            )
-            write_audit_log(
-                "bg_disruption.py",
-                "Output filename was empty or invalid. Defaulting to 'LBL for Disruption.xlsx'.",
-                "WARNING",
-            )
-
-        # Get the config file path relative to the project root
         from config.config_loader import ConfigManager
 
         config_manager = ConfigManager()
@@ -565,7 +526,7 @@ def process_data():
         report_data = (df, summary, tabs, network_pivot)
         write_excel_report(report_data, output_filename)
         # Explicitly confirm creation of LBL for Disruption.xlsx
-        if output_filename == "LBL for Disruption.xlsx":
+        if Path(output_filename).name == "LBL for Disruption.xlsx":
             write_audit_log(
                 "bg_disruption.py",
                 f"LBL for Disruption.xlsx created successfully by user: {username}",

@@ -350,7 +350,33 @@ def write_df_to_template(
     If open_file is True, launch the filled workbook in Excel after writing.
     """
     template_path = Path(template_path)
-    output_path = Path(output_path)
+    # Always use working directory and fixed output name
+    working_dir = Path.cwd()
+    output_name = "_Rx Repricing_wf.xlsx"
+    output_path = working_dir / output_name
+    # Overwrite protection for key templates
+    protected_templates = [
+        "SHARx Blind Repricing 7.25.xlsx",
+        "SHARx Standard Repricing 7.25.xlsx",
+        "Template_Rx Claims for SHARx.xlsx",
+        "Blind Repricing 7.25.xlsx",
+        "Standard Repricing 7.25.xlsx",
+    ]
+    # Only create a copy if the output name is a protected template or matches the template path
+    if output_path.name in protected_templates or output_path.resolve() == template_path.resolve():
+        base = output_path.stem
+        suffix = output_path.suffix
+        copy_name = f"{base}_copy{suffix}"
+        copy_path = working_dir / copy_name
+        i = 1
+        while copy_path.exists():
+            copy_name = f"{base}_copy{i}{suffix}"
+            copy_path = working_dir / copy_name
+            i += 1
+        logger.warning(f"Output path '{output_path.name}' is a protected template or matches the template path. Writing to copy: {copy_path.name}")
+        output_path = copy_path
+    # If output_path is '_Rx Repricing_wf.xlsx' in working dir, allow overwrite; else, create new copy as above
+    # (No extra logic needed, as above already handles protected/template cases)
     shutil.copy(str(template_path), str(output_path))
     write_df_to_sheet(
         path=output_path,
@@ -366,12 +392,10 @@ def write_df_to_template(
         try:
             output_path_str = str(output_path)
             import os
-
             if hasattr(os, "startfile"):
                 os.startfile(output_path_str)
             else:
                 import subprocess
-
                 subprocess.run(["open", output_path_str])
         except Exception as e:
             logger.warning(f"Could not open file after writing: {e}")

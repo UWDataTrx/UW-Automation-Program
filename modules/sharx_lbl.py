@@ -29,10 +29,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 CLAIMS_SHEET = "Claims Table"
 OUTPUT_SHEET = "Line By Line"
-output_filename = "LBL for Disruption.xlsx"
-if len(sys.argv) > 1:
-    output_filename = sys.argv[1]
-output_path = Path(output_filename).resolve()
+output_path = Path("_Rx Claims for SHARx.xlsx").resolve()
 input_files = []
 try:
     config_manager = ConfigManager()
