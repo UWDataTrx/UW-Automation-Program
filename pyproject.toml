@@ -146,3 +146,6 @@ packages = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+pywin32 = { version = "^310", markers = "sys_platform == 'win32'" }
