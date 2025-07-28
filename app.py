@@ -523,14 +523,38 @@ class App:
         try:
             self._try_xlwings_paste(paste_data, paths)
         except Exception as xlwings_error:
-            logger.warning(f"xlwings failed: {xlwings_error}")
-            try:
-                self._try_openpyxl_paste(paste_data, paths)
-            except Exception as openpyxl_error:
-                logger.error("Both xlwings and openpyxl failed")
-                raise Exception(
-                    f"Template update failed with both methods. xlwings: {xlwings_error}, openpyxl: {openpyxl_error}"
-                )
+            logger.error(f"xlwings failed: {xlwings_error}")
+            # Try Excel COM fallback if available
+            if EXCEL_COM_AVAILABLE:
+                try:
+                    self._try_excel_com_paste(paste_data, paths)
+                except Exception as com_error:
+                    logger.error(f"Excel COM fallback also failed: {com_error}")
+                    raise Exception(f"Template update failed with both xlwings and Excel COM. xlwings: {xlwings_error}, Excel COM: {com_error}")
+            else:
+                raise Exception(f"Template update failed with xlwings: {xlwings_error}")
+
+    def _try_excel_com_paste(self, paste_data, paths):
+        """Fallback method using Excel COM (win32com.client) when xlwings fails."""
+        import win32com.client
+        import pythoncom
+        import numpy as np
+        pythoncom.CoInitialize()
+        excel = win32com.client.Dispatch("Excel.Application")
+        excel.Visible = False
+        excel.DisplayAlerts = False
+        wb = excel.Workbooks.Open(str(paths["output"]))
+        ws = wb.Worksheets("Claims Table")
+        # Convert paste_data to numpy array for efficient iteration
+        arr = np.array(paste_data["data"])
+        nrows, ncols = arr.shape
+        # Write data starting from row 2 (assuming row 1 has headers)
+        for row_idx in range(nrows):
+            for col_idx in range(ncols):
+                ws.Cells(row_idx + 2, col_idx + 1).Value = arr[row_idx, col_idx]
+        wb.Save()
+        wb.Close(SaveChanges=True)
+        excel.Quit()
 
     def _try_xlwings_paste(self, paste_data, paths):
         """Try pasting using xlwings with better error handling."""
