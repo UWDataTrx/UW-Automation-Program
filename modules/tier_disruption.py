@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
@@ -523,7 +524,6 @@ def show_completion_message(output_path):
 # Main processing pipeline
 # ---------------------------------------------------------------------------
 def process_data():
-
     # Get current username
     username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
     logger.info(f"Session started for user: {username}")
@@ -532,7 +532,6 @@ def process_data():
         "tier_disruption.py", f"Processing started by user: {username}", "INFO"
     )
     logger.info("Loading data files...")
-
 
     # Always use 'LBL for Disruption.xlsx' in the current working directory
     output_path = Path.cwd() / "LBL for Disruption.xlsx"

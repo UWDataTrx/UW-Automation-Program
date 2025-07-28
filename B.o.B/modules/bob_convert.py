@@ -7,24 +7,24 @@ import pandas as pd
 # df.to_parquet('bob.parquet')
 import os
 
-input_file = 'Results.csv'
-output_file = 'bob.parquet'
+input_file = "Results.csv"
+output_file = "bob.parquet"
 
 dtype_dict = {
-    'column_name_26': 'str',
-    'column_name_32': 'str',
-    'column_name_47': 'str',
-    'column_name_55': 'str',
-    'column_name_57': 'str',
-    'column_name_90': 'str',
-    'column_name_97': 'str'
+    "column_name_26": "str",
+    "column_name_32": "str",
+    "column_name_47": "str",
+    "column_name_55": "str",
+    "column_name_57": "str",
+    "column_name_90": "str",
+    "column_name_97": "str",
 }
 
 if not os.path.exists(input_file):
     print(f"Error: Input file '{input_file}' does not exist.")
 else:
     try:
-        df = pd.read_csv(input_file, dtype=dtype_dict) # type: ignore
+        df = pd.read_csv(input_file, dtype=dtype_dict)  # type: ignore
     except ValueError as e:
         print(f"Error reading CSV with dtype: {e}\nTrying without dtype...")
         try:

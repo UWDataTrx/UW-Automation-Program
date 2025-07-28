@@ -1,11 +1,10 @@
-
 from tkinter import messagebox
 import customtkinter as ctk
 import subprocess
 import sys
 import os
 
-sys.stderr = open(os.devnull, 'w')
+sys.stderr = open(os.devnull, "w")
 
 
 def tier_clicked():
@@ -75,18 +74,53 @@ def main():
 
     """
 
-    warning_label = ctk.CTkLabel(root, text="Preliminary Checks", font=("Oswald", 30, 'bold'), text_color="#FFD578",
-                                 fg_color="#333F48")
-    text_label = ctk.CTkLabel(root, text=text_block, font=("Oswald", 20, 'bold'), fg_color="#333F48")
+    warning_label = ctk.CTkLabel(
+        root,
+        text="Preliminary Checks",
+        font=("Oswald", 30, "bold"),
+        text_color="#FFD578",
+        fg_color="#333F48",
+    )
+    text_label = ctk.CTkLabel(
+        root, text=text_block, font=("Oswald", 20, "bold"), fg_color="#333F48"
+    )
 
-    tier_button = ctk.CTkButton(root, text="Tier Disruption", command=tier_clicked, font=(None, 20, 'bold'),
-                            fg_color="#00B0B9", width=200, height=50)
-    bg_button = ctk.CTkButton(root, text="B/G Disruption", command=bg_clicked, font=(None, 20, 'bold'),
-                            fg_color="#00B0B9", width=200, height=50)
-    data_button = ctk.CTkButton(root, text="Disruption Data Only", command=data_clicked, font=(None, 20, 'bold'),
-                              fg_color="#00B0B9", width=200, height=50)
-    bob_button = ctk.CTkButton(root, text="B.o.B Drug Lookup", command=bob_clicked, font=(None, 20, 'bold'),
-                                fg_color="#00B0B9", width=200, height=50)
+    tier_button = ctk.CTkButton(
+        root,
+        text="Tier Disruption",
+        command=tier_clicked,
+        font=(None, 20, "bold"),
+        fg_color="#00B0B9",
+        width=200,
+        height=50,
+    )
+    bg_button = ctk.CTkButton(
+        root,
+        text="B/G Disruption",
+        command=bg_clicked,
+        font=(None, 20, "bold"),
+        fg_color="#00B0B9",
+        width=200,
+        height=50,
+    )
+    data_button = ctk.CTkButton(
+        root,
+        text="Disruption Data Only",
+        command=data_clicked,
+        font=(None, 20, "bold"),
+        fg_color="#00B0B9",
+        width=200,
+        height=50,
+    )
+    bob_button = ctk.CTkButton(
+        root,
+        text="B.o.B Drug Lookup",
+        command=bob_clicked,
+        font=(None, 20, "bold"),
+        fg_color="#00B0B9",
+        width=200,
+        height=50,
+    )
 
     # Place buttons in the window
     warning_label.grid(row=0, column=0, columnspan=2, pady=10)

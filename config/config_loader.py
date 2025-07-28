@@ -2,6 +2,7 @@ import os
 import json
 import sys
 from pathlib import Path
+
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
@@ -33,6 +34,7 @@ class ConfigManager:
     def __init__(self, config_dir=None):
         self.project_root = Path(__file__).resolve().parent.parent
         from project_settings import PROJECT_ROOT
+
         self.config_dir = Path(config_dir) if config_dir else PROJECT_ROOT / "config"
         self._configs = {}
 

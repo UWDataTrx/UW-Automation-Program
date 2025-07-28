@@ -2,11 +2,13 @@ import pandas as pd
 import logging
 import sys
 from pathlib import Path
+
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
     from project_settings import PROJECT_ROOT
+
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.append(str(PROJECT_ROOT))
 from utils.utils import (  # noqa: E402
@@ -117,7 +119,7 @@ def load_openmdf_tier_data(file_paths):
     try:
         exclusive = pd.read_excel(
             file_paths["e_disrupt"], sheet_name="Alternatives NDC"
-        )[[ "NDC", "Tier", "Alternative"]]
+        )[["NDC", "Tier", "Alternative"]]
     except Exception as e:
         logger.error(f"Failed to read e_disrupt file: {file_paths['e_disrupt']} | {e}")
         write_audit_log(
@@ -496,7 +498,6 @@ def process_data():
     # Start audit session
     log_user_session_start("openmdf_tier.py")
     write_audit_log("openmdf_tier.py", "Processing started.")
-
 
     # Always use 'LBL for Disruption.xlsx' in the current working directory
     output_path = Path.cwd() / "LBL for Disruption.xlsx"

@@ -2,6 +2,7 @@ import logging
 import tkinter as tk
 import sys
 from pathlib import Path
+
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
@@ -19,6 +20,7 @@ from modules.audit_helper import (  # noqa: E402
     log_file_access,
 )
 import sys  # noqa: E402
+
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:

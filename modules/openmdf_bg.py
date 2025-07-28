@@ -2,6 +2,7 @@ import pandas as pd
 import logging
 import sys
 from pathlib import Path
+
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
@@ -77,7 +78,6 @@ def process_data():
     logger.info("Loading data files...")
 
     try:
-
         # Get the config file path relative to the project root
         config_manager = ConfigManager()
         paths = config_manager.get("file_paths.json")
@@ -96,7 +96,9 @@ def process_data():
 
         # Log file access
 
-        logger.info(f"File access by user: {Path.home().name} | {paths['reprice']} | LOADING")
+        logger.info(
+            f"File access by user: {Path.home().name} | {paths['reprice']} | LOADING"
+        )
         log_file_access("openmdf_bg.py", paths["reprice"], "LOADING")
 
         # Check for required sheet name in reprice file
@@ -329,7 +331,6 @@ def process_data():
     logger.info(f"uni_pos shape: {uni_pos.shape}")
     uni_neg, uni_neg_members = pivot_and_count(uni_neg)
     logger.info(f"uni_neg shape: {uni_neg.shape}")
-
 
     # Output file is always 'LBL for Disruption.xlsx' in the current working directory
     import re

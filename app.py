@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
@@ -530,7 +531,9 @@ class App:
                     self._try_excel_com_paste(paste_data, paths)
                 except Exception as com_error:
                     logger.error(f"Excel COM fallback also failed: {com_error}")
-                    raise Exception(f"Template update failed with both xlwings and Excel COM. xlwings: {xlwings_error}, Excel COM: {com_error}")
+                    raise Exception(
+                        f"Template update failed with both xlwings and Excel COM. xlwings: {xlwings_error}, Excel COM: {com_error}"
+                    )
             else:
                 raise Exception(f"Template update failed with xlwings: {xlwings_error}")
 
@@ -539,6 +542,7 @@ class App:
         import win32com.client
         import pythoncom
         import numpy as np
+
         pythoncom.CoInitialize()
         excel = win32com.client.Dispatch("Excel.Application")
         excel.Visible = False

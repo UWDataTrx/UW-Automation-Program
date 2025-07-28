@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
@@ -8,7 +9,6 @@ import logging  # noqa: E402
 import tkinter as tk  # noqa: E402
 from tkinter import messagebox  # noqa: E402
 import pandas as pd  # noqa: E402
-
 
 
 try:
