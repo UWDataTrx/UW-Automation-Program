@@ -89,16 +89,7 @@ class RowIDErrorAnalyzer:
 
     def analyze_dataframe_structure(self, df):
         """Analyze the DataFrame structure for potential issues."""
-        results = {}
-
-        # Basic info
-        results["shape"] = df.shape
-        results["columns"] = list(df.columns)
-        results["dtypes"] = df.dtypes.to_dict()
-        results["memory_usage_mb"] = df.memory_usage(deep=True).sum() / 1024 / 1024
-
-        # Check for existing RowID column
-        results["has_existing_rowid"] = "RowID" in df.columns
+        results = {"shape": df.shape, "columns": list(df.columns), "dtypes": df.dtypes.to_dict(), "memory_usage_mb": df.memory_usage(deep=True).sum() / 1024 / 1024, "has_existing_rowid": "RowID" in df.columns}
         if results["has_existing_rowid"]:
             results["existing_rowid_info"] = {
                 "dtype": str(df["RowID"].dtype),
