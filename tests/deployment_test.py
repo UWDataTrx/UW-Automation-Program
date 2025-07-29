@@ -51,10 +51,10 @@ def main():
             return {}
 
         def write_audit_log(*args, **kwargs):
-            pass
+            raise NotImplementedError()
 
         def log_exception(*args, **kwargs):
-            pass
+            raise NotImplementedError()
 
         file_paths = {}
 
