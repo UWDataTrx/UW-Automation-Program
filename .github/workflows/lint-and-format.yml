@@ -41,3 +41,4 @@ jobs:
           
       - name: Run black (check only)
         run: poetry run black --check .
+
