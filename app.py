@@ -442,7 +442,7 @@ class App:
 
         # Generate Claim Detail CSV with Logic from completed template
         self.root.after(
-            0, lambda: self._generate_claim_detail_csv_with_template_logic()
+            0, self._generate_claim_detail_csv_with_template_logic
         )
 
         self.root.after(
