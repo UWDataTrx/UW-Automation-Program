@@ -6,8 +6,6 @@ import pandas as pd
 import pyperclip
 import statistics
 import subprocess
-import os
-import sys
 
 # sys.stderr = open(os.devnull, 'w')
 
