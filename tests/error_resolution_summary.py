@@ -16,10 +16,10 @@ def show_resolution_summary():
     print("🎯 SYSTEM ERROR RESOLUTION SUMMARY")
     print("=" * 70)
     print(f"📅 Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"👤 User: BrendanReamer")
-    print(f"💻 Machine: L01275-AN")
-    print(f"🐍 Python: 3.13.5")
-    print(f"🖥️  OS: Windows 11")
+    print("👤 User: BrendanReamer")
+    print("💻 Machine: L01275-AN")
+    print("🐍 Python: 3.13.5")
+    print("🖥️  OS: Windows 11")
     print()
 
     print("❌ ORIGINAL ERROR:")
@@ -92,7 +92,7 @@ def main():
         computer_name = os.environ.get("COMPUTERNAME", "Unknown")
         username = os.environ.get("USERNAME", "Unknown")
 
-        print(f"\n🔍 VERIFICATION:")
+        print("\n🔍 VERIFICATION:")
         print(f"   Current Machine: {computer_name}")
         print(f"   Current User: {username}")
 

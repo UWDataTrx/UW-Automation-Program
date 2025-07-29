@@ -548,11 +548,11 @@ def main():
         print("2. ✅ Enhanced App.py with comprehensive error handling")
         print("3. ✅ Created emergency user fix script")
 
-        print(f"\n📋 For User: BrendanReamer")
+        print("\n📋 For User: BrendanReamer")
         print("The RowID error should now be resolved.")
         print("If the error persists, run: emergency_rowid_fix.py")
 
-        print(f"\n📁 Backup files created:")
+        print("\n📁 Backup files created:")
         print("- modules/data_processor.py.backup")
         print("- app.py.backup")
 
