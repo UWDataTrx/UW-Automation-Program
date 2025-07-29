@@ -9,7 +9,6 @@ import subprocess
 import os
 import sys
 
-# sys.stderr = open(os.devnull, 'w')
 
 
 def read_drug_data(file_path):
