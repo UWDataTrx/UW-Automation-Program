@@ -211,7 +211,7 @@ class DataProcessor:
 
                 try:
                     # Method 3: Manual creation with list comprehension
-                    df["RowID"] = [i for i in range(len(df))]
+                    df["RowID"] = list(range(len(df)))
                     logging.info("Created RowID using manual list creation")
                     return df
 
