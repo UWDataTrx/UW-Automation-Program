@@ -159,7 +159,7 @@ class DisruptionConfig:
         """Get list of available disruption types (excluding Full Claims File)."""
         return [
             label
-            for label in cls.DISRUPTION_TYPES.keys()
+            for label in cls.DISRUPTION_TYPES
             if label != "Full Claims File"
         ]
 
