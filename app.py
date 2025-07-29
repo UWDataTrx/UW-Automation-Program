@@ -825,9 +825,11 @@ class App:
             messagebox.showerror("System Check Failed", message)
             return
 
-        if message:  # Warnings present
-            if not messagebox.askyesno("System Warnings", message):
-                return
+        if (
+            message
+            and not messagebox.askyesno("System Warnings", message)
+        ):
+            return
 
         threading.Thread(target=self._start_process_internal).start()
         log_process_action("RepricingProcess", "STARTED")
