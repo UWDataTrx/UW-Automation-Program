@@ -110,7 +110,8 @@ class DiagnosticsGUI(ctk.CTk):
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save report: {e}")
 
-    def check_for_updates(self):
+    @staticmethod
+    def check_for_updates():
         # Example: check a version file on GitHub or a URL
         current_version = "1.0.0"
         version_url = "https://raw.githubusercontent.com/UWDataTrx/UW-Automation-Program/main/VERSION.txt"
@@ -130,7 +131,8 @@ class DiagnosticsGUI(ctk.CTk):
         ctk.set_appearance_mode(new_mode)
         self.mode_var.set(new_mode)
 
-    def get_timestamp(self):
+    @staticmethod
+    def get_timestamp():
         from datetime import datetime
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 

@@ -37,7 +37,8 @@ class TemplateProcessor:
         """Initialize with reference to the main application instance."""
         self.app = app_instance
 
-    def create_template_backup(self, paths):
+    @staticmethod
+    def create_template_backup(paths):
         """Create backup of template and prepare output file."""
         try:
             # Ensure all paths are Path objects
@@ -68,7 +69,8 @@ class TemplateProcessor:
             write_audit_log("TemplateProcessor", error_msg, "ERROR")
             raise
 
-    def format_dataframe(self, df):
+    @staticmethod
+    def format_dataframe(df):
         """Format DataFrame for Excel export."""
         # Format datetime columns
         datetime_columns = df.select_dtypes(include=["datetime64"]).columns
@@ -78,7 +80,8 @@ class TemplateProcessor:
         # Fill NaN values
         return df.fillna("")
 
-    def filter_template_columns(self, df):
+    @staticmethod
+    def filter_template_columns(df):
         """Filter columns for template pasting."""
         try:
             # Ensure 'ClientName' and 'Logic' columns exist and are in the correct order
@@ -120,7 +123,8 @@ class TemplateProcessor:
             write_audit_log("TemplateProcessor", error_msg, "ERROR")
             raise
 
-    def prepare_excel_data(self, paste_data, formulas):
+    @staticmethod
+    def prepare_excel_data(paste_data, formulas):
         """Prepare data for Excel, preserving formulas."""
         data_to_write = []
 
@@ -135,7 +139,8 @@ class TemplateProcessor:
 
         return data_to_write
 
-    def validate_template_requirements(self, template_path):
+    @staticmethod
+    def validate_template_requirements(template_path):
         """Validate that template meets requirements."""
         if not template_path:
             raise ValueError("Template file path is not set.")

@@ -59,7 +59,8 @@ class ProcessManager:
             logging.error(f"Process failed: {e}")
             messagebox.showerror("Error", f"Process failed: {e}")
 
-    def _kill_excel_processes(self):
+    @staticmethod
+    def _kill_excel_processes():
         """Kill any running Excel processes."""
         try:
             subprocess.run(
@@ -124,7 +125,8 @@ class ProcessManager:
             logging.error(f"Failed to start {program_file}: {e}")
             messagebox.showerror("Error", f"{disruption_type} disruption failed: {e}")
 
-    def run_label_generation(self, label_type):
+    @staticmethod
+    def run_label_generation(label_type):
         """Run label generation scripts (SHARx or EPLS)."""
         try:
             script_name = f"{label_type.lower()}_lbl.py"
@@ -140,13 +142,15 @@ class ProcessManager:
             logging.error(f"{label_type} LBL generation failed: {e}")
             messagebox.showerror("Error", f"{label_type} LBL generation failed: {e}")
 
-    def cancel_process(self):
+    @staticmethod
+    def cancel_process():
         """Cancel the current process."""
         logging.info("Process cancellation requested")
         write_audit_log("ProcessManager", "Process cancelled")
         messagebox.showinfo("Cancelled", "Process cancellation requested.")
 
-    def finish_notification(self):
+    @staticmethod
+    def finish_notification():
         """Show completion notification."""
         try:
             from plyer import notification

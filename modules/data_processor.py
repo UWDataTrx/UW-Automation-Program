@@ -41,7 +41,8 @@ class DataProcessor:
                 os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
             )
 
-    def _read_file_flexible(self, file_path):
+    @staticmethod
+    def _read_file_flexible(file_path):
         """Read file supporting both CSV and Excel formats."""
         try:
             file_path_obj = Path(file_path)
@@ -148,7 +149,8 @@ class DataProcessor:
                 df["RowID"] = df.index
             return df
 
-    def _safe_sort_dataframe(self, df):
+    @staticmethod
+    def _safe_sort_dataframe(df):
         """Safely sort the DataFrame with error handling."""
         sort_columns = ["DATEFILLED", "SOURCERECORDID"]
 
@@ -185,7 +187,8 @@ class DataProcessor:
             logging.warning(f"Sorting failed: {e}. Using original order.")
             return df
 
-    def _safe_create_rowid(self, df):
+    @staticmethod
+    def _safe_create_rowid(df):
         """Safely create RowID column with multiple fallback methods."""
         try:
             # Method 1: Standard numpy arange
@@ -224,7 +227,8 @@ class DataProcessor:
                     logging.info("Created RowID using pandas Series (final fallback)")
                     return df
 
-    def process_data_multiprocessing(self, df):
+    @staticmethod
+    def process_data_multiprocessing(df):
         """Process data using multiprocessing for improved performance."""
         try:
             # Import and use multiprocessing helpers
@@ -310,7 +314,8 @@ class DataProcessor:
             write_audit_log("DataProcessor", error_msg, "ERROR")
             raise
 
-    def _save_to_parquet(self, df, output_dir):
+    @staticmethod
+    def _save_to_parquet(df, output_dir):
         """Save data to Parquet format for large DataFrames."""
         try:
             parquet_path = output_dir / "merged_file_with_OR.parquet"
@@ -319,7 +324,8 @@ class DataProcessor:
         except Exception as e:
             logging.warning(f"Could not save Parquet: {e}")
 
-    def _save_to_excel(self, df, output_file):
+    @staticmethod
+    def _save_to_excel(df, output_file):
         """Save data to Excel format."""
         df.drop_duplicates().to_excel(output_file, index=False)
         logging.info(f"Saved Excel file: {output_file}")
@@ -347,7 +353,8 @@ class DataProcessor:
             logging.warning(f"Could not save CSV: {e}")
             write_audit_log("DataProcessor", f"Could not save CSV: {e}", "ERROR")
 
-    def _save_unmatched_reversals(self, excel_rows_to_highlight, output_dir):
+    @staticmethod
+    def _save_unmatched_reversals(excel_rows_to_highlight, output_dir):
         """Save unmatched reversals information."""
         try:
             unmatched_path = output_dir / "unmatched_reversals.txt"
@@ -385,7 +392,8 @@ class DataProcessor:
 
         return opportunity_name
 
-    def validate_merge_inputs(self, file1_path, file2_path):
+    @staticmethod
+    def validate_merge_inputs(file1_path, file2_path):
         """Validate that merge inputs are valid."""
         # Check if both file paths are set and files exist
         if not file1_path or not file2_path:
@@ -419,7 +427,8 @@ class DataProcessor:
             logging.warning(f"Could not validate GrossCost column: {e}")
             return f"File Analysis Warning:\n\nCould not analyze the file: {str(e)}\n\nDefault Recommendation:\nIf your data contains cost information, use the STANDARD template.\nIf your data has no costs or only $0 values, use the BLANK template."
 
-    def _determine_template_type(self, gross_cost_series, file_type=""):
+    @staticmethod
+    def _determine_template_type(gross_cost_series, file_type=""):
         """Determine template type based on GrossCost data analysis."""
         # Check for null/empty values
         null_count = gross_cost_series.isnull().sum()

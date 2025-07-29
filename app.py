@@ -160,7 +160,8 @@ class App:
             )
             logging.error(f"File1 import failed: {e}")
 
-    def _get_file_path(self, title):
+    @staticmethod
+    def _get_file_path(title):
         """Get file path from file dialog."""
         return filedialog.askopenfilename(
             title=title,
@@ -336,13 +337,15 @@ class App:
         """Show audit log viewer using log manager."""
         self.log_manager.show_shared_log_viewer()
 
-    def sharx_lbl(self):
+    @staticmethod
+    def sharx_lbl():
         """Generate SHARx LBL (method not implemented in ProcessManager)."""
         messagebox.showerror(
             "Not Implemented", "SHARx LBL functionality is not available."
         )
 
-    def epls_lbl(self):
+    @staticmethod
+    def epls_lbl():
         """Generate EPLS LBL (method not implemented in ProcessManager)."""
         messagebox.showerror(
             "Not Implemented", "EPLS LBL functionality is not available."
@@ -382,7 +385,8 @@ class App:
 
         threading.Thread(target=run_in_background, daemon=True).start()
 
-    def _check_excel_availability(self):
+    @staticmethod
+    def _check_excel_availability():
         """Check if Excel is available and functioning properly."""
         try:
             # Try to create a temporary Excel application
@@ -478,7 +482,8 @@ class App:
             "ncols": min(df.shape[1], 39),
         }
 
-    def _clean_data_for_excel(self, df):
+    @staticmethod
+    def _clean_data_for_excel(df):
         """Clean data to prevent Excel errors during paste operations."""
         df_clean = df.copy()
 
@@ -537,7 +542,8 @@ class App:
             else:
                 raise Exception(f"Template update failed with xlwings: {xlwings_error}")
 
-    def _try_excel_com_paste(self, paste_data, paths):
+    @staticmethod
+    def _try_excel_com_paste(paste_data, paths):
         """Fallback method using Excel COM (win32com.client) when xlwings fails."""
         import win32com.client
         import pythoncom
@@ -669,7 +675,8 @@ class App:
         wb.save(str(paths["output"]))
         wb.close()
 
-    def _prepare_excel_data(self, paste_data, formulas):
+    @staticmethod
+    def _prepare_excel_data(paste_data, formulas):
         """Prepare data for Excel, preserving formulas."""
         data_to_write = []
 
@@ -684,12 +691,14 @@ class App:
 
         return data_to_write
 
-    def _paste_data_with_progress(self, ws, data_to_write, nrows, ncols):
+    @staticmethod
+    def _paste_data_with_progress(ws, data_to_write, nrows, ncols):
         """Paste data to Excel with progress updates."""
         # Paste values - this happens as a batch operation
         ws.range((2, 1), (nrows + 1, ncols)).value = data_to_write
 
-    def filter_template_columns(self, df):
+    @staticmethod
+    def filter_template_columns(df):
         try:
             # Ensure 'ClientName' and 'Logic' columns exist and are in the correct order
             if "ClientName" in df.columns and "Logic" in df.columns:
@@ -723,7 +732,8 @@ class App:
         """Show toast notification using template processor."""
         return self.template_processor.show_toast(message, duration)
 
-    def perform_preflight_checks(self) -> tuple[bool, str]:
+    @staticmethod
+    def perform_preflight_checks() -> tuple[bool, str]:
         """
         Perform pre-flight checks before starting any processing.
         Returns (is_ready, warning_message)
@@ -962,7 +972,8 @@ class App:
             logging.error(error_msg)
             raise Exception(f"Failed to load merged file: {error_msg}")
 
-    def _safe_prepare_dataframe(self, df):
+    @staticmethod
+    def _safe_prepare_dataframe(df):
         """Safely prepare DataFrame for processing."""
         try:
             # Create a copy to avoid modifying the original
@@ -1176,7 +1187,8 @@ class App:
         self.update_progress(0.65)
         return output_file
 
-    def _save_to_parquet(self, df, output_dir, opportunity_name=None):
+    @staticmethod
+    def _save_to_parquet(df, output_dir, opportunity_name=None):
         """Save data to Parquet format for large DataFrames."""
         try:
             if opportunity_name:
@@ -1190,7 +1202,8 @@ class App:
         except Exception as e:
             logger.warning(f"Could not save Parquet: {e}")
 
-    def _save_to_excel(self, df, output_file):
+    @staticmethod
+    def _save_to_excel(df, output_file):
         """Save data to Excel format."""
         df.drop_duplicates().to_excel(output_file, index=False)
 
@@ -1200,7 +1213,8 @@ class App:
         csv_path = output_dir / f"{opportunity_name} Claim Detail.csv"
         df.drop_duplicates().to_csv(csv_path, index=False)
 
-    def _save_unmatched_reversals(self, excel_rows_to_highlight, output_dir):
+    @staticmethod
+    def _save_unmatched_reversals(excel_rows_to_highlight, output_dir):
         """Save unmatched reversals information."""
         unmatched_path = output_dir / "unmatched_reversals.txt"
         with open(unmatched_path, "w") as f:
@@ -1349,17 +1363,20 @@ class App:
         wb.save(excel_file)
         logger.info(f"Highlighted unmatched reversals in {excel_file}")
 
-    def _is_valid_row_number(self, row_str, ws):
+    @staticmethod
+    def _is_valid_row_number(row_str, ws):
         """Check if row string represents a valid row number."""
         return row_str.isdigit() and 1 <= int(row_str) <= ws.max_row
 
-    def _highlight_row(self, ws, row_num, fill):
+    @staticmethod
+    def _highlight_row(ws, row_num, fill):
         """Highlight all cells in a specific row."""
         row = ws[row_num]
         for cell in row:
             cell.fill = fill
 
-    def _fix_column_positioning(self, df):
+    @staticmethod
+    def _fix_column_positioning(df):
         """
         Ensure the 'Logic' column is the 39th column (AM) and rename it to "O's & R's Check".
         If there are fewer than 39 columns, pad with empty columns.

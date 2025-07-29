@@ -87,7 +87,8 @@ class RowIDErrorAnalyzer:
             self.logger.error(f"Error during analysis: {error_details}")
             return self.create_error_report("ANALYSIS_ERROR", error_details)
 
-    def analyze_dataframe_structure(self, df):
+    @staticmethod
+    def analyze_dataframe_structure(df):
         """Analyze the DataFrame structure for potential issues."""
         results = {}
 
@@ -252,7 +253,8 @@ class RowIDErrorAnalyzer:
 
         return report
 
-    def generate_recommendations(self, structure_analysis, rowid_tests):
+    @staticmethod
+    def generate_recommendations(structure_analysis, rowid_tests):
         """Generate recommendations based on analysis."""
         recommendations = []
 
@@ -320,7 +322,8 @@ class RowIDErrorAnalyzer:
 
         return recommendations
 
-    def generate_fix_suggestions(self, structure_analysis, rowid_tests):
+    @staticmethod
+    def generate_fix_suggestions(structure_analysis, rowid_tests):
         """Generate specific fix suggestions."""
         fixes = []
 
@@ -401,7 +404,8 @@ def safe_multiprocessing_split(df, num_workers):
         except Exception as e:
             self.logger.error(f"Failed to save report: {e}")
 
-    def print_summary_report(self, report):
+    @staticmethod
+    def print_summary_report(report):
         """Print a summary of the analysis."""
         print("\n" + "=" * 60)
         print("ROWID ERROR ANALYSIS SUMMARY")
@@ -435,7 +439,8 @@ def safe_multiprocessing_split(df, num_workers):
 
         print("\n" + "=" * 60)
 
-    def create_error_report(self, error_type, error_details):
+    @staticmethod
+    def create_error_report(error_type, error_details):
         """Create an error report when analysis fails."""
         return {
             "timestamp": datetime.now().isoformat(),

@@ -121,7 +121,8 @@ class LogManager:
         # Initial load
         refresh()
 
-    def initialize_logging(self):
+    @staticmethod
+    def initialize_logging():
         """Initialize logging configuration."""
         # Clear existing log
         log_file = "repricing_log.log"
@@ -140,7 +141,8 @@ class LogManager:
         )
         logging.info("Logging initialized")
 
-    def log_application_start(self):
+    @staticmethod
+    def log_application_start():
         """Log application startup with comprehensive user information."""
         # Validate user access first
         if not validate_user_access():
@@ -149,7 +151,8 @@ class LogManager:
         logging.info("Repricing Automation application started")
         log_user_session_start("RepricingApp")
 
-    def log_application_shutdown(self):
+    @staticmethod
+    def log_application_shutdown():
         """Log application shutdown with user information."""
         logging.info("Repricing Automation application shutting down")
         log_user_session_end("RepricingApp")

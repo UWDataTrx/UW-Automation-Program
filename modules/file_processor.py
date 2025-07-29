@@ -28,7 +28,8 @@ class FileProcessor:
     def __init__(self, app_instance):
         self.app = app_instance
 
-    def check_template(self, file_path):
+    @staticmethod
+    def check_template(file_path):
         """Check if template file exists and is valid."""
         return Path(file_path).exists() and Path(file_path).suffix == ".xlsx"
 
@@ -72,7 +73,8 @@ class FileProcessor:
             write_audit_log("FileProcessor", error_msg, "ERROR")
             return None
 
-    def validate_file_structure(self, df, required_columns=None):
+    @staticmethod
+    def validate_file_structure(df, required_columns=None):
         """Validate that the file has the required structure."""
         if ProcessingConfig is None:
             messagebox.showerror(
@@ -91,7 +93,8 @@ class FileProcessor:
             write_audit_log("FileProcessor", f"Validation Error: {str(e)}", "ERROR")
             return False
 
-    def prepare_file_paths(self, template_path, opportunity_name=None):
+    @staticmethod
+    def prepare_file_paths(template_path, opportunity_name=None):
         """Prepare file paths for template operations."""
         if not template_path:
             raise ValueError("Template file path is not set.")
