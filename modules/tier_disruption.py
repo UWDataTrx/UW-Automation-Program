@@ -435,7 +435,6 @@ def write_excel_sheets(
     writer, df, summary_df, tier_pivots, ex_pt, exc_members, network_df, network_pivot
 ):
     """Write all sheets to the Excel file."""
-    from utils.utils import write_audit_log
 
     # Validate writer path
     output_path = getattr(writer, "path", None)

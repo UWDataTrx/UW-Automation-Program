@@ -13,7 +13,6 @@ import getpass  # noqa: E402
 import subprocess  # noqa: E402
 import warnings  # noqa: E402
 import multiprocessing  # noqa: E402
-from pathlib import Path  # noqa: E402
 from typing import Optional  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
@@ -394,7 +393,6 @@ class App:
 
     def _execute_template_paste(self, processed_file):
         """Execute the template paste operation with proper error handling."""
-        import time
 
         start_time = time.time()
 
@@ -541,7 +539,6 @@ class App:
         """Fallback method using Excel COM (win32com.client) when xlwings fails."""
         import win32com.client
         import pythoncom
-        import numpy as np
 
         pythoncom.CoInitialize()
         excel = win32com.client.Dispatch("Excel.Application")
@@ -633,8 +630,6 @@ class App:
 
     def _try_openpyxl_paste(self, paste_data, paths):
         """Fallback method using openpyxl when xlwings fails."""
-        from openpyxl import load_workbook
-        import pandas as pd
 
         self.root.after(
             0,

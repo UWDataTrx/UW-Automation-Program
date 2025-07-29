@@ -19,7 +19,6 @@ from modules.audit_helper import (  # noqa: E402
     log_user_session_end,
     log_file_access,
 )
-import sys  # noqa: E402
 
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent

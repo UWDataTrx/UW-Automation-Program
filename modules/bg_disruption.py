@@ -394,7 +394,6 @@ def create_network_data(df):
 def write_excel_report(report_data, output_filename):
     """Write the final Excel report."""
     logger.info("Writing Excel report...")
-    from utils.utils import write_audit_log
 
     # Validate output filename
     if not output_filename or not str(output_filename).strip():
