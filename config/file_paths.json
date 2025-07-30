@@ -9,5 +9,6 @@
   "epls": "%OneDrive%/True Community - Data Analyst/Repricing Templates/EPLS/Client Name_Rx Claims for EPLS.xlsx",
   "pharmacy_validation": "%OneDrive%/True Community - Data Analyst/UW Python Program/Logs/Pharmacy_RxSense Validation.xlsx",
   "audit_log": "%OneDrive%/True Community - Data Analyst/UW Python Program/Logs/Audit_Log.csv",
-  "diagnostic_reports": "%OneDrive%/True Community - Data Analyst/UW Python Program/Diagnostic Reports"
+  "diagnostic_reports": "%OneDrive%/True Community - Data Analyst/UW Python Program/Diagnostic Reports",
+  "results_parquet": "%OneDrive%/True Community - Data Analyst/UW Python Program/B.o.B/results.parquet"
 }
