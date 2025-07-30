@@ -19,7 +19,11 @@ def read_drug_data(file_path):
         )
         return None
     try:
-        data = pd.read_csv(file_path)
+        # Read Parquet if file ends with .parquet, else CSV
+        if file_path.lower().endswith(".parquet"):
+            data = pd.read_parquet(file_path)
+        else:
+            data = pd.read_csv(file_path)
         # Check for required columns
         required_cols = [
             "drug_name",
@@ -42,7 +46,7 @@ def read_drug_data(file_path):
         data.loc[data["days_supply"] >= 84, "30/90"] = 90
         return data
     except Exception as e:
-        messagebox.showerror("Error Reading File", f"Error reading CSV file: {e}")
+        messagebox.showerror("Error Reading File", f"Error reading file: {e}")
         return None
 
 
@@ -253,7 +257,8 @@ root.title("B.o.B Drug Lookup")
 root.configure(fg_color="#333F48")
 
 
-file_path = "Results.csv"
+# Change this to your .parquet file
+file_path = r"C:\Users\DamionMorrison\OneDrive - True Rx Health Strategists\True Community - Data Analyst\UW Python Program\UW-Automation-Program\B.o.B\modules\results.parquet"
 data = read_drug_data(file_path)
 if data is None or data.empty:
     messagebox.showerror(
