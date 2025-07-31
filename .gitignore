@@ -172,4 +172,7 @@ cython_debug/
 file_paths.json
 mover.py
 .idea/
-
+brendanreamer_paths.json
+mitchellfrederick_paths.json
+dannybushnell_paths.json
+brettbauer_paths.json
