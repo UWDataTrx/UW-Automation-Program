@@ -351,10 +351,12 @@ def write_df_to_template(
     If open_file is True, launch the filled workbook in Excel after writing.
     """
     template_path = Path(template_path)
-    # Always use working directory and fixed output name
-    working_dir = Path.cwd()
-    output_name = "_Rx Repricing_wf.xlsx"
-    output_path = working_dir / output_name
+    output_path = Path(output_path)  # Use the provided output_path
+
+    # Remove these hardcoded lines:
+    # working_dir
+    # output_name = "_Rx Repricing_wf.xlsx"
+    # output_path = working_dir / output_name
     # Overwrite protection for key templates
     protected_templates = [
         "SHARx Blind Repricing 7.25.xlsx",
@@ -371,11 +373,11 @@ def write_df_to_template(
         base = output_path.stem
         suffix = output_path.suffix
         copy_name = f"{base}_copy{suffix}"
-        copy_path = working_dir / copy_name
+        copy_path = output_path.parent / copy_name
         i = 1
         while copy_path.exists():
             copy_name = f"{base}_copy{i}{suffix}"
-            copy_path = working_dir / copy_name
+            copy_path = output_path.parent / copy_name
             i += 1
         logger.warning(
             f"Output path '{output_path.name}' is a protected template or matches the template path. Writing to copy: {copy_path.name}"

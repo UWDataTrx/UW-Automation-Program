@@ -92,10 +92,20 @@ def main():
             )
 
         template_path = Path(paths["sharx"]).resolve()
+        output_path = Path("_Rx Claims for SHARx.xlsx").resolve()
+
+        # After you set template_path and output_path, add this safety check:
+        if Path(paths["reprice"]).resolve() == output_path:
+            raise RuntimeError(
+                f"ERROR: Output file {output_path} cannot be the same as input file {paths['reprice']}!"
+            )
 
         # Log file access
         log_file_access("sharx_lbl.py", paths["reprice"], "LOADING")
         log_file_access("sharx_lbl.py", paths["sharx"], "LOADING")
+
+        # Debug: print available sheet names
+        print("Available sheets in file:", pd.ExcelFile(paths["reprice"]).sheet_names)
 
         try:
             df = pd.read_excel(paths["reprice"], sheet_name=CLAIMS_SHEET)
@@ -149,6 +159,26 @@ def main():
 
         output_path = Path("_Rx Claims for SHARx.xlsx").resolve()
 
+        # ADD THESE DEBUG PRINTS IMMEDIATELY BEFORE WRITING
+        print("=== DEBUG FILE PATHS ===")
+        print(f"Input file (reprice): {paths['reprice']}")
+        print(f"Template file: {template_path}")
+        print(f"Output file: {output_path}")
+        print(f"Are template and input the same? {template_path == Path(paths['reprice']).resolve()}")
+        print(f"Are output and input the same? {output_path == Path(paths['reprice']).resolve()}")
+        print("========================")
+
+        # STOP THE SCRIPT HERE TO VERIFY PATHS
+        input("Press Enter to continue writing (check paths above first)...")
+
+        # Before calling write_df_to_template, add:
+        if str(template_path).endswith("_Rx Repricing_wf.xlsx") or str(output_path).endswith("_Rx Repricing_wf.xlsx"):
+            raise RuntimeError("STOP! Template or output path points to input file!")
+
+        # Also check if files exist before writing
+        print(f"Template exists: {Path(template_path).exists()}")
+        print(f"Input file exists before writing: {Path('_Rx Repricing_wf.xlsx').exists()}")
+
         write_df_to_template(
             str(template_path),
             str(output_path),
@@ -160,6 +190,9 @@ def main():
             open_file=False,
             visible=False,
         )
+
+        # Check if input file still exists after writing
+        print(f"Input file exists after writing: {Path('_Rx Repricing_wf.xlsx').exists()}")
 
         logger.info(f"SHARx output saved to: {output_path}")
         logger.info("SHARx LBL file created successfully.")
