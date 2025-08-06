@@ -159,26 +159,8 @@ def main():
 
         output_path = Path("_Rx Claims for SHARx.xlsx").resolve()
 
-        # ADD THESE DEBUG PRINTS IMMEDIATELY BEFORE WRITING
-        print("=== DEBUG FILE PATHS ===")
-        print(f"Input file (reprice): {paths['reprice']}")
-        print(f"Template file: {template_path}")
-        print(f"Output file: {output_path}")
-        print(f"Are template and input the same? {template_path == Path(paths['reprice']).resolve()}")
-        print(f"Are output and input the same? {output_path == Path(paths['reprice']).resolve()}")
-        print("========================")
-
-        # STOP THE SCRIPT HERE TO VERIFY PATHS
-        input("Press Enter to continue writing (check paths above first)...")
-
-        # Before calling write_df_to_template, add:
-        if str(template_path).endswith("_Rx Repricing_wf.xlsx") or str(output_path).endswith("_Rx Repricing_wf.xlsx"):
-            raise RuntimeError("STOP! Template or output path points to input file!")
-
-        # Also check if files exist before writing
-        print(f"Template exists: {Path(template_path).exists()}")
-        print(f"Input file exists before writing: {Path('_Rx Repricing_wf.xlsx').exists()}")
-
+        # Remove all debug prints and input pause
+        # Clean version - just call the function directly
         write_df_to_template(
             str(template_path),
             str(output_path),
@@ -190,9 +172,6 @@ def main():
             open_file=False,
             visible=False,
         )
-
-        # Check if input file still exists after writing
-        print(f"Input file exists after writing: {Path('_Rx Repricing_wf.xlsx').exists()}")
 
         logger.info(f"SHARx output saved to: {output_path}")
         logger.info("SHARx LBL file created successfully.")
