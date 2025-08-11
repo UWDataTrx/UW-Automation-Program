@@ -383,6 +383,8 @@ def write_df_to_template(
             f"Output path '{output_path.name}' is a protected template or matches the template path. Writing to copy: {copy_path.name}"
         )
         output_path = copy_path
+        # Diagnostic logging before writing to template
+        logger.info(f"Writing {len(df)} rows and {df.shape[1]} columns to template at '{output_path}' (sheet: '{sheet_name}', cell: '{start_cell}')")
     # If output_path is '_Rx Repricing_wf.xlsx' in working dir, allow overwrite; else, create new copy as above
     # (No extra logic needed, as above already handles protected/template cases)
     shutil.copy(str(template_path), str(output_path))
