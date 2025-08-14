@@ -38,84 +38,107 @@ class TemplateProcessor:
         self.app = app_instance
 
     def create_template_backup(self, paths):
-        """Create backup of template and prepare output file."""
+        """Create backup of template and prepare output file, with robust logging."""
         try:
-            # Ensure all paths are Path objects
             template = Path(paths["template"])
             backup = Path(paths["backup"])
             output = Path(paths["output"])
+            logging.info(
+                f"[Repricing] Starting template backup: template={template}, backup={backup}, output={output}"
+            )
 
             # Backup original template
             shutil.copy(str(template), str(backup))
-            logging.info(f"Template backed up to {backup}")
+            logging.info(f"[Repricing] Template backed up to {backup}")
 
             # Remove old output if it exists
             if output.exists():
                 try:
                     output.unlink()
+                    logging.info(f"[Repricing] Old output file removed: {output}")
                 except PermissionError:
+                    logging.error(
+                        f"[Repricing] Cannot overwrite {output} — file is open in Excel."
+                    )
                     raise RuntimeError(
                         f"Cannot overwrite {output} — please close it in Excel."
                     )
 
             # Copy template to output location
             shutil.copy(str(template), str(output))
+            logging.info(f"[Repricing] Template copied to output location: {output}")
             write_audit_log("TemplateProcessor", f"Template backup created: {backup}")
 
         except Exception as e:
-            error_msg = f"Failed to create template backup: {str(e)}"
+            error_msg = f"[Repricing] Failed to create template backup: {str(e)}"
             logging.error(error_msg)
             write_audit_log("TemplateProcessor", error_msg, "ERROR")
             raise
 
     def format_dataframe(self, df):
-        """Format DataFrame for Excel export."""
-        # Format datetime columns
-        datetime_columns = df.select_dtypes(include=["datetime64"]).columns
-        for col in datetime_columns:
-            df[col] = df[col].dt.strftime("%Y-%m-%d %H:%M:%S")
-
-        # Fill NaN values
-        return df.fillna("")
+        """Format DataFrame for Excel export, with robust logging."""
+        logging.info(
+            f"[Repricing] Formatting DataFrame for Excel export. Shape: {df.shape}, Columns: {df.columns.tolist()}"
+        )
+        try:
+            datetime_columns = df.select_dtypes(include=["datetime64"]).columns
+            for col in datetime_columns:
+                df[col] = df[col].dt.strftime("%Y-%m-%d %H:%M:%S")
+            df = df.fillna("")
+            logging.info("[Repricing] DataFrame formatting completed successfully.")
+            return df
+        except Exception as e:
+            logging.error(f"[Repricing] Error during DataFrame formatting: {e}")
+            write_audit_log(
+                "TemplateProcessor", f"DataFrame formatting error: {e}", "ERROR"
+            )
+            return df
 
     def filter_template_columns(self, df):
-        """Filter columns for template pasting."""
+        """Filter columns for template pasting, with robust logging."""
         try:
-            # Ensure 'ClientName' and 'Logic' columns exist and are in the correct order
             if "ClientName" in df.columns and "Logic" in df.columns:
                 client_name_idx = df.columns.get_loc("ClientName")
                 logic_idx = df.columns.get_loc("Logic")
-
                 if client_name_idx <= logic_idx:
-                    # Select columns from 'ClientName' to 'Logic' (inclusive)
                     selected_columns = df.columns[client_name_idx : logic_idx + 1]
                     logging.info(
-                        f"Pasting only these columns: {selected_columns.tolist()}"
+                        f"[Repricing] Pasting only these columns: {selected_columns.tolist()}"
                     )
                     return df[selected_columns]
                 else:
                     logging.warning(
-                        "'Logic' column appears before 'ClientName'; returning full DataFrame."
+                        "[Repricing] 'Logic' column appears before 'ClientName'; returning full DataFrame."
                     )
                     return df
             else:
+                logging.error(
+                    "[Repricing] Required columns 'ClientName' or 'Logic' are missing."
+                )
                 raise ValueError(
                     "Required columns 'ClientName' or 'Logic' are missing."
                 )
-
         except Exception as e:
-            logging.warning(f"Error filtering columns: {e}. Using full DataFrame.")
+            logging.warning(
+                f"[Repricing] Error filtering columns: {e}. Using full DataFrame."
+            )
+            write_audit_log(
+                "TemplateProcessor", f"Column filtering error: {e}", "ERROR"
+            )
             return df
 
     def prepare_template_data(self, processed_file):
-        """Prepare data for template pasting."""
+        """Prepare data for template pasting, with robust logging."""
         try:
+            logging.info(
+                f"[Repricing] Preparing template data from file: {processed_file}"
+            )
             df = pd.read_excel(processed_file)
             df = self.format_dataframe(df)
-
+            logging.info(f"[Repricing] Template data prepared. Shape: {df.shape}")
             return {"data": df.values, "nrows": df.shape[0], "ncols": df.shape[1]}
         except Exception as e:
-            error_msg = f"Failed to prepare template data: {str(e)}"
+            error_msg = f"[Repricing] Failed to prepare template data: {str(e)}"
             logging.error(error_msg)
             write_audit_log("TemplateProcessor", error_msg, "ERROR")
             raise
@@ -150,7 +173,8 @@ class TemplateProcessor:
         return True
 
     def show_toast(self, message, duration=3000):
-        """Show a toast notification."""
+        """Show a toast notification, with robust logging."""
+        logging.info(f"[Repricing] Showing toast: '{message}' for {duration}ms")
         try:
             import tkinter as tk
             from tkinter import messagebox

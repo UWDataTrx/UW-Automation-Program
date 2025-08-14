@@ -126,6 +126,7 @@ This project includes a `.gitignore` to exclude:
 **Ben Dillon**
 ---
 
+
 ## 📄 License
 
-This repository is private and unlicensed. Redistribution or use outside authorized personnel is prohibited.
+This project is licensed under the MIT License. See the LICENSE file for details.

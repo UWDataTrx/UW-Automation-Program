@@ -1,4 +1,7 @@
 import sys
+if sys.version_info[:3] != (3, 13, 5):
+    raise RuntimeError("This project requires Python 3.13.5. Please install and use the correct Python version.")
+import sys
 from pathlib import Path
 
 project_root = Path(__file__).resolve().parent.parent
@@ -513,7 +516,7 @@ class App:
     def _prepare_template_paths(self):
         """Prepare file paths for template operations using file processor."""
         # Pass None for opportunity_name to use default _Rx Repricing_wf.xlsx naming
-        return self.file_processor.prepare_file_paths(self.template_file_path, None)
+        return self.file_processor.prepare_file_paths(self.template_file_path)
 
     def _create_template_backup(self, paths):
         """Create backup of template and prepare output file using template processor."""
@@ -630,44 +633,6 @@ class App:
                     app.quit()
                 except Exception:
                     pass
-
-    def _try_openpyxl_paste(self, paste_data, paths):
-        """Fallback method using openpyxl when xlwings fails."""
-        from openpyxl import load_workbook
-        import pandas as pd
-
-        self.root.after(
-            0,
-            lambda: self.update_progress(0.87, "Using fallback method (openpyxl)..."),
-        )
-
-        # Load workbook with openpyxl
-        wb = load_workbook(str(paths["output"]))
-        ws = wb["Claims Table"]
-
-        # Convert paste_data to DataFrame for easier handling
-        df = pd.DataFrame(paste_data["data"])
-
-        self.root.after(
-            0,
-            lambda: self.update_progress(
-                0.95, f"Writing {len(df)} rows with openpyxl..."
-            ),
-        )
-
-        # Write data starting from row 2 (assuming row 1 has headers)
-        for row_idx, row_data in enumerate(df.values, start=2):
-            for col_idx, value in enumerate(row_data, start=1):
-                ws.cell(row=row_idx, column=col_idx, value=value)
-
-        self.root.after(
-            0,
-            lambda: self.update_progress(0.98, "Saving with openpyxl..."),
-        )
-
-        # Save workbook
-        wb.save(str(paths["output"]))
-        wb.close()
 
     def _prepare_excel_data(self, paste_data, formulas):
         """Prepare data for Excel, preserving formulas."""

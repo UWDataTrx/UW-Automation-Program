@@ -9,7 +9,6 @@ This script will automatically fix the merged_file.xlsx and allow processing to 
 import pandas as pd
 import numpy as np
 import os
-import sys
 from datetime import datetime
 
 

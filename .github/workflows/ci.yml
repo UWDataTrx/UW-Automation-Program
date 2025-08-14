@@ -1,0 +1,41 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.13.5
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.5'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Lint with Ruff
+        run: ruff check . --output-format=github
+      - name: Format with Ruff
+        run: ruff format . --check
+      - name: Type check with mypy
+        run: pip install mypy && mypy .
+      - name: Security audit
+        run: pip install pip-audit && pip-audit
+      - name: Test coverage
+        run: pip install pytest-cov && pytest --cov=.
+      - name: Check required files
+        run: |
+          test -f requirements.txt || (echo "requirements.txt missing" && exit 1)
+          test -f LICENSE || (echo "LICENSE missing" && exit 1)
+          test -f README.md || (echo "README.md missing" && exit 1)
+      - name: Run tests
+        run: pytest
+      - name: Upload test logs and coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-and-coverage
+          path: |
+            .pytest_cache/
+            .coverage
+            coverage.xml
+            test-results/

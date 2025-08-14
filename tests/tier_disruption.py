@@ -1,5 +1,4 @@
 import json
-import os
 
 import pandas as pd
 
@@ -131,7 +130,7 @@ def process_data():
         summary_rows.append((name.replace("_", " "), members, rxs))
         tab_members[name] = members
 
-    exclusions = df[df["pharmacy_is_excluded"] == True]
+    exclusions = df[df["pharmacy_is_excluded"]]
     ex_pt = exclusions.pivot_table(
         values=["Rxs", "MemberID"],
         index=["Product Name"],
@@ -282,8 +281,8 @@ def process_data():
 
     # Reorder sheets so 'Summary' is right after 'Data'
     workbook = writer.book
-    sheets = workbook.worksheets()
-    sheet_names = [ws.get_name() for ws in sheets]
+    sheets = workbook.worksheets
+    sheet_names = [ws.title for ws in sheets]
 
     # Move 'Summary' after 'Data'
     if "Data" in sheet_names and "Summary" in sheet_names:
@@ -295,7 +294,7 @@ def process_data():
             sheets.insert(data_idx + 1, summary_ws)
 
     # Save once at the end
-    writer._save()
+    writer.close()
 
 
 if __name__ == "__main__":

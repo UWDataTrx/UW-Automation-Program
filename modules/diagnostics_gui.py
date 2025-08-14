@@ -5,8 +5,9 @@ import getpass
 import os
 import json
 from pathlib import Path
-from diagnostic_tool import DiagnosticTool
+from modules.diagnostic_tool import DiagnosticTool
 import urllib.request
+
 
 class DiagnosticsGUI(ctk.CTk):
     def __init__(self):
@@ -17,32 +18,47 @@ class DiagnosticsGUI(ctk.CTk):
         self.create_widgets()
         self.run_diagnostics()
 
-
-
     def create_widgets(self):
-        self.header = ctk.CTkLabel(self, text="System Diagnostics", font=("Arial", 22, "bold"))
+        self.header = ctk.CTkLabel(
+            self, text="System Diagnostics", font=("Arial", 22, "bold")
+        )
         self.header.pack(pady=10)
 
-        self.report_box = ctk.CTkTextbox(self, width=560, height=320, font=("Consolas", 12))
+        self.report_box = ctk.CTkTextbox(
+            self, width=560, height=320, font=("Consolas", 12)
+        )
         self.report_box.pack(pady=10)
 
         btn_frame = ctk.CTkFrame(self)
         btn_frame.pack(pady=10)
 
-        self.refresh_btn = ctk.CTkButton(btn_frame, text="Re-run Diagnostics", command=self.run_diagnostics)
+        self.refresh_btn = ctk.CTkButton(
+            btn_frame, text="Re-run Diagnostics", command=self.run_diagnostics
+        )
         self.refresh_btn.pack(side=tk.LEFT, padx=10)
 
-        self.report_issue_btn = ctk.CTkButton(btn_frame, text="Report an Issue", command=self.open_report_issue_popup)
+        self.report_issue_btn = ctk.CTkButton(
+            btn_frame, text="Report an Issue", command=self.open_report_issue_popup
+        )
         self.report_issue_btn.pack(side=tk.LEFT, padx=10)
 
-        self.update_btn = ctk.CTkButton(btn_frame, text="Check for Updates", command=self.check_for_updates)
+        self.update_btn = ctk.CTkButton(
+            btn_frame, text="Check for Updates", command=self.check_for_updates
+        )
         self.update_btn.pack(side=tk.LEFT, padx=10)
 
         # Dark/Light mode toggle
         mode_frame = ctk.CTkFrame(self)
         mode_frame.pack(pady=5)
         self.mode_var = tk.StringVar(value=ctk.get_appearance_mode())
-        self.mode_toggle = ctk.CTkSwitch(mode_frame, text="Dark Mode", command=self.toggle_mode, variable=self.mode_var, onvalue="Dark", offvalue="Light")
+        self.mode_toggle = ctk.CTkSwitch(
+            mode_frame,
+            text="Dark Mode",
+            command=self.toggle_mode,
+            variable=self.mode_var,
+            onvalue="Dark",
+            offvalue="Light",
+        )
         self.mode_toggle.pack(side=tk.LEFT, padx=10)
         if ctk.get_appearance_mode() == "Dark":
             self.mode_toggle.select()
@@ -74,7 +90,9 @@ class DiagnosticsGUI(ctk.CTk):
             if user_report:
                 self.save_issue_report(user_report, user_name, category)
                 popup.destroy()
-                messagebox.showinfo("Submitted", f"Your issue has been saved as {user_name}.")
+                messagebox.showinfo(
+                    "Submitted", f"Your issue has been saved as {user_name}."
+                )
             else:
                 messagebox.showerror("Error", "Please enter a description.")
 
@@ -118,7 +136,10 @@ class DiagnosticsGUI(ctk.CTk):
             with urllib.request.urlopen(version_url, timeout=5) as response:
                 latest_version = response.read().decode().strip()
             if latest_version > current_version:
-                messagebox.showinfo("Update Available", f"A new version ({latest_version}) is available.")
+                messagebox.showinfo(
+                    "Update Available",
+                    f"A new version ({latest_version}) is available.",
+                )
             else:
                 messagebox.showinfo("Up to Date", "You are using the latest version.")
         except Exception as e:
@@ -132,6 +153,7 @@ class DiagnosticsGUI(ctk.CTk):
 
     def get_timestamp(self):
         from datetime import datetime
+
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def run_diagnostics(self):
@@ -143,6 +165,7 @@ class DiagnosticsGUI(ctk.CTk):
         self.report_box.insert(tk.END, report)
 
     # generate_report is no longer needed; using DiagnosticTool for full diagnostics
+
 
 if __name__ == "__main__":
     app = DiagnosticsGUI()

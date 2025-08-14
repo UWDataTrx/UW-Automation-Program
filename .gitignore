@@ -164,6 +164,7 @@ cython_debug/
 *.csv
 *.txt
 *.parquet
+*.xls
 
 # Log files
 *.log

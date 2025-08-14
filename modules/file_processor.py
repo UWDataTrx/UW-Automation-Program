@@ -91,7 +91,7 @@ class FileProcessor:
             write_audit_log("FileProcessor", f"Validation Error: {str(e)}", "ERROR")
             return False
 
-    def prepare_file_paths(self, template_path, opportunity_name=None):
+    def prepare_file_paths(self, template_path):
         """Prepare file paths for template operations."""
         if not template_path:
             raise ValueError("Template file path is not set.")
@@ -102,11 +102,8 @@ class FileProcessor:
         template = Path(template_path)
         backup_name = template.stem + AppConstants.BACKUP_SUFFIX
 
-        # Use opportunity name in output filename if provided
-        if opportunity_name:
-            output_name = f"{opportunity_name}_Rx Repricing_wf.xlsx"
-        else:
-            output_name = AppConstants.UPDATED_TEMPLATE_NAME
+        # Always use the required output name
+        output_name = "_Rx Repricing_wf.xlsx"
 
         return {
             "template": template,
