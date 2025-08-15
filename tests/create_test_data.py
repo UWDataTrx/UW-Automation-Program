@@ -2,9 +2,10 @@
 Create a test merged_file.xlsx for testing the RowID error analyzer.
 """
 
-import pandas as pd
-import numpy as np
 from datetime import datetime, timedelta
+
+import numpy as np
+import pandas as pd
 
 
 def create_test_merged_file():

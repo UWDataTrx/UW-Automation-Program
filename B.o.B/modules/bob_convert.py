@@ -1,11 +1,11 @@
-import pandas as pd
-
-
-# converts from sql to BOB to run. Keep results naming convention and save in Python folder
-
 # Replace the integer keys with the actual column names as strings, e.g.:
 # df.to_parquet('bob.parquet')
 import os
+
+import pandas as pd
+
+# converts from sql to BOB to run. Keep results naming convention and save in Python folder
+
 
 input_file = "Results.csv"
 output_file = "bob.parquet"

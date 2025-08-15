@@ -15,13 +15,13 @@ Output:
     - Checks for common issues and provides recommendations
 """
 
-import sys
-import platform
-import json
-import traceback
 import importlib.util
-from pathlib import Path
+import json
+import platform
+import sys
+import traceback
 from datetime import datetime
+from pathlib import Path
 
 
 class DiagnosticTool:

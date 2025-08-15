@@ -5,12 +5,12 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+import logging  # noqa: E402
 import os  # noqa: E402
+
 import pandas as pd  # noqa: E402
 from openpyxl import load_workbook  # noqa: E402
 from openpyxl.styles import NamedStyle  # noqa: E402
-import logging  # noqa: E402
-
 
 # Try to import write_audit_log, create a fallback if not available
 try:
@@ -160,10 +160,6 @@ def merge_files(file1_path, file2_path):
             return False
         logger.info(f"Merged file saved to: {merged_path}")
         write_audit_log("merge.py", f"Merged file saved to: {merged_path}")
-        # Ensure test passes by returning True if file exists
-        if merged_path.exists():
-            return True
-        return False
 
         # Apply Excel formatting
         try:
@@ -211,7 +207,10 @@ def merge_files(file1_path, file2_path):
                 status="WARNING",
             )
 
-        return True
+        # Ensure test passes by returning True if file exists
+        if merged_path.exists():
+            return True
+        return False
     except Exception as e:
         # Always set username before logging error
         username = None

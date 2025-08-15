@@ -6,13 +6,13 @@ project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
-import pandas as pd  # noqa: E402
-import numpy as np  # noqa: E402
 import logging  # noqa: E402
 import multiprocessing  # noqa: E402
-import re  # noqa: E402
 import os  # noqa: E402
+import re  # noqa: E402
 
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
 
 try:
     from config.app_config import ProcessingConfig

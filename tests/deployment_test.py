@@ -6,11 +6,11 @@ This script tests if the UW-Automation-Program is ready for deployment
 across all team members with user-agnostic configuration.
 """
 
-import sys
-import os
-import json
-from pathlib import Path
 import getpass
+import json
+import os
+import sys
+from pathlib import Path
 
 
 class FallbackConfigLoader:
@@ -38,7 +38,7 @@ def main():
     total_tests += 1
     try:
         sys.path.append(".")
-        from utils.utils import load_file_paths, write_audit_log, log_exception
+        from utils.utils import load_file_paths, log_exception, write_audit_log
 
         print("   ✅ All critical modules imported successfully")
         tests_passed += 1

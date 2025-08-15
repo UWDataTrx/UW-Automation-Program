@@ -3,8 +3,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from modules.file_processor import FileProcessor
 import unittest
+
+from modules.file_processor import FileProcessor
 
 
 class TestFileProcessor(unittest.TestCase):

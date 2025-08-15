@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 from modules.merge import merge_files
 
 

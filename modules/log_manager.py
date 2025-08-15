@@ -1,23 +1,20 @@
-import tkinter as tk
-from tkinter import scrolledtext
 import csv
 import getpass
 import sys
+import tkinter as tk
 from pathlib import Path
+from tkinter import scrolledtext
 
 # Ensure project root is in sys.path before importing other modules
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
-import logging  # noqa: E402
 import json  # noqa: E402
+import logging  # noqa: E402
 
+from modules.audit_helper import (log_user_session_end,  # noqa: E402
+                                  log_user_session_start, validate_user_access)
 from utils.utils import write_audit_log  # noqa: E402
-from modules.audit_helper import (  # noqa: E402
-    log_user_session_start,
-    log_user_session_end,
-    validate_user_access,
-)
 
 
 class LogManager:
@@ -165,7 +162,8 @@ class ThemeController:
     def toggle_dark_mode(self):
         """Toggle between light and dark themes."""
         import customtkinter as ctk
-        from ui.ui_components import ThemeManager, LIGHT_COLORS, DARK_COLORS
+
+        from ui.ui_components import DARK_COLORS, LIGHT_COLORS, ThemeManager
 
         if self.current_theme == "light":
             # Switch to Dark mode
@@ -185,6 +183,6 @@ class ThemeController:
 
     def apply_initial_theme(self):
         """Apply the initial light theme."""
-        from ui.ui_components import ThemeManager, LIGHT_COLORS
+        from ui.ui_components import LIGHT_COLORS, ThemeManager
 
         ThemeManager.apply_theme_colors(self.app, LIGHT_COLORS)

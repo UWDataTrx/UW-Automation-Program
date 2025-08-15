@@ -2,19 +2,15 @@
 Generate PDF from SETUP_GUIDE.txt using reportlab for consistent formatting
 """
 
-from pathlib import Path
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    Preformatted,
-    PageBreak,
-)
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.colors import HexColor
-from datetime import datetime
 import re
+from datetime import datetime
+from pathlib import Path
+
+from reportlab.lib.colors import HexColor
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import (PageBreak, Paragraph, Preformatted,
+                                SimpleDocTemplate, Spacer)
 
 
 def generate_setup_pdf():

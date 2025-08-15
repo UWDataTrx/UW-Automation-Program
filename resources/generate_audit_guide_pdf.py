@@ -2,9 +2,10 @@
 Generate PDF from AUDIT_SYSTEM_GUIDE.md
 """
 
+from pathlib import Path
+
 import markdown
 from weasyprint import HTML
-from pathlib import Path
 
 
 def generate_audit_guide_pdf():

@@ -1,7 +1,8 @@
-import pandas as pd
-import sys
 import pathlib
+import sys
 from pathlib import Path
+
+import pandas as pd
 
 # Ensure project root is in sys.path before importing other modules
 project_root = pathlib.Path(__file__).resolve().parent.parent
@@ -10,7 +11,7 @@ if str(project_root) not in sys.path:
 from tkinter import messagebox  # noqa: E402
 
 try:
-    from config.app_config import ProcessingConfig, AppConstants
+    from config.app_config import AppConstants, ProcessingConfig
     from utils.utils import write_audit_log
 except ImportError:
     # Fallback if imports are not available

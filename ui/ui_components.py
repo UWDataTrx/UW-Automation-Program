@@ -5,7 +5,6 @@ This module contains UI-related classes and utilities to improve code organizati
 
 import customtkinter as ctk
 
-
 # UI styling variables
 FONT_SELECT = ("Cambria", 20, "bold")
 

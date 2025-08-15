@@ -1,5 +1,6 @@
-from fpdf import FPDF
 import re
+
+from fpdf import FPDF
 
 with open("README.txt", "r", encoding="utf-8") as f:
     lines = f.readlines()

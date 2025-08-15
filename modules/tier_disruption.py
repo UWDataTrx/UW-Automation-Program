@@ -1,9 +1,10 @@
-import pandas as pd
-import re
 import logging
 import os
+import re
 import sys
 from pathlib import Path
+
+import pandas as pd
 
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent
@@ -11,24 +12,14 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 
-from utils.utils import (  # noqa: E402
-    standardize_pharmacy_ids,
-    standardize_network_ids,
-    merge_with_network,
-    drop_duplicates_df,
-    clean_logic_and_tier,
-    filter_recent_date,
-    filter_logic_and_maintenance,
-    filter_products_and_alternative,
-    write_audit_log,
-)
-from modules.audit_helper import (  # noqa: E402
-    make_audit_entry,
-    log_user_session_start,
-    log_user_session_end,
-    log_file_access,
-)
-
+from modules.audit_helper import (log_file_access,  # noqa: E402
+                                  log_user_session_end, log_user_session_start,
+                                  make_audit_entry)
+from utils.utils import (clean_logic_and_tier,  # noqa: E402
+                         drop_duplicates_df, filter_logic_and_maintenance,
+                         filter_products_and_alternative, filter_recent_date,
+                         merge_with_network, standardize_network_ids,
+                         standardize_pharmacy_ids, write_audit_log)
 
 # Set up logger
 logging.basicConfig(level=logging.INFO)
@@ -189,7 +180,9 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
             .fillna(False)
             .infer_objects(copy=False)
         )
-        logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
+        logger.info(
+            f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
+        )
 
         # Identify rows where pharmacy_is_excluded is "NA"
         na_pharmacies = df[df["pharmacy_is_excluded"].isna()]
@@ -197,30 +190,42 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
 
         if not na_pharmacies.empty:
             output_file_path = Path(file_paths["pharmacy_validation"]).resolve()
-            logger.info(f"Preparing to write NA pharmacies to pharmacy validation log: {output_file_path}")
+            logger.info(
+                f"Preparing to write NA pharmacies to pharmacy validation log: {output_file_path}"
+            )
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
             na_pharmacies_output["Result"] = "NA"
             logger.info(f"Rows to write: {len(na_pharmacies_output)}")
 
             try:
                 if output_file_path.exists():
-                    logger.info(f"Existing pharmacy validation log found at: {output_file_path}")
+                    logger.info(
+                        f"Existing pharmacy validation log found at: {output_file_path}"
+                    )
                     existing_df = pd.read_excel(output_file_path)
                     logger.info(f"Existing log rows: {len(existing_df)}")
-                    combined_df = pd.concat([
-                        existing_df, na_pharmacies_output
-                    ], ignore_index=True)
+                    combined_df = pd.concat(
+                        [existing_df, na_pharmacies_output], ignore_index=True
+                    )
                     combined_df = combined_df.drop_duplicates()
-                    logger.info(f"Combined log rows after append and deduplication: {len(combined_df)}")
+                    logger.info(
+                        f"Combined log rows after append and deduplication: {len(combined_df)}"
+                    )
                 else:
-                    logger.info(f"No existing pharmacy validation log found. Creating new file at: {output_file_path}")
+                    logger.info(
+                        f"No existing pharmacy validation log found. Creating new file at: {output_file_path}"
+                    )
                     combined_df = na_pharmacies_output
 
                 combined_df.to_excel(output_file_path, index=False)
-                logger.info(f"Successfully wrote {len(na_pharmacies_output)} NA pharmacy rows to '{output_file_path}'. Total rows now: {len(combined_df)}.")
+                logger.info(
+                    f"Successfully wrote {len(na_pharmacies_output)} NA pharmacy rows to '{output_file_path}'. Total rows now: {len(combined_df)}."
+                )
 
             except Exception as e:
-                logger.error(f"Error updating pharmacy validation file '{output_file_path}': {e}")
+                logger.error(
+                    f"Error updating pharmacy validation file '{output_file_path}': {e}"
+                )
                 make_audit_entry(
                     "tier_disruption.py",
                     f"Pharmacy validation file update error: {e}",
@@ -229,9 +234,13 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                 # Fallback - just write the new data
                 try:
                     na_pharmacies_output.to_excel(output_file_path, index=False)
-                    logger.info(f"Fallback: Wrote {len(na_pharmacies_output)} NA pharmacy rows to '{output_file_path}'.")
+                    logger.info(
+                        f"Fallback: Wrote {len(na_pharmacies_output)} NA pharmacy rows to '{output_file_path}'."
+                    )
                 except Exception as fallback_e:
-                    logger.error(f"Fallback error writing to '{output_file_path}': {fallback_e}")
+                    logger.error(
+                        f"Fallback error writing to '{output_file_path}': {fallback_e}"
+                    )
 
     return df
 
@@ -402,9 +411,9 @@ def create_network_analysis(df):
         network_df["NABP"] = network_df["NABP"].fillna("NABP")
         # Create Unique Identifier based on whichever identifier is available (PHARMACYNPI or NABP)
         network_df["Unique Identifier"] = network_df.apply(
-            lambda row: row["PHARMACYNPI"]
-            if row["PHARMACYNPI"] != "N/A"
-            else row["NABP"],
+            lambda row: (
+                row["PHARMACYNPI"] if row["PHARMACYNPI"] != "N/A" else row["NABP"]
+            ),
             axis=1,
         )
         network_pivot = pd.pivot_table(

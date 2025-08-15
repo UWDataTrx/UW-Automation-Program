@@ -1,8 +1,9 @@
-from tkinter import messagebox
-import customtkinter as ctk
+import os
 import subprocess
 import sys
-import os
+from tkinter import messagebox
+
+import customtkinter as ctk
 
 sys.stderr = open(os.devnull, "w")
 

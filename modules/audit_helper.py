@@ -4,13 +4,12 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
-import logging  # noqa: E402
 import getpass  # noqa: E402
+import logging  # noqa: E402
+import os  # Only for os.getlogin(), os.environ, and os.getlogin fallback  # noqa: E402
 import platform  # noqa: E402
 import socket  # noqa: E402
 from datetime import datetime  # noqa: E402
-import os  # Only for os.getlogin(), os.environ, and os.getlogin fallback  # noqa: E402
-
 
 # Try to import write_audit_log, create fallback if not available
 try:

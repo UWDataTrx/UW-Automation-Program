@@ -1,9 +1,10 @@
+import statistics
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox, ttk
+
 import customtkinter as ctk
 import pandas as pd
 import pyperclip
-import statistics
 
 
 def read_drug_data(file_path):

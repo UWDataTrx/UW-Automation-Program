@@ -1,10 +1,11 @@
-import pandas as pd
+import csv
 import json
 import logging
 import os
-import csv
 import sys
 from pathlib import Path
+
+import pandas as pd
 
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:

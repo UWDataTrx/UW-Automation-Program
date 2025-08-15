@@ -1,7 +1,7 @@
 import sys
-from pathlib import Path
 import traceback
 from datetime import datetime
+from pathlib import Path
 
 # Ensure project root is in sys.path before importing other modules
 project_root = Path(__file__).resolve().parent.parent

@@ -39,9 +39,9 @@ def test_load_existing_config(tmp_work_dir):
         json.dump(custom, f)
 
     cm = ConfigManager()
-    assert cm.config == custom, (
-        "ConfigManager did not load the existing config.json correctly."
-    )
+    assert (
+        cm.config == custom
+    ), "ConfigManager did not load the existing config.json correctly."
 
 
 def test_filter_template_columns_extracts_correct_range():

@@ -10,11 +10,12 @@ if str(project_root) not in sys.path:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.append(str(PROJECT_ROOT))
 
+import logging  # noqa: E402
 import subprocess  # noqa: E402
 import threading  # noqa: E402
 import time  # noqa: E402
-import logging  # noqa: E402
 from tkinter import messagebox  # noqa: E402
+
 from config.app_config import DisruptionConfig  # noqa: E402
 from utils.utils import write_audit_log  # noqa: E402
 

@@ -1,54 +1,53 @@
 import sys
+
 if sys.version_info[:3] != (3, 13, 5):
-    raise RuntimeError("This project requires Python 3.13.5. Please install and use the correct Python version.")
+    raise RuntimeError(
+        "This project requires Python 3.13.5. Please install and use the correct Python version."
+    )
 import sys
 from pathlib import Path
 
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+import getpass  # noqa: E402
+import importlib  # noqa: E402
+import importlib.util  # noqa: E402
+import json  # noqa: E402
+import logging  # noqa: E402
+import multiprocessing  # noqa: E402
 import os  # noqa: E402
+import re  # noqa: E402
+import shutil  # noqa: E402
+import subprocess  # noqa: E402
 import threading  # noqa: E402
 import time  # noqa: E402
-import json  # noqa: E402
-import re  # noqa: E402
-import getpass  # noqa: E402
-import subprocess  # noqa: E402
+import tkinter as tk  # noqa: E402
 import warnings  # noqa: E402
-import multiprocessing  # noqa: E402
 from pathlib import Path  # noqa: E402
+from tkinter import filedialog, messagebox, scrolledtext  # noqa: E402
 from typing import Optional  # noqa: E402
+
+import customtkinter as ctk  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import psutil  # noqa: E402
-import logging  # noqa: E402
-import tkinter as tk  # noqa: E402
-import customtkinter as ctk  # noqa: E402
-from tkinter import filedialog, messagebox, scrolledtext  # noqa: E402
+import xlwings as xw  # noqa: E402
 from openpyxl import load_workbook  # noqa: E402
 from openpyxl.styles import PatternFill  # noqa: E402
-import xlwings as xw  # noqa: E402
-import shutil  # noqa: E402
-import importlib  # noqa: E402
-import importlib.util  # noqa: E402
-
 
 # Import main modules (after path setup)
-from config.app_config import ProcessingConfig, AppConstants  # noqa: E402
-from modules.file_processor import FileProcessor  # noqa: E402
-from modules.template_processor import TemplateProcessor  # noqa: E402
+from config.app_config import AppConstants, ProcessingConfig  # noqa: E402
+from modules.audit_helper import (log_file_access,  # noqa: E402
+                                  log_file_error, log_process_action,
+                                  log_system_error)
 from modules.data_processor import DataProcessor  # noqa: E402
-from modules.process_manager import ProcessManager  # noqa: E402
-from modules.ui_builder import UIBuilder  # noqa: E402
+from modules.file_processor import FileProcessor  # noqa: E402
 from modules.log_manager import LogManager, ThemeController  # noqa: E402
+from modules.process_manager import ProcessManager  # noqa: E402
+from modules.template_processor import TemplateProcessor  # noqa: E402
+from modules.ui_builder import UIBuilder  # noqa: E402
 from utils.utils import write_audit_log  # noqa: E402
-from modules.audit_helper import (  # noqa: E402
-    log_file_access,
-    log_process_action,
-    log_system_error,
-    log_file_error,
-)
-
 
 # Excel COM check
 XLWINGS_AVAILABLE = importlib.util.find_spec("xlwings") is not None
@@ -542,9 +541,9 @@ class App:
 
     def _try_excel_com_paste(self, paste_data, paths):
         """Fallback method using Excel COM (win32com.client) when xlwings fails."""
-        import win32com.client
-        import pythoncom
         import numpy as np
+        import pythoncom
+        import win32com.client
 
         pythoncom.CoInitialize()
         excel = win32com.client.Dispatch("Excel.Application")

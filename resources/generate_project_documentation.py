@@ -3,21 +3,15 @@ Generate comprehensive PDF documentation for the entire UW Automation Program di
 """
 
 import os
-from pathlib import Path
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import (
-    SimpleDocTemplate,
-    Paragraph,
-    Spacer,
-    Preformatted,
-    PageBreak,
-    Table,
-    TableStyle,
-)
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.colors import HexColor, black, white
-from reportlab.lib.units import inch
 from datetime import datetime
+from pathlib import Path
+
+from reportlab.lib.colors import HexColor, black, white
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import (PageBreak, Paragraph, Preformatted,
+                                SimpleDocTemplate, Spacer, Table, TableStyle)
 
 
 def generate_project_documentation_pdf():

@@ -1,10 +1,11 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
-import pandas as pd
-import customtkinter as ctk
-import pyperclip
 import os
 import sys
+import tkinter as tk
+from tkinter import messagebox, ttk
+
+import customtkinter as ctk
+import pandas as pd
+import pyperclip
 
 sys.stderr = open(os.devnull, "w")
 

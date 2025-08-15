@@ -6,10 +6,11 @@ Run this script if you encounter the error:
 This script will automatically fix the merged_file.xlsx and allow processing to continue.
 """
 
-import pandas as pd
-import numpy as np
 import os
 from datetime import datetime
+
+import numpy as np
+import pandas as pd
 
 
 def emergency_fix_merged_file():

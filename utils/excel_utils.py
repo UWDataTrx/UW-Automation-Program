@@ -1,13 +1,14 @@
-import shutil
-import logging
-import xlwings as xw
 import importlib.util
-from typing import Any, Tuple, Union
-import pandas as pd
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import tempfile
+import logging
+import shutil
 import sys
+import tempfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Any, Tuple, Union
+
+import pandas as pd
+import xlwings as xw
 
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
@@ -282,12 +283,14 @@ def write_df_to_sheet(
 
             def clear_func(rng):
                 rng.clear_contents()
+
         else:
             ws: Any = wb.Worksheets(sheet_name)
             cell: Any = ws.Range(start_cell)
 
             def clear_func(rng):
                 rng.ClearContents()
+
     except Exception as e:
         close_workbook(wb, app, save=False, use_com=use_com)
         raise ValueError(f"Sheet '{sheet_name}' not found in workbook.") from e

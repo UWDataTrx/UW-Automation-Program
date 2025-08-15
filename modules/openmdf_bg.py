@@ -1,32 +1,24 @@
-import pandas as pd
 import logging
 import sys
 from pathlib import Path
+
+import pandas as pd
 
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
-from project_settings import PROJECT_ROOT  # noqa: E402
-from utils.utils import (  # noqa: E402
-    standardize_pharmacy_ids,
-    standardize_network_ids,
-    merge_with_network,
-    drop_duplicates_df,
-    clean_logic_and_tier,
-    filter_recent_date,
-    filter_logic_and_maintenance,
-    filter_products_and_alternative,
-    write_audit_log,
-)
 from config.config_loader import ConfigManager  # noqa: E402
-from utils.excel_utils import safe_excel_write, check_disk_space  # noqa: E402
-from modules.audit_helper import (  # noqa: E402
-    make_audit_entry,
-    log_user_session_start,
-    log_user_session_end,
-    log_file_access,
-)
+from modules.audit_helper import (log_file_access,  # noqa: E402
+                                  log_user_session_end, log_user_session_start,
+                                  make_audit_entry)
+from project_settings import PROJECT_ROOT  # noqa: E402
+from utils.excel_utils import check_disk_space, safe_excel_write  # noqa: E402
+from utils.utils import (clean_logic_and_tier,  # noqa: E402
+                         drop_duplicates_df, filter_logic_and_maintenance,
+                         filter_products_and_alternative, filter_recent_date,
+                         merge_with_network, standardize_network_ids,
+                         standardize_pharmacy_ids, write_audit_log)
 
 # Import required utility functions for overwrite protection
 # from utils.utils import load_file_paths
@@ -151,6 +143,7 @@ def process_data():
 
         # After loading claims, also call handle_tier_pharmacy_exclusions to ensure pharmacy validation log is written
         from modules.tier_disruption import handle_tier_pharmacy_exclusions
+
         handle_tier_pharmacy_exclusions(claims, paths)
     except Exception as e:
         logger.error(f"Failed to load configuration or reprice file: {e}")
@@ -261,9 +254,9 @@ def process_data():
     # Ensure pharmacy_id exists
     if "pharmacy_id" not in df.columns:
         df["pharmacy_id"] = df.apply(
-            lambda row: row["PHARMACYNPI"]
-            if pd.notna(row["PHARMACYNPI"])
-            else row["NABP"],
+            lambda row: (
+                row["PHARMACYNPI"] if pd.notna(row["PHARMACYNPI"]) else row["NABP"]
+            ),
             axis=1,
         )
 
@@ -501,9 +494,9 @@ def process_data():
         network_df["NABP"] = network_df["NABP"].fillna("NABP")
         # Create Unique Identifier based on whichever identifier is available (PHARMACYNPI or NABP)
         network_df["Unique Identifier"] = network_df.apply(
-            lambda row: row["PHARMACYNPI"]
-            if row["PHARMACYNPI"] != "N/A"
-            else row["NABP"],
+            lambda row: (
+                row["PHARMACYNPI"] if row["PHARMACYNPI"] != "N/A" else row["NABP"]
+            ),
             axis=1,
         )
         network_pivot = pd.pivot_table(

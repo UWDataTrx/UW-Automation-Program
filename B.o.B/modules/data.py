@@ -1,7 +1,8 @@
-import pandas as pd
-import customtkinter as ctk
-from tkinter import filedialog
 import tkinter as tk
+from tkinter import filedialog
+
+import customtkinter as ctk
+import pandas as pd
 
 notes_window = None
 root = ctk.CTk()

@@ -1,7 +1,7 @@
-import json
-from datetime import datetime, timedelta
 import csv
+import json
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # Ensure project root is in sys.path before importing project_settings
@@ -58,9 +58,9 @@ def safe_read_audit_log():
                             "user": cleaned_row[1],
                             "script": cleaned_row[2],
                             "message": cleaned_row[3],
-                            "status": cleaned_row[4]
-                            if len(cleaned_row) > 4
-                            else "UNKNOWN",
+                            "status": (
+                                cleaned_row[4] if len(cleaned_row) > 4 else "UNKNOWN"
+                            ),
                         }
                         entries.append(entry)
 

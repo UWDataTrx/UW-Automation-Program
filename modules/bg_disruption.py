@@ -1,30 +1,22 @@
-import sys
-from pathlib import Path
-import pandas as pd
 import logging
 import os  # noqa: E402
+import sys
+from pathlib import Path
+
+import pandas as pd
 
 # Ensure project root is in sys.path before importing other modules
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
-from utils.utils import (  # noqa: E402
-    filter_logic_and_maintenance,
-    filter_products_and_alternative,
-    standardize_pharmacy_ids,
-    standardize_network_ids,
-    merge_with_network,
-    drop_duplicates_df,
-    clean_logic_and_tier,
-    filter_recent_date,
-    write_audit_log,
-)
-from modules.audit_helper import (  # noqa: E402
-    make_audit_entry,
-    log_user_session_start,
-    log_user_session_end,
-    log_file_access,
-)
+from modules.audit_helper import (log_file_access,  # noqa: E402
+                                  log_user_session_end, log_user_session_start,
+                                  make_audit_entry)
+from utils.utils import (clean_logic_and_tier,  # noqa: E402
+                         drop_duplicates_df, filter_logic_and_maintenance,
+                         filter_products_and_alternative, filter_recent_date,
+                         merge_with_network, standardize_network_ids,
+                         standardize_pharmacy_ids, write_audit_log)
 
 # Logging setup
 logging.basicConfig(
@@ -512,6 +504,7 @@ def process_data():
 
         # Also call handle_tier_pharmacy_exclusions to ensure pharmacy validation log is written
         from modules.tier_disruption import handle_tier_pharmacy_exclusions
+
         handle_tier_pharmacy_exclusions(df, file_paths)
 
         # Create filtered datasets

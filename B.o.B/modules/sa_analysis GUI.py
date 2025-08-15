@@ -1,17 +1,18 @@
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
+import re
+import statistics
+import subprocess
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
+
 import customtkinter as ctk
 import pandas as pd
 import pyperclip
-import statistics
-import subprocess
-import re
+
 from config.config_loader import ConfigLoader
 
 sys.stderr = open(os.devnull, "w")

@@ -1,8 +1,9 @@
-import customtkinter as ctk
-from tkinter import messagebox
 import getpass
 import sys
 from pathlib import Path
+from tkinter import messagebox
+
+import customtkinter as ctk
 
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent
@@ -13,8 +14,8 @@ from project_settings import PROJECT_ROOT  # noqa: E402
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from ui.ui_components import UIFactory, LIGHT_COLORS, DARK_COLORS  # noqa: E402
-from config.app_config import DisruptionConfig, AppConstants  # noqa: E402
+from config.app_config import AppConstants, DisruptionConfig  # noqa: E402
+from ui.ui_components import DARK_COLORS, LIGHT_COLORS, UIFactory  # noqa: E402
 
 
 class UIBuilder:

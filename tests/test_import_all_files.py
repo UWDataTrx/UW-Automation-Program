@@ -1,7 +1,7 @@
-import unittest
-import os
-from pathlib import Path
 import importlib.util
+import os
+import unittest
+from pathlib import Path
 
 
 class TestAllPythonFiles(unittest.TestCase):

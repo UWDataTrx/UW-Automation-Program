@@ -3,8 +3,8 @@
 Test the RowID multiprocessing fix to ensure no conflicts occur.
 """
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 
 def test_multiprocessing_rowid_fix():

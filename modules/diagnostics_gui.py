@@ -1,12 +1,14 @@
-import customtkinter as ctk
-import tkinter as tk
-from tkinter import messagebox
 import getpass
-import os
 import json
-from pathlib import Path
-from modules.diagnostic_tool import DiagnosticTool
+import os
+import tkinter as tk
 import urllib.request
+from pathlib import Path
+from tkinter import messagebox
+
+import customtkinter as ctk
+
+from modules.diagnostic_tool import DiagnosticTool
 
 
 class DiagnosticsGUI(ctk.CTk):

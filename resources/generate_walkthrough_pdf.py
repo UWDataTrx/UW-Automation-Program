@@ -1,5 +1,6 @@
-from fpdf import FPDF
 import re
+
+from fpdf import FPDF
 
 # Read the markdown file
 with open("repricing_walkthrough.md", "r", encoding="utf-8") as f:

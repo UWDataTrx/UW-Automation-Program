@@ -1,8 +1,9 @@
-import pandas as pd
 import json
-from datetime import datetime, timedelta
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+
+import pandas as pd
 
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent
@@ -192,16 +193,20 @@ def get_error_summary(days_back=7):
             "total_errors": len(error_df),
             "error_types": error_df["Status"].value_counts().to_dict(),
             "users_with_errors": error_df["User"].nunique(),
-            "most_affected_user": error_df["User"].value_counts().index[0]
-            if len(error_df) > 0
-            else None,
-            "most_common_script": error_df["Script"].value_counts().index[0]
-            if len(error_df) > 0
-            else None,
+            "most_affected_user": (
+                error_df["User"].value_counts().index[0] if len(error_df) > 0 else None
+            ),
+            "most_common_script": (
+                error_df["Script"].value_counts().index[0]
+                if len(error_df) > 0
+                else None
+            ),
             "date_range": f"Last {days_back} days",
-            "latest_error": error_df.iloc[0]["Timestamp"].strftime("%Y-%m-%d %H:%M")
-            if len(error_df) > 0
-            else None,
+            "latest_error": (
+                error_df.iloc[0]["Timestamp"].strftime("%Y-%m-%d %H:%M")
+                if len(error_df) > 0
+                else None
+            ),
         }
 
         return summary

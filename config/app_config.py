@@ -1,7 +1,7 @@
-import multiprocessing
-import json
-import os
 import getpass
+import json
+import multiprocessing
+import os
 import sys
 from pathlib import Path
 

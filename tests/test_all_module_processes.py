@@ -1,6 +1,6 @@
+import importlib
 import unittest
 from pathlib import Path
-import importlib
 from unittest.mock import patch
 
 MODULES_DIR = Path(__file__).parent.parent / "modules"

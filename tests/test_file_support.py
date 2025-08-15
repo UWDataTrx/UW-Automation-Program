@@ -3,9 +3,11 @@
 Test script to verify CSV and Excel file support for template validation.
 """
 
-import pandas as pd
-import tempfile
 import os
+import tempfile
+
+import pandas as pd
+
 from modules.data_processor import DataProcessor
 
 

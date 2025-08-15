@@ -8,13 +8,13 @@ if str(project_root) not in sys.path:
 import logging  # noqa: E402
 import tkinter as tk  # noqa: E402
 from tkinter import messagebox  # noqa: E402
+
 import pandas as pd  # noqa: E402
 
-
 try:
+    from config.config_loader import ConfigManager
     from utils.excel_utils import write_df_to_template
     from utils.utils import write_audit_log
-    from config.config_loader import ConfigManager
 except ImportError:
 
     def write_df_to_template(*args, **kwargs) -> None:
@@ -34,12 +34,8 @@ except ImportError:
 
 
 try:
-    from modules.audit_helper import (
-        make_audit_entry,
-        log_user_session_start,
-        log_user_session_end,
-        log_file_access,
-    )
+    from modules.audit_helper import (log_file_access, log_user_session_end,
+                                      log_user_session_start, make_audit_entry)
 except ImportError:
 
     def make_audit_entry(script_name, message, status="INFO"):
