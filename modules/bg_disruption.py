@@ -510,6 +510,10 @@ def process_data():
         # Handle pharmacy exclusions
         df = handle_pharmacy_exclusions(df, file_paths)
 
+        # Also call handle_tier_pharmacy_exclusions to ensure pharmacy validation log is written
+        from modules.tier_disruption import handle_tier_pharmacy_exclusions
+        handle_tier_pharmacy_exclusions(df, file_paths)
+
         # Create filtered datasets
         uni_pos, uni_neg, ex_pos, ex_neg, ex_ex = create_data_filters(df)
 

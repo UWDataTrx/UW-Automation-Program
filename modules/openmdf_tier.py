@@ -525,7 +525,9 @@ def process_data():
         reference_data = (medi, mdf, exclusive)
         df = process_openmdf_data_pipeline(claims, reference_data, network)
 
-        df = handle_openmdf_pharmacy_exclusions(df, file_paths)
+        # Also call handle_tier_pharmacy_exclusions to ensure pharmacy validation log is written
+        from modules.tier_disruption import handle_tier_pharmacy_exclusions
+        handle_tier_pharmacy_exclusions(df, file_paths)
 
         # Convert FormularyTier to numeric for proper filtering
         df["FormularyTier"] = pd.to_numeric(df["FormularyTier"], errors="coerce")

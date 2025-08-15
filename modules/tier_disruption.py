@@ -189,9 +189,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
             .fillna(False)
             .infer_objects(copy=False)
         )
-        logger.info(
-            f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
-        )
+        logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
 
         # Identify rows where pharmacy_is_excluded is "NA"
         na_pharmacies = df[df["pharmacy_is_excluded"].isna()]
@@ -199,43 +197,41 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
 
         if not na_pharmacies.empty:
             output_file_path = Path(file_paths["pharmacy_validation"]).resolve()
+            logger.info(f"Preparing to write NA pharmacies to pharmacy validation log: {output_file_path}")
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
-            # Add Result column with "NA" value
             na_pharmacies_output["Result"] = "NA"
+            logger.info(f"Rows to write: {len(na_pharmacies_output)}")
 
-            # Use pandas to write to Excel, which is simpler and more reliable
             try:
-                # Try to append to existing file
                 if output_file_path.exists():
-                    # Read existing data
+                    logger.info(f"Existing pharmacy validation log found at: {output_file_path}")
                     existing_df = pd.read_excel(output_file_path)
-                    # Concatenate with new data
-                    combined_df = pd.concat(
-                        [existing_df, na_pharmacies_output], ignore_index=True
-                    )
-                    # Remove duplicates
+                    logger.info(f"Existing log rows: {len(existing_df)}")
+                    combined_df = pd.concat([
+                        existing_df, na_pharmacies_output
+                    ], ignore_index=True)
                     combined_df = combined_df.drop_duplicates()
+                    logger.info(f"Combined log rows after append and deduplication: {len(combined_df)}")
                 else:
+                    logger.info(f"No existing pharmacy validation log found. Creating new file at: {output_file_path}")
                     combined_df = na_pharmacies_output
 
-                # Write to Excel
                 combined_df.to_excel(output_file_path, index=False)
-                logger.info(
-                    f"NA pharmacies written to '{output_file_path}' with Result column."
-                )
+                logger.info(f"Successfully wrote {len(na_pharmacies_output)} NA pharmacy rows to '{output_file_path}'. Total rows now: {len(combined_df)}.")
 
             except Exception as e:
-                logger.error(f"Error updating pharmacy validation file: {e}")
+                logger.error(f"Error updating pharmacy validation file '{output_file_path}': {e}")
                 make_audit_entry(
                     "tier_disruption.py",
                     f"Pharmacy validation file update error: {e}",
                     "FILE_ERROR",
                 )
                 # Fallback - just write the new data
-                na_pharmacies_output.to_excel(output_file_path, index=False)
-                logger.info(
-                    f"NA pharmacies written to '{output_file_path}' (fallback mode)."
-                )
+                try:
+                    na_pharmacies_output.to_excel(output_file_path, index=False)
+                    logger.info(f"Fallback: Wrote {len(na_pharmacies_output)} NA pharmacy rows to '{output_file_path}'.")
+                except Exception as fallback_e:
+                    logger.error(f"Fallback error writing to '{output_file_path}': {fallback_e}")
 
     return df
 

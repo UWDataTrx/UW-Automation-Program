@@ -148,6 +148,10 @@ def process_data():
             )
             log_user_session_end("openmdf_bg.py")
             return False
+
+        # After loading claims, also call handle_tier_pharmacy_exclusions to ensure pharmacy validation log is written
+        from modules.tier_disruption import handle_tier_pharmacy_exclusions
+        handle_tier_pharmacy_exclusions(claims, paths)
     except Exception as e:
         logger.error(f"Failed to load configuration or reprice file: {e}")
         make_audit_entry(
