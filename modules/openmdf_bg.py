@@ -368,7 +368,7 @@ def process_data():
             df["pharmacy_is_excluded"]
             .astype(str)
             .str.lower()
-            .map({"true": True, "false": False})
+            .map({"yes": True, "no": False})
             .fillna(False)
             .infer_objects(copy=False)
         )
@@ -529,13 +529,14 @@ def process_data():
         f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
     )
 
-    logger.info(f"Total pharmacies in dataset: {df.shape[0]}")
-    logger.info(
-        f"Excluded pharmacies (pharmacy_is_excluded=True): {df['pharmacy_is_excluded'].sum()}"
-    )
-    logger.info(
-        f"Non-excluded pharmacies (pharmacy_is_excluded=False): {(~df['pharmacy_is_excluded']).sum()}"
-    )
+    total_pharmacies = df.shape[0]
+    logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
+    excluded_count = df['pharmacy_is_excluded'].sum()
+    non_excluded_count = (~df['pharmacy_is_excluded']).sum()
+    logger.info(f"Total pharmacies in dataset: {total_pharmacies}")
+    logger.info(f"Excluded pharmacies ('yes'): {excluded_count}")
+    logger.info(f"Non-excluded pharmacies ('no'): {non_excluded_count}")
+    logger.info(f"Sanity check: Excluded + Non-excluded = {excluded_count + non_excluded_count} (should match total)")
     logger.info(
         f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
     )

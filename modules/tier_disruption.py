@@ -115,7 +115,7 @@ def load_tier_disruption_data(file_paths):
     )
     print(f"e shape: {e.shape}")
 
-    network = pd.read_excel(
+    network = pd.read_csv(
         file_paths["n_disrupt"],
         usecols=["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"],
     )
@@ -176,7 +176,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
             df["pharmacy_is_excluded"]
             .astype(str)
             .str.lower()
-            .map({"true": True, "false": False})
+            .map({"yes": True, "no": False})
             .fillna(False)
             .infer_objects(copy=False)
         )
@@ -632,16 +632,17 @@ def process_data():
         ex_pt.to_excel(writer, sheet_name="Exclusions")
         writer.sheets["Exclusions"].write("F1", f"Total Members: {exc_members}")
 
-        # Network summary for excluded pharmacies (pharmacy_is_excluded=True)
+        # Network summary for excluded pharmacies (pharmacy_is_excluded="yes")
         logger.info("Processing network analysis...")
         network_df, network_pivot = create_network_analysis(df)
-        logger.info(f"Total pharmacies in dataset: {df.shape[0]}")
-        logger.info(
-            f"Excluded pharmacies (pharmacy_is_excluded=True): {df['pharmacy_is_excluded'].sum()}"
-        )
-        logger.info(
-            f"Non-excluded pharmacies (pharmacy_is_excluded=False): {(~df['pharmacy_is_excluded']).sum()}"
-        )
+        total_pharmacies = df.shape[0]
+        logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
+        excluded_count = df['pharmacy_is_excluded'].sum()
+        non_excluded_count = (~df['pharmacy_is_excluded']).sum()
+        logger.info(f"Total pharmacies in dataset: {total_pharmacies}")
+        logger.info(f"Excluded pharmacies ('yes'): {excluded_count}")
+        logger.info(f"Non-excluded pharmacies ('no'): {non_excluded_count}")
+        logger.info(f"Sanity check: Excluded + Non-excluded = {excluded_count + non_excluded_count} (should match total)")
         logger.info(
             f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
         )
