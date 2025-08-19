@@ -13,7 +13,7 @@ from modules.audit_helper import (log_file_access,  # noqa: E402
                                   log_user_session_end, log_user_session_start,
                                   make_audit_entry)
 from project_settings import PROJECT_ROOT  # noqa: E402
-from utils.excel_utils import check_disk_space, safe_excel_write  # noqa: E402
+from utils.excel_utils import check_disk_space  # noqa: E402
 from utils.utils import (clean_logic_and_tier,  # noqa: E402
                          drop_duplicates_df, filter_logic_and_maintenance,
                          filter_products_and_alternative, filter_recent_date,
@@ -364,13 +364,12 @@ def process_data():
 
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
+        # Only 'yes' and 'no' (case-insensitive) are mapped; blanks/unknowns become NaN for manual review
         df["pharmacy_is_excluded"] = (
             df["pharmacy_is_excluded"]
             .astype(str)
-            .str.lower()
+            .str.strip().str.lower()
             .map({"yes": True, "no": False})
-            .fillna(False)
-            .infer_objects(copy=False)
         )
         logger.info(
             f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
@@ -382,35 +381,20 @@ def process_data():
         if not na_pharmacies.empty:
             output_file_path = paths["pharmacy_validation"]
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
-            # Add Result column with "NA" value
             na_pharmacies_output["Result"] = "NA"
 
-            # Use pandas to write to Excel, which is simpler and more reliable
-
             try:
-                # Try to append to existing file
                 output_file_path_obj = Path(output_file_path)
                 if output_file_path_obj.exists():
-                    # Read existing data
-                    existing_df = pd.read_excel(output_file_path_obj)
-                    # Concatenate with new data
+                    existing_df = pd.read_csv(output_file_path_obj)
                     combined_df = pd.concat(
                         [existing_df, na_pharmacies_output], ignore_index=True
                     )
-                    # Remove duplicates
                     combined_df = combined_df.drop_duplicates()
                 else:
                     combined_df = na_pharmacies_output
 
-                # Write to Excel using safe method
-                if not safe_excel_write(
-                    combined_df, str(output_file_path_obj), index=False
-                ):
-                    logger.error(
-                        f"Safe write failed for {output_file_path_obj}, trying fallback"
-                    )
-                    # Fallback to direct pandas write
-                    combined_df.to_excel(output_file_path_obj, index=False)
+                combined_df.to_csv(output_file_path_obj, index=False)
                 logger.info(
                     f"NA pharmacies written to '{output_file_path_obj}' with Result column."
                 )

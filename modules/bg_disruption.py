@@ -166,13 +166,12 @@ def handle_pharmacy_exclusions(df, file_paths):
 
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
+        # Only 'yes' and 'no' (case-insensitive) are mapped; blanks/unknowns become NaN for manual review
         df["pharmacy_is_excluded"] = (
             df["pharmacy_is_excluded"]
             .astype(str)
-            .str.lower()
+            .str.strip().str.lower()
             .map({"yes": True, "no": False})
-            .fillna(False)
-            .infer_objects(copy=False)
         )
         logger.info(
             f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
@@ -183,31 +182,22 @@ def handle_pharmacy_exclusions(df, file_paths):
         logger.info(f"NA pharmacies count: {na_pharmacies.shape[0]}")
 
         if not na_pharmacies.empty:
-            # Define the writer before using it
             output_file_path = file_paths["pharmacy_validation"]
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
-            # Add Result column with "NA" value
             na_pharmacies_output["Result"] = "NA"
 
-            # Use pandas to write to Excel, which is simpler and more reliable
             try:
-                # Try to append to existing file
-
                 output_path = Path(output_file_path)
                 if output_path.exists():
-                    # Read existing data
-                    existing_df = pd.read_excel(output_path)
-                    # Concatenate with new data
+                    existing_df = pd.read_csv(output_path)
                     combined_df = pd.concat(
                         [existing_df, na_pharmacies_output], ignore_index=True
                     )
-                    # Remove duplicates
                     combined_df = combined_df.drop_duplicates()
                 else:
                     combined_df = na_pharmacies_output
 
-                # Write to Excel
-                combined_df.to_excel(output_path, index=False)
+                combined_df.to_csv(output_path, index=False)
                 logger.info(
                     f"NA pharmacies written to '{output_path}' with Result column."
                 )

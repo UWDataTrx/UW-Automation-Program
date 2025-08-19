@@ -198,13 +198,12 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
     """Handle pharmacy exclusions for Open MDF tier disruption."""
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
+        # Only 'yes' and 'no' (case-insensitive) are mapped; blanks/unknowns become NaN for manual review
         df["pharmacy_is_excluded"] = (
             df["pharmacy_is_excluded"]
             .astype(str)
-            .str.lower()
+            .str.strip().str.lower()
             .map({"yes": True, "no": False})
-            .fillna(False)
-            .infer_objects(copy=False)
         )
         logger.info(
             f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
@@ -217,27 +216,21 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
         if not na_pharmacies.empty:
             output_file_path = file_paths["pharmacy_validation"]
             na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
-            # Add Result column with "NA" value
             na_pharmacies_output["Result"] = "NA"
 
-            # Use pandas to write to Excel, which is simpler and more reliable
-
             try:
-                # Try to append to existing file
                 output_file_path_obj = Path(output_file_path)
                 if output_file_path_obj.exists():
-                    # Read existing data
-                    existing_df = pd.read_excel(output_file_path_obj)
-                    # Concatenate with new data
+                    existing_df = pd.read_csv(output_file_path_obj)
                     combined_df = pd.concat(
                         [existing_df, na_pharmacies_output], ignore_index=True
                     )
-                    # Remove duplicates
                     combined_df = combined_df.drop_duplicates()
                 else:
                     combined_df = na_pharmacies_output
 
-                # Write to Excel
+                # Write to CSV
+                combined_df.to_csv(output_file_path_obj, index=False)
                 combined_df.to_excel(output_file_path_obj, index=False)
                 logger.info(
                     f"NA pharmacies written to '{output_file_path_obj}' with Result column."

@@ -172,13 +172,13 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
     """Handle pharmacy exclusions for tier disruption."""
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
+        # Map all possible values to boolean, only 'yes' is excluded
+        # Only 'yes' and 'no' (case-insensitive) are mapped; blanks/unknowns become NaN for manual review
         df["pharmacy_is_excluded"] = (
             df["pharmacy_is_excluded"]
             .astype(str)
-            .str.lower()
+            .str.strip().str.lower()
             .map({"yes": True, "no": False})
-            .fillna(False)
-            .infer_objects(copy=False)
         )
         logger.info(
             f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
@@ -189,7 +189,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
         logger.info(f"NA pharmacies count: {na_pharmacies.shape[0]}")
 
         if not na_pharmacies.empty:
-            output_file_path = Path(file_paths["pharmacy_validation"]).resolve()
+            output_file_path = file_paths["pharmacy_validation"]
             logger.info(
                 f"Preparing to write NA pharmacies to pharmacy validation log: {output_file_path}"
             )
@@ -198,11 +198,12 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
             logger.info(f"Rows to write: {len(na_pharmacies_output)}")
 
             try:
-                if output_file_path.exists():
+                output_file_path_obj = Path(output_file_path)
+                if output_file_path_obj.exists():
                     logger.info(
                         f"Existing pharmacy validation log found at: {output_file_path}"
                     )
-                    existing_df = pd.read_excel(output_file_path)
+                    existing_df = pd.read_csv(output_file_path_obj)
                     logger.info(f"Existing log rows: {len(existing_df)}")
                     combined_df = pd.concat(
                         [existing_df, na_pharmacies_output], ignore_index=True
@@ -217,7 +218,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                     )
                     combined_df = na_pharmacies_output
 
-                combined_df.to_excel(output_file_path, index=False)
+                combined_df.to_csv(output_file_path_obj, index=False)
                 logger.info(
                     f"Successfully wrote {len(na_pharmacies_output)} NA pharmacy rows to '{output_file_path}'. Total rows now: {len(combined_df)}."
                 )
@@ -547,7 +548,7 @@ def process_data():
         from config.config_loader import ConfigManager
 
         config_manager = ConfigManager()
-        file_paths = config_manager.get("file_paths.json")
+        file_paths = config_manager.get("../config/file_paths.json")
 
         logger.info("Loading tier disruption data files...")
         result = load_tier_disruption_data(file_paths)
