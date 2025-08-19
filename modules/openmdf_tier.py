@@ -209,43 +209,44 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
             f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
         )
 
-        # Identify rows where pharmacy_is_excluded is "NA"
-        na_pharmacies = df[df["pharmacy_is_excluded"].isna()]
-        logger.info(f"NA pharmacies count: {na_pharmacies.shape[0]}")
+        # Identify rows where pharmacy_is_excluded is NA or 'unknown'
+        unknown_mask = df["pharmacy_is_excluded"].isna() | (df["pharmacy_is_excluded"] == "unknown")
+        unknown_pharmacies = df[unknown_mask]
+        logger.info(f"Unknown/NA pharmacies count: {unknown_pharmacies.shape[0]}")
 
-        if not na_pharmacies.empty:
+        if not unknown_pharmacies.empty:
             output_file_path = file_paths["pharmacy_validation"]
-            na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
-            na_pharmacies_output["Result"] = "NA"
+            unknown_pharmacies_output = unknown_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
+            unknown_pharmacies_output["Result"] = unknown_pharmacies["pharmacy_is_excluded"].fillna("NA")
 
             try:
                 output_file_path_obj = Path(output_file_path)
                 if output_file_path_obj.exists():
                     existing_df = pd.read_csv(output_file_path_obj)
                     combined_df = pd.concat(
-                        [existing_df, na_pharmacies_output], ignore_index=True
+                        [existing_df, unknown_pharmacies_output], ignore_index=True
                     )
                     combined_df = combined_df.drop_duplicates()
                 else:
-                    combined_df = na_pharmacies_output
+                    combined_df = unknown_pharmacies_output
 
                 # Write to CSV
                 combined_df.to_csv(output_file_path_obj, index=False)
                 combined_df.to_excel(output_file_path_obj, index=False)
                 logger.info(
-                    f"NA pharmacies written to '{output_file_path_obj}' with Result column."
+                    f"Unknown/NA pharmacies written to '{output_file_path_obj}' with Result column."
                 )
 
             except Exception as e:
                 logger.error(f"Error updating pharmacy validation file: {e}")
                 # Fallback - just write the new data
-                na_pharmacies_output.to_excel(output_file_path, index=False)
+                unknown_pharmacies_output.to_excel(output_file_path, index=False)
                 logger.info(
-                    f"NA pharmacies written to '{output_file_path}' (fallback mode)."
+                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode)."
                 )
                 # Fallback to original method
                 writer = pd.ExcelWriter(output_file_path, engine="openpyxl")
-                na_pharmacies_output.to_excel(
+                unknown_pharmacies_output.to_excel(
                     writer, sheet_name="Validations", index=False, engine="openpyxl"
                 )
                 writer.close()
@@ -348,7 +349,7 @@ def create_openmdf_summary_dataframe(tab_members, tab_rxs, total_claims, total_m
 
 def create_openmdf_network_analysis(df):
     """Create network analysis for excluded pharmacies."""
-    network_df = df[df["pharmacy_is_excluded"]]
+    network_df = df[df["pharmacy_is_excluded"].fillna(False)]
     logger.debug(f"Initial network_df shape: {network_df.shape}")
     logger.debug(f"Initial network_df contents: {network_df.head(10).to_dict()}")
 

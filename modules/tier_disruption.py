@@ -179,23 +179,26 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
             .astype(str)
             .str.strip().str.lower()
             .map({"yes": True, "no": False})
+            .fillna(False)
         )
         logger.info(
             f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
         )
 
-        # Identify rows where pharmacy_is_excluded is "NA"
-        na_pharmacies = df[df["pharmacy_is_excluded"].isna()]
-        logger.info(f"NA pharmacies count: {na_pharmacies.shape[0]}")
 
-        if not na_pharmacies.empty:
+        # Identify rows where pharmacy_is_excluded is NA or 'unknown'
+        unknown_mask = df["pharmacy_is_excluded"].isna() | (df["pharmacy_is_excluded"] == "unknown")
+        unknown_pharmacies = df[unknown_mask]
+        logger.info(f"Unknown/NA pharmacies count: {unknown_pharmacies.shape[0]}")
+
+        if not unknown_pharmacies.empty:
             output_file_path = file_paths["pharmacy_validation"]
             logger.info(
-                f"Preparing to write NA pharmacies to pharmacy validation log: {output_file_path}"
+                f"Preparing to write unknown/NA pharmacies to pharmacy validation log: {output_file_path}"
             )
-            na_pharmacies_output = na_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
-            na_pharmacies_output["Result"] = "NA"
-            logger.info(f"Rows to write: {len(na_pharmacies_output)}")
+            unknown_pharmacies_output = unknown_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
+            unknown_pharmacies_output["Result"] = unknown_pharmacies["pharmacy_is_excluded"].fillna("NA")
+            logger.info(f"Rows to write: {len(unknown_pharmacies_output)}")
 
             try:
                 output_file_path_obj = Path(output_file_path)
@@ -206,7 +209,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                     existing_df = pd.read_csv(output_file_path_obj)
                     logger.info(f"Existing log rows: {len(existing_df)}")
                     combined_df = pd.concat(
-                        [existing_df, na_pharmacies_output], ignore_index=True
+                        [existing_df, unknown_pharmacies_output], ignore_index=True
                     )
                     combined_df = combined_df.drop_duplicates()
                     logger.info(
@@ -216,11 +219,11 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                     logger.info(
                         f"No existing pharmacy validation log found. Creating new file at: {output_file_path}"
                     )
-                    combined_df = na_pharmacies_output
+                    combined_df = unknown_pharmacies_output
 
                 combined_df.to_csv(output_file_path_obj, index=False)
                 logger.info(
-                    f"Successfully wrote {len(na_pharmacies_output)} NA pharmacy rows to '{output_file_path}'. Total rows now: {len(combined_df)}."
+                    f"Successfully wrote {len(unknown_pharmacies_output)} unknown/NA pharmacy rows to '{output_file_path}'. Total rows now: {len(combined_df)}."
                 )
 
             except Exception as e:
@@ -234,9 +237,9 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                 )
                 # Fallback - just write the new data
                 try:
-                    na_pharmacies_output.to_excel(output_file_path, index=False)
+                    unknown_pharmacies_output.to_excel(output_file_path, index=False)
                     logger.info(
-                        f"Fallback: Wrote {len(na_pharmacies_output)} NA pharmacy rows to '{output_file_path}'."
+                        f"Fallback: Wrote {len(unknown_pharmacies_output)} unknown/NA pharmacy rows to '{output_file_path}'."
                     )
                 except Exception as fallback_e:
                     logger.error(
@@ -381,7 +384,8 @@ def create_summary_dataframe(tab_members, tab_rxs, total_claims, total_members):
 
 def create_network_analysis(df):
     """Create network analysis for excluded pharmacies."""
-    network_df = df[df["pharmacy_is_excluded"]]
+    # Fix: Fill NA/NaN values with False before filtering
+    network_df = df[df["pharmacy_is_excluded"].fillna(False)]
     logger.debug(f"Initial network_df shape: {network_df.shape}")
     logger.debug(f"Initial network_df contents: {network_df.head(10).to_dict()}")
 
@@ -638,15 +642,16 @@ def process_data():
         network_df, network_pivot = create_network_analysis(df)
         total_pharmacies = df.shape[0]
         logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
-        excluded_count = df['pharmacy_is_excluded'].sum()
-        non_excluded_count = (~df['pharmacy_is_excluded']).sum()
+    # Ensure pharmacy_is_excluded is boolean for correct inversion
+        excluded_mask = df['pharmacy_is_excluded'].fillna(False).astype(bool)
+        excluded_count = excluded_mask.sum()
+        non_excluded_count = (~excluded_mask).sum()
         logger.info(f"Total pharmacies in dataset: {total_pharmacies}")
         logger.info(f"Excluded pharmacies ('yes'): {excluded_count}")
         logger.info(f"Non-excluded pharmacies ('no'): {non_excluded_count}")
         logger.info(f"Sanity check: Excluded + Non-excluded = {excluded_count + non_excluded_count} (should match total)")
-        logger.info(
-            f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
-        )
+        logger.info(f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
+    )
 
         # Write Network sheet
         if network_pivot is not None:
@@ -687,7 +692,6 @@ def process_data():
         try:
             import tkinter as tk
             from tkinter import messagebox
-
             root = tk.Tk()
             root.withdraw()
             messagebox.showinfo("Processing Complete", "Processing complete")
