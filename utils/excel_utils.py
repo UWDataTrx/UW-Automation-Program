@@ -278,6 +278,10 @@ def write_df_to_sheet(
 
     try:
         if not use_com:
+            sheet_names = [s.name for s in wb.sheets]
+            if sheet_name not in sheet_names:
+                print(f"DEBUG: Available sheets in '{path}': {sheet_names}")
+                raise ValueError(f"Sheet '{sheet_name}' not found in workbook. Available sheets: {sheet_names}")
             ws = wb.sheets[sheet_name]
             cell = ws.range(start_cell)
 
