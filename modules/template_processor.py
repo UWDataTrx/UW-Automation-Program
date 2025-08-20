@@ -67,6 +67,14 @@ class TemplateProcessor:
             # Copy template to output location
             shutil.copy(str(template), str(output))
             logging.info(f"[Repricing] Template copied to output location: {output}")
+            # Log the output file's last modified time
+            try:
+                mtime = output.stat().st_mtime
+                from datetime import datetime
+                mtime_str = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
+                logging.info(f"[Repricing] Output file last modified: {mtime_str} ({output})")
+            except Exception as e:
+                logging.warning(f"[Repricing] Could not get output file modified time: {e}")
             write_audit_log("TemplateProcessor", f"Template backup created: {backup}")
 
         except Exception as e:
