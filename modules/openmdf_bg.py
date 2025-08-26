@@ -314,9 +314,10 @@ def process_data():
     total_claims = df["Rxs"].sum()
     logger.info("Creating data filters...")
 
-    uni_pos = df[(df["Tier"] == 1) & (df["FormularyTier"].isin(["B", "BRAND"]))]
+    # Update logic/tier filtering to use 1-10 instead of 1 or 2,3
+    uni_pos = df[(df["Tier"].isin(range(1, 11))) & (df["FormularyTier"].isin(["B", "BRAND"]))]
     uni_neg = df[
-        (df["Tier"].isin([2, 3])) & (df["FormularyTier"].isin(["G", "GENERIC"]))
+        (df["Tier"].isin(range(1, 11))) & (df["FormularyTier"].isin(["G", "GENERIC"]))
     ]
 
     def pivot_and_count(data):

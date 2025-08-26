@@ -223,19 +223,20 @@ def create_data_filters(df):
     """Create filtered datasets for different scenarios."""
     logger.info("Creating data filters...")
 
-    uni_pos = df[(df["Universal Tier"] == 1) & df["FormularyTier"].isin(["B", "BRAND"])]
+    # Update logic/tier filtering to use 1-10 instead of 5-10
+    uni_pos = df[(df["Universal Tier"].isin(range(1, 11))) & df["FormularyTier"].isin(["B", "BRAND"])]
     logger.info(f"uni_pos shape: {uni_pos.shape}")
 
     uni_neg = df[
-        df["Universal Tier"].isin([2, 3]) & df["FormularyTier"].isin(["G", "GENERIC"])
+        df["Universal Tier"].isin(range(1, 11)) & df["FormularyTier"].isin(["G", "GENERIC"])
     ]
     logger.info(f"uni_neg shape: {uni_neg.shape}")
 
-    ex_pos = df[(df["Exclusive Tier"] == 1) & df["FormularyTier"].isin(["B", "BRAND"])]
+    ex_pos = df[(df["Exclusive Tier"].isin(range(1, 11))) & df["FormularyTier"].isin(["B", "BRAND"])]
     logger.info(f"ex_pos shape: {ex_pos.shape}")
 
     ex_neg = df[
-        df["Exclusive Tier"].isin([2, 3]) & df["FormularyTier"].isin(["G", "GENERIC"])
+        df["Exclusive Tier"].isin(range(1, 11)) & df["FormularyTier"].isin(["G", "GENERIC"])
     ]
     logger.info(f"ex_neg shape: {ex_neg.shape}")
 
