@@ -51,18 +51,7 @@ class TemplateProcessor:
             shutil.copy(str(template), str(backup))
             logging.info(f"[Repricing] Template backed up to {backup}")
 
-            # Remove old output if it exists
-            if output.exists():
-                try:
-                    output.unlink()
-                    logging.info(f"[Repricing] Old output file removed: {output}")
-                except PermissionError:
-                    logging.error(
-                        f"[Repricing] Cannot overwrite {output} — file is open in Excel."
-                    )
-                    raise RuntimeError(
-                        f"Cannot overwrite {output} — please close it in Excel."
-                    )
+            # No need to remove old output; shutil.copy will overwrite if file exists
 
             # Copy template to output location
             shutil.copy(str(template), str(output))

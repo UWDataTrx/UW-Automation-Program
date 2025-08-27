@@ -277,23 +277,28 @@ def write_df_to_sheet(
     wb, app, use_com = open_workbook(path, visible)
 
     try:
-        if not use_com:
-            sheet_names = [s.name for s in wb.sheets]
-            if sheet_name not in sheet_names:
-                print(f"DEBUG: Available sheets in '{path}': {sheet_names}")
-                raise ValueError(f"Sheet '{sheet_name}' not found in workbook. Available sheets: {sheet_names}")
-            ws = wb.sheets[sheet_name]
-            cell = ws.range(start_cell)
+            logger.info(f"write_df_to_sheet: Using {'COM' if use_com else 'xlwings'} method.")
+            logger.info(f"write_df_to_sheet: DataFrame shape: {df.shape}, columns: {list(df.columns)}")
+            logger.info(f"write_df_to_sheet: Writing to sheet '{sheet_name}' starting at cell '{start_cell}'")
+            logger.info(f"write_df_to_sheet: DataFrame head: {df.head().to_dict()}")
 
-            def clear_func(rng):
-                rng.clear_contents()
+            if not use_com:
+                sheet_names = [s.name for s in wb.sheets]
+                if sheet_name not in sheet_names:
+                    logger.error(f"DEBUG: Available sheets in '{path}': {sheet_names}")
+                    raise ValueError(f"Sheet '{sheet_name}' not found in workbook. Available sheets: {sheet_names}")
+                ws = wb.sheets[sheet_name]
+                cell = ws.range(start_cell)
 
-        else:
-            ws: Any = wb.Worksheets(sheet_name)
-            cell: Any = ws.Range(start_cell)
+                def clear_func(rng):
+                    rng.clear_contents()
 
-            def clear_func(rng):
-                rng.ClearContents()
+            else:
+                ws: Any = wb.Worksheets(sheet_name)
+                cell: Any = ws.Range(start_cell)
+
+                def clear_func(rng):
+                    rng.ClearContents()
 
     except Exception as e:
         close_workbook(wb, app, save=False, use_com=use_com)
@@ -307,35 +312,45 @@ def write_df_to_sheet(
     end_row = start_row + total_rows - 1
     end_col = start_col + n_cols - 1
 
-    if not use_com:
-        target = ws.range((start_row, start_col), (end_row, end_col))
-        if clear:
-            if clear_by_label:
-                # Clear by column label (header row)
-                for idx, col in enumerate(df.columns, start_col):
-                    col_range = ws.range((start_row, idx), (end_row, idx))
-                    col_range.clear_contents()
-            else:
-                clear_func(target)
-        target.options(index=index, header=header).value = df
-    else:
-        target = ws.Range(ws.Cells(start_row, start_col), ws.Cells(end_row, end_col))
-        if clear:
-            if clear_by_label:
-                # Clear by column label (header row)
-                for idx, col in enumerate(df.columns, start_col):
-                    col_rng = ws.Range(ws.Cells(start_row, idx), ws.Cells(end_row, idx))
-                    col_rng.ClearContents()
-            else:
-                clear_func(target)
-        data_start = start_row
-        if header:
-            for j, h in enumerate(df.columns, start_col):
-                ws.Cells(start_row, j).Value = h
-            data_start += 1
-        for i, row in enumerate(df.values.tolist(), data_start):
-            for j, val in enumerate(row, start_col):
-                ws.Cells(i, j).Value = val
+    logger.info(f"write_df_to_sheet: Target range: ({start_row}, {start_col}) to ({end_row}, {end_col})")
+
+    try:
+        if not use_com:
+            target = ws.range((start_row, start_col), (end_row, end_col))
+            if clear:
+                if clear_by_label:
+                    # Clear by column label (header row)
+                    for idx, col in enumerate(df.columns, start_col):
+                        col_range = ws.range((start_row, idx), (end_row, idx))
+                        col_range.clear_contents()
+                else:
+                    clear_func(target)
+            logger.info("write_df_to_sheet: Writing DataFrame to Excel via xlwings...")
+            target.options(index=index, header=header).value = df
+            logger.info(f"write_df_to_sheet: Write complete. First cell value: {ws.range((start_row, start_col)).value}")
+        else:
+            target = ws.Range(ws.Cells(start_row, start_col), ws.Cells(end_row, end_col))
+            if clear:
+                if clear_by_label:
+                    # Clear by column label (header row)
+                    for idx, col in enumerate(df.columns, start_col):
+                        col_rng = ws.Range(ws.Cells(start_row, idx), ws.Cells(end_row, idx))
+                        col_rng.ClearContents()
+                else:
+                    clear_func(target)
+            logger.info("write_df_to_sheet: Writing DataFrame to Excel via COM...")
+            data_start = start_row
+            if header:
+                for j, h in enumerate(df.columns, start_col):
+                    ws.Cells(start_row, j).Value = h
+                data_start += 1
+            for i, row in enumerate(df.values.tolist(), data_start):
+                for j, val in enumerate(row, start_col):
+                    ws.Cells(i, j).Value = val
+            logger.info(f"write_df_to_sheet: Write complete. First cell value: {ws.Cells(start_row, start_col).Value}")
+    except Exception as e:
+        logger.error(f"write_df_to_sheet: Exception during write: {e}")
+        raise
 
     close_workbook(wb, app, save=True, use_com=use_com)
 
