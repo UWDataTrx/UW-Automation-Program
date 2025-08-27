@@ -97,9 +97,14 @@ def load_data_files(file_paths):
     ]
     logger.info(f"exl shape: {exl.shape}")
 
-    network = pd.read_excel(file_paths["n_disrupt"])[
-        ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
-    ]
+    if file_paths["n_disrupt"].lower().endswith(".csv"):
+        network = pd.read_csv(file_paths["n_disrupt"])[
+            ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
+        ]
+    else:
+        network = pd.read_excel(file_paths["n_disrupt"])[
+            ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
+        ]
     logger.info(f"network shape: {network.shape}")
 
     return claims, medi, uni, exl, network

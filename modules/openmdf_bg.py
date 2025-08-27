@@ -199,9 +199,15 @@ def process_data():
         log_user_session_end("openmdf_bg.py")
         return False
     try:
-        network = pd.read_excel(paths["n_disrupt"])[
-            ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
-        ]
+        # Load n_disrupt as CSV if it is a CSV file, otherwise as Excel
+        if paths["n_disrupt"].lower().endswith(".csv"):
+            network = pd.read_csv(paths["n_disrupt"])[
+                ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
+            ]
+        else:
+            network = pd.read_excel(paths["n_disrupt"])[
+                ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
+            ]
         logger.info(f"network shape: {network.shape}")
         log_file_access("openmdf_bg.py", paths["n_disrupt"], "LOADED")
     except Exception as e:
