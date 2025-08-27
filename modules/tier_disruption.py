@@ -564,154 +564,147 @@ def process_data():
             )
             return  # Early exit if claims loading failed
         claims, medi, u, e, network = result
-
-        logger.info(f"Claims loaded: {claims.shape}")
-        logger.info(f"Medi loaded: {medi.shape}")
-        logger.info(f"Universal NDC loaded: {u.shape}")
-        logger.info(f"Alternatives NDC loaded: {e.shape}")
-        logger.info(f"Network loaded: {network.shape}")
-
-        # Log file access
-        log_file_access(
-            "tier_disruption.py", file_paths.get("reprice", "unknown"), "LOADING"
-        )
-        write_audit_log(
-            "tier_disruption.py",
-            f"User {username} loaded file: {file_paths.get('reprice', 'unknown')}",
-            "INFO",
-        )
-        reference_data = (medi, u, e)
-        logger.info("Processing tier data pipeline...")
-        df = process_tier_data_pipeline(claims, reference_data, network)
-        logger.info(f"After processing pipeline: {df.shape}")
-
-        logger.info("Handling pharmacy exclusions...")
-        df = handle_tier_pharmacy_exclusions(df, file_paths)
-        logger.info(f"After exclusions: {df.shape}")
-
-        # Totals for summary
-        total_claims = df["Rxs"].sum()
-        total_members = df["MemberID"].nunique()
-        logger.info(f"Total claims: {total_claims}, Total members: {total_members}")
-
-        # Log data processing metrics
+    except Exception as e:
+        logger.error(f"Error loading configuration or data files: {e}")
         make_audit_entry(
-            "tier_disruption.py",
-            f"Processed {total_claims} claims for {total_members} members by user: {username}",
-            "INFO",
+            "tier_disruption.py", f"Error loading configuration or data files: {e}", "CONFIG_ERROR"
         )
+        return
 
-        # Excel writer setup
-        logger.info("Setting up Excel writer...")
-        writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
+    logger.info(f"Claims loaded: {claims.shape}")
+    logger.info(f"Medi loaded: {medi.shape}")
+    logger.info(f"Universal NDC loaded: {u.shape}")
+    logger.info(f"Alternatives NDC loaded: {e.shape}")
+    logger.info(f"Network loaded: {network.shape}")
 
-        # Summary calculations (must be written immediately after Data)
-        tiers = create_tier_definitions()
-        logger.info("Processing tier pivots...")
-        tier_pivots, tab_members, tab_rxs = process_tier_pivots(df, tiers)
+    # Log file access
+    log_file_access(
+        "tier_disruption.py", file_paths.get("reprice", "unknown"), "LOADING"
+    )
+    write_audit_log(
+        "tier_disruption.py",
+        f"User {username} loaded file: {file_paths.get('reprice', 'unknown')}",
+        "INFO",
+    )
+    reference_data = (medi, u, e)
+    logger.info("Processing tier data pipeline...")
+    df = process_tier_data_pipeline(claims, reference_data, network)
+    logger.info(f"After processing pipeline: {df.shape}")
 
-        # Exclusions sheet (Nonformulary)
-        logger.info("Processing exclusions...")
-        ex_pt, exc_rxs, exc_members = process_exclusions(df)
-        tab_members["Exclusions"] = exc_members
-        tab_rxs["Exclusions"] = exc_rxs
+    logger.info("Handling pharmacy exclusions...")
+    df = handle_tier_pharmacy_exclusions(df, file_paths)
+    logger.info(f"After exclusions: {df.shape}")
 
-        # Write the 'Data' sheet first
-        logger.info("Writing Data sheet...")
-        data_sheet_df = df.copy()
-        data_sheet_df.to_excel(writer, sheet_name="Data", index=False)
+    # Totals for summary
+    total_claims = df["Rxs"].sum()
+    total_members = df["MemberID"].nunique()
+    logger.info(f"Total claims: {total_claims}, Total members: {total_members}")
 
-        # Write the 'Summary' sheet second
-        logger.info("Writing Summary sheet...")
-        summary_df = create_summary_dataframe(
-            tab_members, tab_rxs, total_claims, total_members
-        )
-        summary_df.to_excel(writer, sheet_name="Summary", index=False)
-
-        # Write tier pivots and Exclusions after Summary
-        logger.info("Writing tier pivot sheets...")
-        for name, pt, members, _ in tier_pivots:
-            pt.to_excel(writer, sheet_name=name)
-            writer.sheets[name].write("F1", f"Total Members: {members}")
-
-        logger.info("Writing Exclusions sheet...")
-        ex_pt.to_excel(writer, sheet_name="Exclusions")
-        writer.sheets["Exclusions"].write("F1", f"Total Members: {exc_members}")
-
-        # Network summary for excluded pharmacies (pharmacy_is_excluded="yes")
-        logger.info("Processing network analysis...")
-        network_df, network_pivot = create_network_analysis(df)
-        total_pharmacies = df.shape[0]
-        logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
-    # Ensure pharmacy_is_excluded is boolean for correct inversion
-        excluded_mask = df['pharmacy_is_excluded'].fillna(False).astype(bool)
-        excluded_count = excluded_mask.sum()
-        non_excluded_count = (~excluded_mask).sum()
-        logger.info(f"Total pharmacies in dataset: {total_pharmacies}")
-        logger.info(f"Excluded pharmacies ('yes'): {excluded_count}")
-        logger.info(f"Non-excluded pharmacies ('no'): {non_excluded_count}")
-        logger.info(f"Sanity check: Excluded + Non-excluded = {excluded_count + non_excluded_count} (should match total)")
-        logger.info(f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
+    # Log data processing metrics
+    make_audit_entry(
+        "tier_disruption.py",
+        f"Processed {total_claims} claims for {total_members} members by user: {username}",
+        "INFO",
     )
 
-        # Write Network sheet
-        if network_pivot is not None:
-            logger.info("Writing Network pivot sheet...")
-            network_pivot.to_excel(writer, sheet_name="Network", index=False)
+    # Excel writer setup
+    logger.info("Setting up Excel writer...")
+    writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
 
-        # Write filtered network data
-        logger.info("Writing filtered network data...")
-        selected_columns = [
-            "PHARMACYNPI",
-            "NABP",
-            "MemberID",
-            "Pharmacy Name",
-            "pharmacy_is_excluded",
-            "Unique Identifier",
-        ]
-        network_df[selected_columns].to_excel(writer, sheet_name="Network", index=False)
-        logger.info(
-            f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
-        )
+    # Summary calculations (must be written immediately after Data)
+    tiers = create_tier_definitions()
+    logger.info("Processing tier pivots...")
+    tier_pivots, tab_members, tab_rxs = process_tier_pivots(df, tiers)
 
-        writer.close()
-        logger.info(f"Excel report written to: {output_path}")
+    # Exclusions sheet (Nonformulary)
+    logger.info("Processing exclusions...")
+    ex_pt, exc_rxs, exc_members = process_exclusions(df)
+    tab_members["Exclusions"] = exc_members
+    tab_rxs["Exclusions"] = exc_rxs
 
-        # Log successful completion
-        make_audit_entry(
-            "tier_disruption.py",
-            f"Successfully generated tier disruption report: {str(output_path)} by user: {username}",
-            "INFO",
-        )
-        log_file_access("tier_disruption.py", str(output_path), "CREATED")
-        write_audit_log(
-            "tier_disruption.py",
-            f"Excel report written to: {str(output_path)} by user: {username}",
-            "INFO",
-        )
-        print(f"Processing complete. Output file: {output_path}")
-        try:
-            import tkinter as tk
-            from tkinter import messagebox
-            root = tk.Tk()
-            root.withdraw()
-            messagebox.showinfo("Processing Complete", "Processing complete")
-            root.destroy()
-        except Exception:
-            pass
-    except Exception as e:
-        # Log detailed error information
-        make_audit_entry(
-            "tier_disruption.py",
-            f"Processing failed with error: {str(e)}",
-            "SYSTEM_ERROR",
-        )
-        write_audit_log(
-            "tier_disruption.py",
-            f"Processing failed for user: {username}: {e}",
-            status="ERROR",
-        )
-        raise
+    # Write the 'Data' sheet first
+    logger.info("Writing Data sheet...")
+    data_sheet_df = df.copy()
+    data_sheet_df.to_excel(writer, sheet_name="Data", index=False)
+
+    # Write the 'Summary' sheet second
+    logger.info("Writing Summary sheet...")
+    summary_df = create_summary_dataframe(
+        tab_members, tab_rxs, total_claims, total_members
+    )
+    summary_df.to_excel(writer, sheet_name="Summary", index=False)
+
+    # Write tier pivots and Exclusions after Summary
+    logger.info("Writing tier pivot sheets...")
+    for name, pt, members, _ in tier_pivots:
+        pt.to_excel(writer, sheet_name=name)
+        writer.sheets[name].write("F1", f"Total Members: {members}")
+
+    logger.info("Writing Exclusions sheet...")
+    ex_pt.to_excel(writer, sheet_name="Exclusions")
+    writer.sheets["Exclusions"].write("F1", f"Total Members: {exc_members}")
+
+    # Network summary for excluded pharmacies (pharmacy_is_excluded="yes")
+    logger.info("Processing network analysis...")
+    network_df, network_pivot = create_network_analysis(df)
+    total_pharmacies = df.shape[0]
+    logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
+    # Ensure pharmacy_is_excluded is boolean for correct inversion
+    excluded_mask = df['pharmacy_is_excluded'].fillna(False).astype(bool)
+    excluded_count = excluded_mask.sum()
+    non_excluded_count = (~excluded_mask.astype(bool)).sum()
+    logger.info(f"Total pharmacies in dataset: {total_pharmacies}")
+    logger.info(f"Excluded pharmacies ('yes'): {excluded_count}")
+    logger.info(f"Non-excluded pharmacies ('no'): {non_excluded_count}")
+    logger.info(f"Sanity check: Excluded + Non-excluded = {excluded_count + non_excluded_count} (should match total)")
+    logger.info(f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
+    )
+
+    # Write Network sheet
+    if network_pivot is not None:
+        logger.info("Writing Network pivot sheet...")
+        network_pivot.to_excel(writer, sheet_name="Network", index=False)
+
+    # Write filtered network data
+    logger.info("Writing filtered network data...")
+    selected_columns = [
+        "PHARMACYNPI",
+        "NABP",
+        "MemberID",
+        "Pharmacy Name",
+        "pharmacy_is_excluded",
+        "Unique Identifier",
+    ]
+    network_df[selected_columns].to_excel(writer, sheet_name="Network", index=False)
+    logger.info(
+        f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
+    )
+
+    writer.close()
+    logger.info(f"Excel report written to: {output_path}")
+
+    # Log successful completion
+    make_audit_entry(
+        "tier_disruption.py",
+        f"Successfully generated tier disruption report: {str(output_path)} by user: {username}",
+        "INFO",
+    )
+    log_file_access("tier_disruption.py", str(output_path), "CREATED")
+    write_audit_log(
+        "tier_disruption.py",
+        f"Excel report written to: {str(output_path)} by user: {username}",
+        "INFO",
+    )
+    print(f"Processing complete. Output file: {output_path}")
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showinfo("Processing Complete", "Processing complete")
+        root.destroy()
+    except Exception:
+        pass
     finally:
         # End audit session
         log_user_session_end("tier_disruption.py")

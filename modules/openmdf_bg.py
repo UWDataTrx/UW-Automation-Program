@@ -519,7 +519,7 @@ def process_data():
     total_pharmacies = df.shape[0]
     logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
     excluded_count = df['pharmacy_is_excluded'].sum()
-    non_excluded_count = (~df['pharmacy_is_excluded']).sum()
+    non_excluded_count = (~df['pharmacy_is_excluded'].astype(bool)).sum()
     logger.info(f"Total pharmacies in dataset: {total_pharmacies}")
     logger.info(f"Excluded pharmacies ('yes'): {excluded_count}")
     logger.info(f"Non-excluded pharmacies ('no'): {non_excluded_count}")
