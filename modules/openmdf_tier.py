@@ -283,8 +283,8 @@ def create_openmdf_tier_definitions():
 
 def summarize_by_openmdf_tier(df, col, from_val, to_val):
     """Summarize Open MDF tier data."""
-    # Update logic/tier filtering to use 1-10 instead of 5-10
-    filtered = df[(df[col].isin(range(1, 11))) & (df["FormularyTier"] == to_val)]
+    
+    filtered = df[(df[col] == from_val) & (df["FormularyTier"] == to_val)]
     pt = pd.pivot_table(
         filtered,
         values=["Rxs", "MemberID"],

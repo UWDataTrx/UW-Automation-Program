@@ -26,7 +26,7 @@ class LogicMaintenanceConfig:
     """Configuration for logic and maintenance filtering."""
 
     logic_col: str = "Logic"
-    min_logic: int = 5
+    min_logic: int = 1
     max_logic: int = 10
     maint_col: str = "Maint Drug?"
 

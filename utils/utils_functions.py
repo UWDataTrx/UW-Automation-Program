@@ -218,7 +218,7 @@ def filter_recent_date(df, date_col="DATEFILLED"):
 
 
 def filter_logic_and_maintenance(
-    df, logic_col="Logic", min_logic=5, max_logic=10, maint_col="Maint Drug?"
+    df, logic_col="Logic", min_logic=1, max_logic=10, maint_col="Maint Drug?"
 ):
     """
     Filters rows where min_logic ≤ Logic ≤ max_logic and 'Maint Drug?' == 'Y'.
