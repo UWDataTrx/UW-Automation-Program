@@ -1,0 +1,15 @@
+{
+  "medi_span": "%OneDrive%/True Community - Data Analyst/Medispan Export 6.27.25.xlsx",
+  "e_disrupt": "%OneDrive%/True Community - Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Exclusive - Formulary Reference Guide.xlsx",
+  "u_disrupt": "%OneDrive%/True Community - Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Universal - Formulary Reference Guide.xlsx",
+  "mdf_disrupt": "%OneDrive%/True Community - Data Analyst/Repricing Templates/Disruption/Formulary Tiers References/Copy of Open MDF - Formulary Reference Guide.xlsx",
+  "n_disrupt": "%OneDrive%/True Community - Data Analyst/Repricing Templates/Disruption/Pharmacy Disruption/Rx Sense Pharmacy Network 8.25.csv",
+  "reprice": "_Rx Repricing_wf.xlsx",
+  "lbl": "%OneDrive%/True Community - Data Analyst/Repricing Templates/Standard/Template_LBL Claims.xlsx",
+  "sharx": "%OneDrive%/True Community - Data Analyst/Repricing Templates/SHARx/Template_Rx Claims for SHARx.xlsx",
+  "epls": "%OneDrive%/True Community - Data Analyst/Repricing Templates/EPLS/Client Name_Rx Claims for EPLS.xlsx",
+  "pharmacy_validation": "%OneDrive%/True Community - Data Analyst/UW Python Program/Logs/Pharmacy_RxSense Validation.xlsx",
+  "audit_log": "%OneDrive%/True Community - Data Analyst/UW Python Program/Logs/Audit_Log.csv",
+  "diagnostic_reports": "%OneDrive%/True Community - Data Analyst/UW Python Program/Diagnostic Reports",
+  "results_parquet": "%OneDrive%/True Community - Data Analyst/UW Python Program/B.o.B/results.parquet"
+}
