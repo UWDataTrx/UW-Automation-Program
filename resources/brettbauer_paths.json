@@ -9,6 +9,10 @@
   "epls": "C:\\Users\\BrettBauer\\OneDrive - True Rx Health Strategists\\True Rx Management Services\\Data Analyst\\Repricing Templates\\EPLS\\Client Name_Rx Claims for EPLS.xlsx",
   "pharmacy_validation": "C:\\Users\\BrettBauer\\OneDrive - True Rx Health Strategists\\True Rx Management Services\\Data Analyst\\UW Python Program\\Logs\\Pharmacy_RxSense Validation.xlsx",
   "audit_log": "C:\\Users\\BrettBauer\\OneDrive - True Rx Health Strategists\\True Community - Data Analyst\\UW Python Program\\Logs\\BrettBauer\\Audit_Log.csv",
+<<<<<<< HEAD
   "diagnostic_reports": "C:\\Users\\BrettBauer\\OneDrive - True Rx Health Strategists\\True Rx Management Services\\Data Analyst\\UW Python Program\\Diagnostic Reports",
   "results_parquet": "%OneDrive%/True Community - Data Analyst/UW Python Program/B.o.B/results.parquet"
+=======
+  "diagnostic_reports": "C:\\Users\\BrettBauer\\OneDrive - True Rx Health Strategists\\True Rx Management Services\\Data Analyst\\UW Python Program\\Diagnostic Reports"
+>>>>>>> a387064600c31f088f8fafa3b9e1137f33cdce57
 }
