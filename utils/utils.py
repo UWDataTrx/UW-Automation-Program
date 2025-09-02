@@ -169,12 +169,20 @@ def merge_with_network(df, network):
     Returns:
         pd.DataFrame: Merged DataFrame.
     """
-    return df.merge(
+    merged = df.merge(
         network,
         left_on=["PHARMACYNPI", "NABP"],
         right_on=["pharmacy_npi", "pharmacy_nabp"],
         how="left",
     )
+
+    # If NABP or NPI cannot be matched, set pharmacy_is_excluded to 'N/A'
+    # If value is already 'yes' or 'no', keep it
+    if "pharmacy_is_excluded" in merged.columns:
+        merged["pharmacy_is_excluded"] = merged["pharmacy_is_excluded"].where(
+            merged["pharmacy_is_excluded"].isin(["yes", "no"]), "N/A"
+        )
+    return merged
 
 
 def drop_duplicates_df(df):
