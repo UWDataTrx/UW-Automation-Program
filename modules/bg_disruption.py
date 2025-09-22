@@ -195,7 +195,7 @@ def handle_pharmacy_exclusions(df, file_paths):
             try:
                 output_path = Path(output_file_path)
                 if output_path.exists():
-                    existing_df = pd.read_csv(output_path)
+                    existing_df = pd.read_excel(output_path)
                     combined_df = pd.concat(
                         [existing_df, unknown_pharmacies_output], ignore_index=True
                     )
@@ -203,9 +203,9 @@ def handle_pharmacy_exclusions(df, file_paths):
                 else:
                     combined_df = unknown_pharmacies_output
 
-                combined_df.to_csv(output_path, index=False)
+                combined_df.to_excel(output_path, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_path}' with Result column."
+                    f"Unknown/NA pharmacies written to '{output_path}' with Result column (XLSX)."
                 )
 
             except Exception as e:
@@ -218,7 +218,7 @@ def handle_pharmacy_exclusions(df, file_paths):
                 # Fallback - just write the new data
                 unknown_pharmacies_output.to_excel(output_file_path, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode)."
+                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode XLSX)."
                 )
 
     return df
@@ -400,6 +400,7 @@ def write_excel_report(report_data, output_filename):
     df, summary, tabs, network_pivot = report_data
 
     output_path = Path(output_filename)
+    os.makedirs(output_path.parent, exist_ok=True)
     writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
     df.to_excel(writer, sheet_name="Data", index=False)
     summary.to_excel(writer, sheet_name="Summary", index=False)

@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -235,11 +236,10 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
                 else:
                     combined_df = unknown_pharmacies_output
 
-                # Write to CSV
-                combined_df.to_csv(output_file_path_obj, index=False)
+                # Write to XLSX only
                 combined_df.to_excel(output_file_path_obj, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_file_path_obj}' with Result column."
+                    f"Unknown/NA pharmacies written to '{output_file_path_obj}' with Result column (XLSX)."
                 )
 
             except Exception as e:
@@ -247,7 +247,7 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
                 # Fallback - just write the new data
                 unknown_pharmacies_output.to_excel(output_file_path, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode)."
+                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode XLSX)."
                 )
                 # Fallback to original method
                 writer = pd.ExcelWriter(output_file_path, engine="openpyxl")
@@ -256,7 +256,7 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
                 )
                 writer.close()
                 logger.info(
-                    f"NA pharmacies written to '{output_file_path}' sheet (fallback)."
+                    f"NA pharmacies written to '{output_file_path}' sheet (fallback XLSX)."
                 )
 
     return df
@@ -535,6 +535,8 @@ def process_data():
             "INFO",
         )
 
+        # Ensure output directory exists before saving Excel file
+        os.makedirs(output_path.parent, exist_ok=True)
         # Excel writer setup
         writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
 

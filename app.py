@@ -1149,6 +1149,7 @@ class App:
                 )
             else:
                 parquet_path = output_dir / "merged_file_with_OR.parquet"
+            os.makedirs(os.path.dirname(str(parquet_path)), exist_ok=True)
             df.drop_duplicates().to_parquet(parquet_path, index=False)
             logger.info(f"Saved intermediate Parquet file: {parquet_path}")
         except Exception as e:
@@ -1156,17 +1157,20 @@ class App:
 
     def _save_to_excel(self, df, output_file):
         """Save data to Excel format."""
+        os.makedirs(os.path.dirname(str(output_file)), exist_ok=True)
         df.drop_duplicates().to_excel(output_file, index=False)
 
     def _save_to_csv(self, df, output_dir):
         """Save data to CSV format with opportunity name."""
         opportunity_name = self._extract_opportunity_name()
         csv_path = output_dir / f"{opportunity_name} Claim Detail.csv"
+        os.makedirs(os.path.dirname(str(csv_path)), exist_ok=True)
         df.drop_duplicates().to_csv(csv_path, index=False)
 
     def _save_unmatched_reversals(self, excel_rows_to_highlight, output_dir):
         """Save unmatched reversals information."""
         unmatched_path = output_dir / "unmatched_reversals.txt"
+        os.makedirs(os.path.dirname(str(unmatched_path)), exist_ok=True)
         with open(unmatched_path, "w") as f:
             f.write(",".join(map(str, excel_rows_to_highlight)))
 

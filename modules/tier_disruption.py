@@ -209,7 +209,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                 output_file_path_obj = Path(output_file_path)
                 if output_file_path_obj.exists():
                     logger.info(f"Existing pharmacy validation log found at: {output_file_path}")
-                    existing_df = pd.read_csv(output_file_path_obj)
+                    existing_df = pd.read_excel(output_file_path_obj)
                     logger.info(f"Existing log rows: {len(existing_df)}")
                     combined_df = pd.concat([existing_df, unknown_pharmacies_output], ignore_index=True)
                     combined_df = combined_df.drop_duplicates()
@@ -218,8 +218,8 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                     logger.info(f"No existing pharmacy validation log found. Creating new file at: {output_file_path}")
                     combined_df = unknown_pharmacies_output
 
-                combined_df.to_csv(output_file_path_obj, index=False)
-                logger.info(f"Successfully wrote {len(unknown_pharmacies_output)} blank/N/A/unknown pharmacy rows to '{output_file_path}'. Total rows now: {len(combined_df)}.")
+                combined_df.to_excel(output_file_path_obj, index=False)
+                logger.info(f"Successfully wrote {len(unknown_pharmacies_output)} blank/N/A/unknown pharmacy rows to '{output_file_path}' (XLSX). Total rows now: {len(combined_df)}.")
 
             except Exception as e:
                 logger.error(f"Error updating pharmacy validation file '{output_file_path}': {e}")
@@ -231,7 +231,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                 # Fallback - just write the new data
                 try:
                     unknown_pharmacies_output.to_excel(output_file_path, index=False)
-                    logger.info(f"Fallback: Wrote {len(unknown_pharmacies_output)} blank/N/A/unknown pharmacy rows to '{output_file_path}'.")
+                    logger.info(f"Fallback: Wrote {len(unknown_pharmacies_output)} blank/N/A/unknown pharmacy rows to '{output_file_path}' (XLSX).")
                 except Exception as fallback_e:
                     logger.error(f"Fallback error writing to '{output_file_path}': {fallback_e}")
 
@@ -448,6 +448,8 @@ def write_excel_sheets(
             "Output filename was empty or invalid. Defaulting to 'Unknown_Tier_Disruption_Report.xlsx'.",
             "WARNING",
         )
+    else:
+        os.makedirs(Path(output_path).parent, exist_ok=True)
 
     # Write Summary sheet
     summary_df.to_excel(writer, sheet_name="Summary", index=False)

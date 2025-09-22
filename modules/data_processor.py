@@ -314,6 +314,7 @@ class DataProcessor:
         """Save data to Parquet format for large DataFrames."""
         try:
             parquet_path = output_dir / "merged_file_with_OR.parquet"
+            os.makedirs(os.path.dirname(str(parquet_path)), exist_ok=True)
             df.drop_duplicates().to_parquet(parquet_path, index=False)
             logging.info(f"Saved intermediate Parquet file: {parquet_path}")
         except Exception as e:
@@ -321,6 +322,7 @@ class DataProcessor:
 
     def _save_to_excel(self, df, output_file):
         """Save data to Excel format."""
+        os.makedirs(os.path.dirname(str(output_file)), exist_ok=True)
         df.drop_duplicates().to_excel(output_file, index=False)
         logging.info(f"Saved Excel file: {output_file}")
 
@@ -340,6 +342,7 @@ class DataProcessor:
                     "WARNING",
                 )
             csv_path = output_dir / f"{opportunity_name} Claim Detail.csv"
+            os.makedirs(os.path.dirname(str(csv_path)), exist_ok=True)
             df.drop_duplicates().to_csv(csv_path, index=False)
             logging.info(f"Saved CSV file: {csv_path}")
             write_audit_log("DataProcessor", f"Saved CSV file: {csv_path}", "INFO")
@@ -351,6 +354,7 @@ class DataProcessor:
         """Save unmatched reversals information."""
         try:
             unmatched_path = output_dir / "unmatched_reversals.txt"
+            os.makedirs(os.path.dirname(str(unmatched_path)), exist_ok=True)
             with open(unmatched_path, "w") as f:
                 f.write(",".join(map(str, excel_rows_to_highlight)))
             logging.info(f"Saved unmatched reversals info: {unmatched_path}")

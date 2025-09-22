@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -27,6 +28,7 @@ from utils.utils import (clean_logic_and_tier,  # noqa: E402
 
 # Always use 'LBL for Disruption.xlsx' in the current working directory
 output_path = Path.cwd() / "LBL for Disruption.xlsx"
+os.makedirs(output_path.parent, exist_ok=True)
 
 
 # Add the project root directory to the Python path using PROJECT_ROOT
@@ -394,7 +396,7 @@ def process_data():
             try:
                 output_file_path_obj = Path(output_file_path)
                 if output_file_path_obj.exists():
-                    existing_df = pd.read_csv(output_file_path_obj)
+                    existing_df = pd.read_excel(output_file_path_obj)
                     combined_df = pd.concat(
                         [existing_df, unknown_pharmacies_output], ignore_index=True
                     )
@@ -402,9 +404,9 @@ def process_data():
                 else:
                     combined_df = unknown_pharmacies_output
 
-                combined_df.to_csv(output_file_path_obj, index=False)
+                combined_df.to_excel(output_file_path_obj, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_file_path_obj}' with Result column."
+                    f"Unknown/NA pharmacies written to '{output_file_path_obj}' with Result column (XLSX)."
                 )
 
             except Exception as e:
@@ -412,7 +414,7 @@ def process_data():
                 # Fallback - just write the new data
                 unknown_pharmacies_output.to_excel(output_file_path, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode)."
+                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode XLSX)."
                 )
 
     # Write main data to 'Claims Data' sheet

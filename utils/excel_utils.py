@@ -3,6 +3,7 @@ import logging
 import shutil
 import sys
 import tempfile
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Tuple, Union
@@ -41,6 +42,7 @@ def safe_excel_write(df: pd.DataFrame, output_path: Union[str, Path], **kwargs) 
     """
     try:
         output_path = Path(output_path)
+        os.makedirs(output_path.parent, exist_ok=True)
         # Create a temporary file first
         temp_dir = output_path.parent
         with tempfile.NamedTemporaryFile(
@@ -374,6 +376,7 @@ def write_df_to_template(
     """
     template_path = Path(template_path)
     output_path = Path(output_path)  # Use the provided output_path
+    os.makedirs(output_path.parent, exist_ok=True)
 
     # Remove these hardcoded lines:
     # working_dir
@@ -425,13 +428,11 @@ def write_df_to_template(
     if open_file:
         try:
             output_path_str = str(output_path)
-            import os
-
+            # Use already imported os module
             if hasattr(os, "startfile"):
                 os.startfile(output_path_str)
             else:
                 import subprocess
-
                 subprocess.run(["open", output_path_str])
         except Exception as e:
             logger.warning(f"Could not open file after writing: {e}")
