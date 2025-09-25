@@ -28,36 +28,41 @@ jobs:
           echo "Files available in upstream/main:"
           git ls-tree -r --name-only upstream/main | head -20
 
+      - name: Clean cache and temp files
+        shell: pwsh
+        run: |
+          Write-Output "Cleaning cache and temp files..."
+          Get-ChildItem -Path . -Recurse -Include *.pyc,~$*,*.tmp,*.log,*.bak | Remove-Item -Force
+
       - name: Sync specific files
+        shell: pwsh
         continue-on-error: false
         run: |
-          echo "Starting file and directory sync..."
-          
+          Write-Output "Starting file and directory sync..."
+
           # Sync root-level app.py file
-          echo "Syncing app.py..."
-          if git show upstream/main:app.py >/dev/null 2>&1; then
-            git checkout upstream/main -- app.py && echo "✓ Synced: app.py" || echo "✗ Failed to sync: app.py"
-          else
-            echo "⚠ app.py not found in upstream"
-          fi
-          
+          Write-Output "Syncing app.py..."
+          $appExists = git ls-tree -r --name-only upstream/main | Select-String -Pattern "^app.py$"
+          if ($appExists) {
+            git checkout upstream/main -- app.py
+            Write-Output "✓ Synced: app.py"
+          } else {
+            Write-Output "⚠ app.py not found in upstream"
+          }
+
           # Sync entire directories
-          declare -a directories=(
-            "config"
-            "modules"
-            "utils"
-          )
-          
-          for dir in "${directories[@]}"; do
-            echo "Syncing ${dir}/ directory..."
-            if git show upstream/main:${dir} >/dev/null 2>&1; then
-              # Remove local directory first to ensure clean sync
-              rm -rf ${dir}
-              git checkout upstream/main -- ${dir}/ && echo "✓ Synced directory: ${dir}/" || echo "✗ Failed to sync directory: ${dir}/"
-            else
-              echo "⚠ ${dir}/ directory not found in upstream"
-            fi
-          done
+          $directories = @("config", "modules", "utils")
+          foreach ($dir in $directories) {
+            Write-Output "Syncing $dir/ directory..."
+            $dirExists = git ls-tree -r --name-only upstream/main | Select-String -Pattern "^$dir/"
+            if ($dirExists) {
+              Remove-Item -Recurse -Force $dir
+              git checkout upstream/main -- "$dir/"
+              Write-Output "✓ Synced directory: $dir/"
+            } else {
+              Write-Output "⚠ $dir/ directory not found in upstream"
+            }
+          }
           
           echo "File and directory sync completed."
 
