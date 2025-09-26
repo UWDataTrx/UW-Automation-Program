@@ -1,5 +1,4 @@
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -19,8 +18,7 @@ from modules.audit_helper import (log_file_access,  # noqa: E402
 from utils.utils import (clean_logic_and_tier,  # noqa: E402
                          drop_duplicates_df, filter_logic_and_maintenance,
                          filter_products_and_alternative, filter_recent_date,
-                         merge_with_network, standardize_network_ids,
-                         standardize_pharmacy_ids, write_audit_log)
+                         write_audit_log)
 
 # Logging setup
 logging.basicConfig(
@@ -30,24 +28,14 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+# Prevent double logging
+logger.propagate = False
+# Add console handler for terminal output
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+logger.addHandler(console_handler)
 
-# Load NABP/NPI list
-included_nabp_npi = {
-    "4528874": "1477571404",
-    "2365422": "1659313435",
-    "3974157": "1972560688",
-    "320793": "1164437406",
-    "4591055": "1851463087",
-    "2348046": "1942303110",
-    "4023610": "1407879588",
-    "4025385": "1588706212",
-    "4025311": "1588705446",
-    "4026806": "1285860312",
-    "4931350": "1750330775",
-    "4024585": "1396768461",
-    "4028026": "1497022438",
-    "2643749": "1326490376",
-}
 
 
 # ---------------------------------------------------------------------------
@@ -124,13 +112,16 @@ def load_openmdf_tier_data(file_paths):
     try:
         if file_paths["n_disrupt"].lower().endswith(".csv"):
             network = pd.read_csv(file_paths["n_disrupt"])[
-                ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
+                ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]
             ]
         else:
             network = pd.read_excel(file_paths["n_disrupt"])[
-                ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
+                ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]
             ]
         print(f"network shape: {network.shape}")
+        print(f"Raw network['pharmacy_nabp'] sample: {network['pharmacy_nabp'].head(10).tolist()}")
+        print(f"Raw network['pharmacy_npi'] sample: {network['pharmacy_npi'].head(10).tolist()}")
+        print(f"Unique values in raw network['pharmacy_is_excluded']: {network['pharmacy_is_excluded'].unique()}")
     except Exception as e:
         logger.error(f"Failed to read n_disrupt file: {file_paths['n_disrupt']} | {e}")
         write_audit_log(
@@ -150,33 +141,30 @@ def process_openmdf_data_pipeline(claims, reference_data, network):
     # Merge reference data
     df = claims.merge(medi, on="NDC", how="left")
     print(f"After merge with medi: {df.shape}")
-
     df = df.merge(mdf.rename(columns={"Tier": "Open MDF Tier"}), on="NDC", how="left")
     print(f"After merge with mdf: {df.shape}")
-
-    df = df.merge(
-        exclusive.rename(columns={"Tier": "Exclusive Tier"}), on="NDC", how="left"
-    )
+    df = df.merge(exclusive.rename(columns={"Tier": "Exclusive Tier"}), on="NDC", how="left")
     print(f"After merge with exclusive: {df.shape}")
-
-    # Standardize IDs and perform network merge
-    df = standardize_pharmacy_ids(df)
-    print(f"After standardize_pharmacy_ids: {df.shape}")
-    network = standardize_network_ids(network)
-    print(f"After standardize_network_ids: {network.shape}")
-    df = merge_with_network(df, network)
-    print(f"After merge_with_network: {df.shape}")
-
-    if "pharmacy_id" not in df.columns:
-        df["pharmacy_id"] = df.apply(
-            lambda row: (
-                row["PHARMACYNPI"] if pd.notna(row["PHARMACYNPI"]) else row["NABP"]
-            ),
-            axis=1,
-        )
-
-    print("Columns in df before further processing:")
-    print(df.columns)
+    # Unified pharmacy_id creation and merging
+    df['pharmacy_id'] = df.apply(lambda row: str(row['PHARMACYNPI']) if pd.notna(row['PHARMACYNPI']) else str(row['NABP']), axis=1)
+    network['pharmacy_id'] = network.apply(lambda row: str(row['pharmacy_npi']) if pd.notna(row['pharmacy_npi']) else str(row['pharmacy_nabp']), axis=1)
+    df = pd.merge(df, network[['pharmacy_id', 'pharmacy_is_excluded']], on='pharmacy_id', how='left')
+    print(f"After merge on pharmacy_id: {df.shape}")
+    # Map exclusions: True/False/REVIEW
+    def map_excluded(val):
+        if pd.isna(val) or str(val).strip() == "":
+            return "REVIEW"
+        v = str(val).strip().lower()
+        if v in {"yes", "y", "true", "1"}:
+            return True
+        elif v in {"no", "n", "false", "0"}:
+            return False
+        return "REVIEW"
+    df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(map_excluded)
+    # Fill missing IDs
+    import numpy as np
+    df["PHARMACYNPI"] = df["PHARMACYNPI"].replace([np.nan, '', float('nan')], "N/A").fillna("N/A")
+    df["NABP"] = df["NABP"].replace(['', float('nan')], "N/A").fillna("N/A")
 
     # Date parsing, deduplication, type cleaning, and filters
     df["DATEFILLED"] = pd.to_datetime(df["DATEFILLED"], errors="coerce")
@@ -204,15 +192,19 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
     """Handle pharmacy exclusions for Open MDF tier disruption."""
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
-        # Only 'yes' and 'no' (case-insensitive) are mapped; blanks/unknowns become NaN for manual review
-        df["pharmacy_is_excluded"] = (
-            df["pharmacy_is_excluded"]
-            .astype(str)
-            .str.strip().str.lower()
-            .map({"yes": True, "no": False})
-        )
+        def map_excluded(val):
+            if pd.isna(val):
+                return None
+            v = str(val).strip().lower()
+            if v in {"yes", "y", "true", "1"}:
+                return True
+            elif v in {"no", "n", "false", "0"}:
+                return False
+            logger.warning(f"Unexpected pharmacy_is_excluded value encountered: {val}")
+            return None
+        df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(map_excluded)
         logger.info(
-            f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
+            f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts(dropna=False).to_dict()}"
         )
 
         # Identify rows where pharmacy_is_excluded is NA or 'unknown'
@@ -236,10 +228,11 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
                 else:
                     combined_df = unknown_pharmacies_output
 
-                # Write to XLSX only
+                # Write to CSV
+                combined_df.to_csv(output_file_path_obj, index=False)
                 combined_df.to_excel(output_file_path_obj, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_file_path_obj}' with Result column (XLSX)."
+                    f"Unknown/NA pharmacies written to '{output_file_path_obj}' with Result column."
                 )
 
             except Exception as e:
@@ -247,7 +240,7 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
                 # Fallback - just write the new data
                 unknown_pharmacies_output.to_excel(output_file_path, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode XLSX)."
+                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode)."
                 )
                 # Fallback to original method
                 writer = pd.ExcelWriter(output_file_path, engine="openpyxl")
@@ -256,7 +249,7 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
                 )
                 writer.close()
                 logger.info(
-                    f"NA pharmacies written to '{output_file_path}' sheet (fallback XLSX)."
+                    f"NA pharmacies written to '{output_file_path}' sheet (fallback)."
                 )
 
     return df
@@ -355,12 +348,11 @@ def create_openmdf_summary_dataframe(tab_members, tab_rxs, total_claims, total_m
 
 def create_openmdf_network_analysis(df):
     """Create network analysis for excluded pharmacies."""
-    network_df = df[df["pharmacy_is_excluded"].fillna(False)]
-    logger.debug(f"Initial network_df shape: {network_df.shape}")
-    logger.debug(f"Initial network_df contents: {network_df.head(10).to_dict()}")
-
+    # Ensure any blanks in pharmacy_is_excluded are marked as 'REVIEW' before filtering
+    df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].replace([None, '', pd.NA], "REVIEW")
+    # Only include rows where pharmacy_is_excluded is True or REVIEW
+    network_df = df[df["pharmacy_is_excluded"].isin([True, "REVIEW"])]
     import re
-
     filter_phrases = [
         "CVS",
         "Walgreens",
@@ -374,43 +366,23 @@ def create_openmdf_network_analysis(df):
         "Publix",
     ]
     filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
-    regex_pattern = "|".join([f"\\b{p}\\b" for p in filter_phrases_escaped])
+    regex_pattern = "|".join([f"\b{p}\b" for p in filter_phrases_escaped])
     network_df = network_df[
         ~network_df["Pharmacy Name"]
         .str.lower()
         .str.contains(regex_pattern, case=False, regex=True, na=False)
     ]
-    logger.debug(f"Filtered network_df shape: {network_df.shape}")
-    logger.debug(f"Filtered network_df contents: {network_df.head(10).to_dict()}")
-
-    if {"PHARMACYNPI", "NABP", "Pharmacy Name"}.issubset(network_df.columns):
-        network_df["PHARMACYNPI"] = network_df["PHARMACYNPI"].fillna("N/A")
-        network_df["NABP"] = network_df["NABP"].fillna("NABP")
-        # Create Unique Identifier based on whichever identifier is available (PHARMACYNPI or NABP)
-        network_df["Unique Identifier"] = network_df.apply(
-            lambda row: (
-                row["PHARMACYNPI"] if row["PHARMACYNPI"] != "N/A" else row["NABP"]
-            ),
-            axis=1,
-        )
-        network_pivot = pd.pivot_table(
-            network_df,
-            values=["Rxs", "MemberID"],
-            index=["Unique Identifier"],
-            aggfunc={"Rxs": "sum", "MemberID": pd.Series.nunique},
-        )
-        network_pivot = network_pivot.rename(
-            columns={"Rxs": "Total Rxs", "MemberID": "Unique Members"}
-        )
-        network_pivot.reset_index(
-            inplace=True
-        )  # Ensure index columns are included in the output
-        logger.debug(f"Network pivot shape: {network_pivot.shape}")
-        logger.debug(f"Network pivot contents: {network_pivot.head(10).to_dict()}")
-
-        return network_df, network_pivot
-
-    return network_df, None
+    # Build network sheet as a DataFrame with required columns
+    if {"PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"}.issubset(network_df.columns):
+        network_df["PHARMACYNPI"] = network_df["PHARMACYNPI"].replace([None, '', pd.NA, float('nan')], "N/A")
+        network_df["NABP"] = network_df["NABP"].replace([None, '', pd.NA, float('nan')], "N/A")
+        network_sheet = network_df[["PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"]].copy()
+        network_sheet = network_sheet.rename(columns={"MemberID": "Unique Members", "Rxs": "Total Rxs"})
+        # Drop duplicates so each pharmacy only appears once
+        network_sheet = network_sheet.drop_duplicates(subset=["PHARMACYNPI", "NABP", "Pharmacy Name"])
+        return network_sheet, None
+    else:
+        return None, None
 
 
 def write_openmdf_excel_sheets(
@@ -442,10 +414,11 @@ def write_openmdf_excel_sheets(
         "pharmacy_is_excluded",
         "Unique Identifier",
     ]
-    network_df[selected_columns].to_excel(writer, sheet_name="Network", index=False)
-    logger.info(
-        f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
-    )
+    if network_df is not None:
+        network_df[selected_columns].to_excel(writer, sheet_name="Network", index=False)
+        logger.info(
+            f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
+        )
 
 
 def reorder_openmdf_excel_sheets(writer):
@@ -535,8 +508,6 @@ def process_data():
             "INFO",
         )
 
-        # Ensure output directory exists before saving Excel file
-        os.makedirs(output_path.parent, exist_ok=True)
         # Excel writer setup
         writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
 
@@ -571,9 +542,12 @@ def process_data():
         logger.info(f"Excluded pharmacies ('yes'): {excluded_count}")
         logger.info(f"Non-excluded pharmacies ('no'): {non_excluded_count}")
         logger.info(f"Sanity check: Excluded + Non-excluded = {excluded_count + non_excluded_count} (should match total)")
-        logger.info(
-            f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
-        )
+        if network_df is not None:
+            logger.info(
+                f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
+            )
+        else:
+            logger.info("Network sheet will show 0 excluded pharmacy records (minus major chains)")
 
         # Write Network sheet
         if network_pivot is not None:
@@ -588,10 +562,13 @@ def process_data():
             "pharmacy_is_excluded",
             "Unique Identifier",
         ]
-        network_df[selected_columns].to_excel(writer, sheet_name="Network", index=False)
-        logger.info(
-            f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
-        )
+        if network_df is not None:
+            network_df[selected_columns].to_excel(writer, sheet_name="Network", index=False)
+            logger.info(
+                f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
+            )
+        else:
+            logger.info("Network sheet not written: network_df is None.")
 
         # Reorder sheets so Summary follows Data
         reorder_openmdf_excel_sheets(writer)

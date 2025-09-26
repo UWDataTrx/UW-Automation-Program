@@ -15,8 +15,7 @@ from modules.audit_helper import (log_file_access,  # noqa: E402
 from utils.utils import (clean_logic_and_tier,  # noqa: E402
                          drop_duplicates_df, filter_logic_and_maintenance,
                          filter_products_and_alternative, filter_recent_date,
-                         merge_with_network, standardize_network_ids,
-                         standardize_pharmacy_ids, write_audit_log)
+                         write_audit_log)
 
 # Logging setup
 logging.basicConfig(
@@ -26,24 +25,14 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+# Prevent double logging
+logger.propagate = False
+# Add console handler for terminal output
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+logger.addHandler(console_handler)
 
-# Load NABP/NPI list
-included_nabp_npi = {
-    "4528874": "1477571404",
-    "2365422": "1659313435",
-    "3974157": "1972560688",
-    "320793": "1164437406",
-    "4591055": "1851463087",
-    "2348046": "1942303110",
-    "4023610": "1407879588",
-    "4025385": "1588706212",
-    "4025311": "1588705446",
-    "4026806": "1285860312",
-    "4931350": "1750330775",
-    "4024585": "1396768461",
-    "4028026": "1497022438",
-    "2643749": "1326490376",
-}
 
 
 def load_data_files(file_paths):
@@ -99,13 +88,16 @@ def load_data_files(file_paths):
 
     if file_paths["n_disrupt"].lower().endswith(".csv"):
         network = pd.read_csv(file_paths["n_disrupt"])[
-            ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
+            ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]
         ]
     else:
         network = pd.read_excel(file_paths["n_disrupt"])[
-            ["pharmacy_npi", "pharmacy_nabp", "pharmacy_is_excluded"]
+            ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]
         ]
     logger.info(f"network shape: {network.shape}")
+    logger.info(f"Raw network['pharmacy_nabp'] sample: {network['pharmacy_nabp'].head(10).tolist()}")
+    logger.info(f"Raw network['pharmacy_npi'] sample: {network['pharmacy_npi'].head(10).tolist()}")
+    logger.info(f"Unique values in raw network['pharmacy_is_excluded']: {network['pharmacy_is_excluded'].unique()}")
 
     return claims, medi, uni, exl, network
 
@@ -125,14 +117,25 @@ def merge_data_files(claims, reference_data, network):
     df = df.merge(exl.rename(columns={"Tier": "Exclusive Tier"}), on="NDC", how="left")
     logger.info(f"After merge with exl: {df.shape}")
 
-    # Standardize IDs and perform network merge
-    df = standardize_pharmacy_ids(df)
-    logger.info(f"After standardize_pharmacy_ids: {df.shape}")
-    network = standardize_network_ids(network)
-    logger.info(f"After standardize_network_ids: {network.shape}")
-    df = merge_with_network(df, network)
-    logger.info(f"After merge_with_network: {df.shape}")
-
+    # Unified pharmacy_id creation and merging
+    df['pharmacy_id'] = df.apply(lambda row: str(row['PHARMACYNPI']) if pd.notna(row['PHARMACYNPI']) else str(row['NABP']), axis=1)
+    network['pharmacy_id'] = network.apply(lambda row: str(row['pharmacy_npi']) if pd.notna(row['pharmacy_npi']) else str(row['pharmacy_nabp']), axis=1)
+    df = pd.merge(df, network[['pharmacy_id', 'pharmacy_is_excluded']], on='pharmacy_id', how='left')
+    logger.info(f"After merge on pharmacy_id: {df.shape}")
+    # Map exclusions: True/False/REVIEW
+    def map_excluded(val):
+        if pd.isna(val) or str(val).strip() == "":
+            return "REVIEW"
+        v = str(val).strip().lower()
+        if v in {"yes", "y", "true", "1"}:
+            return True
+        elif v in {"no", "n", "false", "0"}:
+            return False
+        return "REVIEW"
+    df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(map_excluded)
+    # Fill missing IDs
+    df["PHARMACYNPI"] = df["PHARMACYNPI"].replace(['', float('nan')], "N/A").fillna("N/A")
+    df["NABP"] = df["NABP"].replace(['', float('nan')], "N/A").fillna("N/A")
     return df
 
 
@@ -171,15 +174,19 @@ def handle_pharmacy_exclusions(df, file_paths):
 
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
-        # Only 'yes' and 'no' (case-insensitive) are mapped; blanks/unknowns become NaN for manual review
-        df["pharmacy_is_excluded"] = (
-            df["pharmacy_is_excluded"]
-            .astype(str)
-            .str.strip().str.lower()
-            .map({"yes": True, "no": False})
-        )
+        def map_excluded(val):
+            if pd.isna(val):
+                return None
+            v = str(val).strip().lower()
+            if v in {"yes", "y", "true", "1"}:
+                return True
+            elif v in {"no", "n", "false", "0"}:
+                return False
+            logger.warning(f"Unexpected pharmacy_is_excluded value encountered: {val}")
+            return None
+        df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(map_excluded)
         logger.info(
-            f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}"
+            f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts(dropna=False).to_dict()}"
         )
 
         # Identify rows where pharmacy_is_excluded is NA or 'unknown'
@@ -195,7 +202,7 @@ def handle_pharmacy_exclusions(df, file_paths):
             try:
                 output_path = Path(output_file_path)
                 if output_path.exists():
-                    existing_df = pd.read_excel(output_path)
+                    existing_df = pd.read_csv(output_path)
                     combined_df = pd.concat(
                         [existing_df, unknown_pharmacies_output], ignore_index=True
                     )
@@ -203,9 +210,9 @@ def handle_pharmacy_exclusions(df, file_paths):
                 else:
                     combined_df = unknown_pharmacies_output
 
-                combined_df.to_excel(output_path, index=False)
+                combined_df.to_csv(output_path, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_path}' with Result column (XLSX)."
+                    f"Unknown/NA pharmacies written to '{output_path}' with Result column."
                 )
 
             except Exception as e:
@@ -218,7 +225,7 @@ def handle_pharmacy_exclusions(df, file_paths):
                 # Fallback - just write the new data
                 unknown_pharmacies_output.to_excel(output_file_path, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode XLSX)."
+                    f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode)."
                 )
 
     return df
@@ -325,8 +332,10 @@ def create_network_data(df):
 
     import re
 
-    # Network summary for excluded pharmacies (pharmacy_is_excluded=True)
-    network_df = df[df["pharmacy_is_excluded"].fillna(False)]
+    # Ensure any blanks in pharmacy_is_excluded are marked as 'REVIEW' before filtering
+    df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].replace([None, '', pd.NA], "REVIEW")
+    # Only include rows where pharmacy_is_excluded is True or REVIEW
+    network_df = df[df["pharmacy_is_excluded"].isin([True, "REVIEW"])]
     filter_phrases = [
         "CVS",
         "Walgreens",
@@ -339,45 +348,24 @@ def create_network_data(df):
         "Williams Bro",
         "Publix",
     ]
-
-    # Regex safety: escape and lower-case all phrases and names
     filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
-    regex_pattern = "|".join([f"\\b{p}\\b" for p in filter_phrases_escaped])
+    regex_pattern = "|".join([f"\b{p}\b" for p in filter_phrases_escaped])
     network_df = network_df[
         ~network_df["Pharmacy Name"]
         .str.lower()
         .str.contains(regex_pattern, case=False, regex=True, na=False)
     ]
-    logger.info(f"network_df shape after exclusion: {network_df.shape}")
-
-    network_pivot = None
-    if {"PHARMACYNPI", "NABP", "Pharmacy Name"}.issubset(network_df.columns):
-        network_df["PHARMACYNPI"] = network_df["PHARMACYNPI"].fillna("N/A")
-        network_df["NABP"] = network_df["NABP"].fillna("N/A")
-        network_pivot = pd.pivot_table(
-            network_df,
-            values=["Rxs", "MemberID"],
-            index=["PHARMACYNPI", "NABP", "Pharmacy Name"],
-            aggfunc={"Rxs": "sum", "MemberID": pd.Series.nunique},
-        )
-        network_pivot = network_pivot.rename(
-            columns={"Rxs": "Total Rxs", "MemberID": "Unique Members"}
-        )
-
-    # Log debug info to verify the filtering
-    total_pharmacies = df.shape[0]
-    logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
-    excluded_count = df['pharmacy_is_excluded'].sum()
-    non_excluded_count = (~df['pharmacy_is_excluded'].astype(bool)).sum()
-    logger.info(f"Total pharmacies in dataset: {total_pharmacies}")
-    logger.info(f"Excluded pharmacies ('yes'): {excluded_count}")
-    logger.info(f"Non-excluded pharmacies ('no'): {non_excluded_count}")
-    logger.info(f"Sanity check: Excluded + Non-excluded = {excluded_count + non_excluded_count} (should match total)")
-    logger.info(
-        f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)"
-    )
-
-    return network_pivot
+    # Build network sheet as a DataFrame with required columns
+    if {"PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"}.issubset(network_df.columns):
+        network_df["PHARMACYNPI"] = network_df["PHARMACYNPI"].replace([None, '', pd.NA, float('nan')], "N/A")
+        network_df["NABP"] = network_df["NABP"].replace([None, '', pd.NA, float('nan')], "N/A")
+        network_sheet = network_df[["PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"]].copy()
+        network_sheet = network_sheet.rename(columns={"MemberID": "Unique Members", "Rxs": "Total Rxs"})
+        # Drop duplicates so each pharmacy only appears once
+        network_sheet = network_sheet.drop_duplicates(subset=["PHARMACYNPI", "NABP", "Pharmacy Name"])
+        return network_sheet
+    else:
+        return None
 
 
 def write_excel_report(report_data, output_filename):
@@ -400,9 +388,10 @@ def write_excel_report(report_data, output_filename):
     df, summary, tabs, network_pivot = report_data
 
     output_path = Path(output_filename)
-    os.makedirs(output_path.parent, exist_ok=True)
     writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
-    df.to_excel(writer, sheet_name="Data", index=False)
+    # Drop duplicates in Data sheet so each pharmacy only appears once
+    df_unique = df.drop_duplicates(subset=["PHARMACYNPI", "NABP", "Pharmacy Name"])
+    df_unique.to_excel(writer, sheet_name="Data", index=False)
     summary.to_excel(writer, sheet_name="Summary", index=False)
 
     for sheet, (_, pt, mems) in tabs.items():
