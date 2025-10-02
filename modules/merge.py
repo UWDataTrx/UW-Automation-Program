@@ -146,8 +146,16 @@ def merge_files(file1_path, file2_path):
                 )
 
         # Drop the DATEFILLED_DIFF column if it exists before saving the merged file
+
+        # Drop the DATEFILLED_DIFF column if it exists before saving the merged file
         if "DATEFILLED_DIFF" in df_merged.columns:
             df_merged.drop(columns=["DATEFILLED_DIFF"], inplace=True)
+
+        # Drop any columns with names starting with 'Unnamed'
+        unnamed_cols = [col for col in df_merged.columns if str(col).startswith("Unnamed")]
+        if unnamed_cols:
+            logger.info(f"Dropping Unnamed columns: {unnamed_cols}")
+            df_merged.drop(columns=unnamed_cols, inplace=True)
 
         merged_path = Path.cwd() / MERGED_FILENAME
         try:

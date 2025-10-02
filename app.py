@@ -554,10 +554,14 @@ class App:
         # Convert paste_data to numpy array for efficient iteration
         arr = np.array(paste_data["data"])
         nrows, ncols = arr.shape
-        # Write data starting from row 2 (assuming row 1 has headers)
+        # Read formulas and values from the template
+        formulas = [[ws.Cells(row_idx + 2, col_idx + 1).Formula for col_idx in range(ncols)] for row_idx in range(nrows)]
+        values = [[ws.Cells(row_idx + 2, col_idx + 1).Value for col_idx in range(ncols)] for row_idx in range(nrows)]
+        # Write data only if cell is empty and has no formula
         for row_idx in range(nrows):
             for col_idx in range(ncols):
-                ws.Cells(row_idx + 2, col_idx + 1).Value = arr[row_idx, col_idx]
+                if (formulas[row_idx][col_idx] in (None, "") and (values[row_idx][col_idx] in (None, ""))):
+                    ws.Cells(row_idx + 2, col_idx + 1).Value = arr[row_idx, col_idx]
         wb.Save()
         wb.Close(SaveChanges=True)
         excel.Quit()
@@ -1238,9 +1242,13 @@ class App:
                 ].to_dict()
 
                 # Update Logic column in claim detail data
-                claim_detail_df["Logic"] = (
-                    claim_detail_df["SOURCERECORDID"].map(logic_mapping).fillna("")
-                )
+
+                claim_detail_df["Logic"] = claim_detail_df["SOURCERECORDID"].map(logic_mapping).fillna("")
+
+                # Drop O's & R's Check and Logic columns if present before saving
+                # Drop only O's & R's Check column if present before saving
+                if "O's & R's Check" in claim_detail_df.columns:
+                    claim_detail_df = claim_detail_df.drop(columns=["O's & R's Check"])
 
                 # Save the updated CSV
                 output_dir = Path.cwd()
