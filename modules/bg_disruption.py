@@ -389,9 +389,8 @@ def write_excel_report(report_data, output_filename):
 
     output_path = Path(output_filename)
     writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
-    # Drop duplicates in Data sheet so each pharmacy only appears once
-    df_unique = df.drop_duplicates(subset=["PHARMACYNPI", "NABP", "Pharmacy Name"])
-    df_unique.to_excel(writer, sheet_name="Data", index=False)
+    # Write the full filtered DataFrame to the Data tab (no deduplication)
+    df.to_excel(writer, sheet_name="Data", index=False)
     summary.to_excel(writer, sheet_name="Summary", index=False)
 
     for sheet, (_, pt, mems) in tabs.items():

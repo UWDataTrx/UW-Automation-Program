@@ -378,9 +378,8 @@ def write_excel_report(report_data, output_filename):
     output_path = Path(output_filename)
     writer = pd.ExcelWriter(output_path, engine="xlsxwriter")
     # Match openmdf_bg.py sheet names
-    # Drop duplicates in Data sheet so each pharmacy only appears once
-    df_unique = df.drop_duplicates(subset=["PHARMACYNPI", "NABP", "Pharmacy Name"])
-    df_unique.to_excel(writer, sheet_name="Claims Data", index=False)
+    # Write the full DataFrame to the Claims Data sheet (no deduplication)
+    df.to_excel(writer, sheet_name="Claims Data", index=False)
     summary.to_excel(writer, sheet_name="Summary", index=False)
 
     # Write positive/negative sheets with matching names
