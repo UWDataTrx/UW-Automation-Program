@@ -433,7 +433,11 @@ def write_excel_report(report_data, output_filename):
         missing_columns = [col for col in selected_columns if col not in network_pivot.columns]
         if missing_columns:
             logger.warning(f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}")
-        network_pivot[available_columns].to_excel(writer, sheet_name="Network", index=False)
+            network_pivot[available_columns].to_excel(writer, sheet_name="Network", index=False)
+        
+        # Log a warning if any expected columns are missing
+        if missing_columns:
+            logger.warning(f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}")
 
     # Reorder sheets so Summary follows Data
     sheets = writer.sheets  # This is a dict: {sheet_name: worksheet_object}

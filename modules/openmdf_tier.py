@@ -423,7 +423,19 @@ def write_openmdf_excel_sheets(
 
     # Write Network sheet
     if network_pivot is not None:
-        network_pivot.to_excel(writer, sheet_name="Network", index=False)
+        selected_columns = [
+            "PHARMACYNPI",
+            "NABP",
+            "MemberID",
+            "Pharmacy Name",
+            "pharmacy_is_excluded",
+            "Unique Identifier",
+        ]
+        available_columns = [col for col in selected_columns if col in network_pivot.columns]
+        missing_columns = [col for col in selected_columns if col not in network_pivot.columns]
+        if missing_columns:
+            logger.warning(f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}")
+        network_pivot[available_columns].to_excel(writer, sheet_name="Network", index=False)
 
     # Write filtered network data
     selected_columns = [

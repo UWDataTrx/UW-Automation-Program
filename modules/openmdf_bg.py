@@ -417,7 +417,6 @@ def write_excel_report(report_data, output_filename):
         tabs[sheet][1].to_excel(writer, sheet_name=sheet)
         writer.sheets[sheet].write("F1", f"Total Members: {tabs[sheet][2]}")
 
-    # Write network sheet with matching columns
     # Write network sheet with dynamic column selection
     if network_pivot is not None:
         selected_columns = [
