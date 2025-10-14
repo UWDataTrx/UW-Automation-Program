@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import hashlib
+import pickle
 
 project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
@@ -183,6 +185,144 @@ def merge_with_network(df, network):
             merged["pharmacy_is_excluded"].isin(["yes", "no"]), "N/A"
         )
     return merged
+
+# ---------------------------------------------------------------------------
+# Central pharmacy exclusion helpers
+# ---------------------------------------------------------------------------
+def normalize_pharmacy_is_excluded(val):
+    """Normalize raw exclusion indicator to True/False/REVIEW.
+
+    Accepts various yes/no tokens; blanks, unknown, unexpected -> REVIEW.
+    """
+    if val is None:
+        return "REVIEW"
+    v = str(val).strip().lower()
+    if v == "":
+        return "REVIEW"
+    if v in {"yes", "y", "true", "1"}:
+        return True
+    if v in {"no", "n", "false", "0"}:
+        return False
+    return "REVIEW"
+
+_PHARMACY_CACHE_FILE = Path(__file__).resolve().parent.parent / 'build' / 'pharmacy_exclusion_cache.pkl'
+
+def _compute_network_signature(network: pd.DataFrame) -> str:
+    """Compute a robust SHA256 signature for the network content used for exclusion lookups."""
+    cols = ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]
+    # Limit size by hashing concatenated first N + last N values for each col
+    parts = []
+    for c in cols:
+        if c in network.columns:
+            series = network[c].astype(str)
+            head = '|'.join(series.head(200).tolist())
+            tail = '|'.join(series.tail(200).tolist())
+            col_blob = f"{c}:{len(series)}:{hashlib.sha256((head+tail).encode('utf-8')).hexdigest()}"
+        else:
+            col_blob = f"{c}:missing"
+        parts.append(col_blob)
+    return '|'.join(parts)
+
+def _load_persistent_cache():
+    global _PHARMACY_EXCLUSION_CACHE
+    if '_PHARMACY_EXCLUSION_CACHE' not in globals():
+        _PHARMACY_EXCLUSION_CACHE = {}
+    if _PHARMACY_CACHE_FILE.exists():
+        try:
+            with _PHARMACY_CACHE_FILE.open('rb') as f:
+                data = pickle.load(f)
+            if isinstance(data, dict):
+                _PHARMACY_EXCLUSION_CACHE.update(data)
+        except Exception:
+            pass
+
+def _save_persistent_cache():
+    global _PHARMACY_EXCLUSION_CACHE
+    try:
+        _PHARMACY_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with _PHARMACY_CACHE_FILE.open('wb') as f:
+            pickle.dump(_PHARMACY_EXCLUSION_CACHE, f)
+    except Exception:
+        pass
+
+def clear_pharmacy_exclusion_cache(persistent: bool = True):
+    """Clear in-memory cache and optionally remove persistent cache file."""
+    global _PHARMACY_EXCLUSION_CACHE
+    _PHARMACY_EXCLUSION_CACHE = {}
+    if persistent and _PHARMACY_CACHE_FILE.exists():
+        try:
+            _PHARMACY_CACHE_FILE.unlink()
+        except Exception:
+            pass
+
+def vectorized_resolve_pharmacy_exclusion(df: pd.DataFrame, network: pd.DataFrame, use_cache: bool = True, persist: bool = True) -> pd.Series:
+    """Vectorized resolution of pharmacy exclusion status.
+
+    Priority: use NABP first; if missing/unmatched, try NPI; else REVIEW.
+    Expects df to contain NABP, PHARMACYNPI columns and network to contain
+    pharmacy_nabp, pharmacy_npi, pharmacy_is_excluded.
+    Returns a Series aligned to df index with normalized exclusion values.
+    """
+    # Simple in-process cache keyed by a hash of network identifiers
+    global _PHARMACY_EXCLUSION_CACHE
+    if '_PHARMACY_EXCLUSION_CACHE' not in globals():
+        _PHARMACY_EXCLUSION_CACHE = {}
+    if use_cache:
+        _load_persistent_cache()
+    network_signature = _compute_network_signature(network) if use_cache else None
+
+    cached_maps = _PHARMACY_EXCLUSION_CACHE.get(network_signature) if use_cache else None
+    # Defensive copies
+    net = network.copy()
+    # Clean identifiers
+    for col in ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]:
+        if col in net.columns:
+            net[col] = net[col].astype(str).str.strip()
+
+    if cached_maps is None:
+        nabp_map = net.dropna(subset=["pharmacy_nabp"]).set_index("pharmacy_nabp")["pharmacy_is_excluded"].to_dict()
+        npi_map = net.dropna(subset=["pharmacy_npi"]).set_index("pharmacy_npi")["pharmacy_is_excluded"].to_dict()
+        if use_cache:
+            _PHARMACY_EXCLUSION_CACHE[network_signature] = (nabp_map, npi_map)
+            if persist:
+                _save_persistent_cache()
+    else:
+        nabp_map, npi_map = cached_maps
+
+    # Extract claim identifiers as cleaned strings
+    nabp_claim = df.get("NABP", pd.Series(index=df.index, dtype=object)).astype(str).str.strip()
+    npi_claim = df.get("PHARMACYNPI", pd.Series(index=df.index, dtype=object)).astype(str).str.strip()
+
+    # Determine matches
+    nabp_raw = nabp_claim.map(nabp_map)
+    # For rows where NABP did not match (isna or empty), attempt NPI lookup
+    need_npi = nabp_raw.isna() | (nabp_claim == "") | (nabp_claim.str.upper() == "N/A")
+    npi_raw = pd.Series([None]*len(df), index=df.index)
+    npi_subset = npi_claim[need_npi]
+    npi_raw.loc[need_npi] = npi_subset.map(npi_map)
+
+    # Combine preference: NABP if matched else NPI else REVIEW
+    combined = nabp_raw.where(~nabp_raw.isna(), npi_raw)
+
+    # Normalize
+    resolved = combined.apply(normalize_pharmacy_is_excluded)
+
+    # Ensure rows with explicitly unmatched IDs become REVIEW
+    unmatched_mask = (
+        resolved == "REVIEW"
+    )
+
+    # Stats logging convenience (optional: caller can log)
+    try:
+        import logging as _lg
+        cache_hit = cached_maps is not None and use_cache
+        _lg.getLogger(__name__).info(
+            f"Vector resolve stats -> NABP matches: {(~nabp_raw.isna()).sum()}, NPI matches: {(~npi_raw.isna()).sum()}, REVIEW: {unmatched_mask.sum()} | cache_hit={cache_hit}"
+        )
+    except Exception:
+        pass
+
+    return resolved
 
 
 def drop_duplicates_df(df):
