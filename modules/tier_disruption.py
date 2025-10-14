@@ -218,7 +218,25 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                     logger.info(
                         f"Existing pharmacy validation log found at: {output_file_path}"
                     )
-                    existing_df = pd.read_csv(output_file_path_obj)
+                    # Handle both CSV and Excel files with proper encoding
+                    try:
+                        if str(output_file_path_obj).lower().endswith('.csv'):
+                            # Try different encodings for CSV files
+                            try:
+                                existing_df = pd.read_csv(output_file_path_obj, encoding='utf-8')
+                            except UnicodeDecodeError:
+                                logger.warning("UTF-8 failed, trying latin-1 encoding...")
+                                existing_df = pd.read_csv(output_file_path_obj, encoding='latin-1')
+                        else:
+                            # Handle Excel files
+                            existing_df = pd.read_excel(output_file_path_obj)
+                    except Exception as read_error:
+                        logger.error(f"Failed to read existing file: {read_error}")
+                        logger.info("Creating backup and starting fresh...")
+                        backup_path = output_file_path_obj.with_suffix(f"{output_file_path_obj.suffix}.backup")
+                        output_file_path_obj.rename(backup_path)
+                        existing_df = pd.DataFrame()
+                    
                     logger.info(f"Existing log rows: {len(existing_df)}")
                     combined_df = pd.concat(
                         [existing_df, unknown_pharmacies_output], ignore_index=True
@@ -233,7 +251,11 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                     )
                     combined_df = unknown_pharmacies_output
 
-                combined_df.to_csv(output_file_path_obj, index=False)
+                # Save based on file extension
+                if str(output_file_path_obj).lower().endswith('.csv'):
+                    combined_df.to_csv(output_file_path_obj, index=False, encoding='utf-8')
+                else:
+                    combined_df.to_excel(output_file_path_obj, index=False)
                 logger.info(
                     f"Successfully wrote {len(unknown_pharmacies_output)} unknown/NA pharmacy rows to '{output_file_path}'. Total rows now: {len(combined_df)}."
                 )
