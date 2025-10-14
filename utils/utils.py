@@ -289,17 +289,21 @@ def vectorized_resolve_pharmacy_exclusion(df: pd.DataFrame, network: pd.DataFram
     else:
         nabp_map, npi_map = cached_maps
 
+
     # Extract claim identifiers as cleaned strings
-    nabp_claim = df.get("NABP", pd.Series(index=df.index, dtype=object)).astype(str).str.strip()
-    npi_claim = df.get("PHARMACYNPI", pd.Series(index=df.index, dtype=object)).astype(str).str.strip()
+    nabp_claim = df.get("NABP", pd.Series(index=df.index, dtype=object)).astype(str).str.strip().str.upper()
+    npi_claim = df.get("PHARMACYNPI", pd.Series(index=df.index, dtype=object)).astype(str).str.strip().str.upper()
+
+    # Clean network keys for robust matching
+    nabp_map_clean = {str(k).strip().upper(): v for k, v in nabp_map.items()}
+    npi_map_clean = {str(k).strip().upper(): v for k, v in npi_map.items()}
 
     # Determine matches
-    nabp_raw = nabp_claim.map(nabp_map)
-    # For rows where NABP did not match (isna or empty), attempt NPI lookup
-    need_npi = nabp_raw.isna() | (nabp_claim == "") | (nabp_claim.str.upper() == "N/A")
+    nabp_raw = nabp_claim.map(nabp_map_clean)
+    need_npi = nabp_raw.isna() | (nabp_claim == "") | (nabp_claim == "N/A")
     npi_raw = pd.Series([None]*len(df), index=df.index)
     npi_subset = npi_claim[need_npi]
-    npi_raw.loc[need_npi] = npi_subset.map(npi_map)
+    npi_raw.loc[need_npi] = npi_subset.map(npi_map_clean)
 
     # Combine preference: NABP if matched else NPI else REVIEW
     combined = nabp_raw.where(~nabp_raw.isna(), npi_raw)
@@ -307,17 +311,18 @@ def vectorized_resolve_pharmacy_exclusion(df: pd.DataFrame, network: pd.DataFram
     # Normalize
     resolved = combined.apply(normalize_pharmacy_is_excluded)
 
-    # Ensure rows with explicitly unmatched IDs become REVIEW
-    unmatched_mask = (
-        resolved == "REVIEW"
-    )
+    # If the original network value is 'no', always return False
+    resolved = resolved.where(~combined.isin(["no", "n", "false", "0"]), False)
+
+    # Only truly unmatched IDs get REVIEW
+    resolved = resolved.where(~(combined.isna() | (combined == "") | (combined == "N/A")), "REVIEW")
 
     # Stats logging convenience (optional: caller can log)
     try:
         import logging as _lg
         cache_hit = cached_maps is not None and use_cache
         _lg.getLogger(__name__).info(
-            f"Vector resolve stats -> NABP matches: {(~nabp_raw.isna()).sum()}, NPI matches: {(~npi_raw.isna()).sum()}, REVIEW: {unmatched_mask.sum()} | cache_hit={cache_hit}"
+            f"Vector resolve stats -> NABP matches: {(~nabp_raw.isna()).sum()}, NPI matches: {(~npi_raw.isna()).sum()}, REVIEW: {(resolved == 'REVIEW').sum()} | cache_hit={cache_hit}"
         )
     except Exception:
         pass
