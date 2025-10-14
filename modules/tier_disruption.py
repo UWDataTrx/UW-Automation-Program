@@ -503,9 +503,13 @@ def write_excel_sheets(
         "Unique Identifier",
     ]
     if network_df is not None:
-        network_df[selected_columns].to_excel(writer, sheet_name="Network", index=False)
+        available_columns = [col for col in selected_columns if col in network_df.columns]
+        missing_columns = [col for col in selected_columns if col not in network_df.columns]
+        if missing_columns:
+            logger.warning(f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}")
+        network_df[available_columns].to_excel(writer, sheet_name="Network", index=False)
         logger.info(
-            f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
+            f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and columns: {available_columns}"
         )
     write_audit_log(
         "tier_disruption.py", f"Excel report written to: {output_path}", "INFO"

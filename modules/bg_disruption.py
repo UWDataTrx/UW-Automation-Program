@@ -419,8 +419,21 @@ def write_excel_report(report_data, output_filename):
         pt.to_excel(writer, sheet_name=sheet)
         writer.sheets[sheet].write("F1", f"Total Members: {mems}")
 
+    # Write network sheet with dynamic column selection
     if network_pivot is not None:
-        network_pivot.to_excel(writer, sheet_name="Network")
+        selected_columns = [
+            "PHARMACYNPI",
+            "NABP",
+            "MemberID",
+            "Pharmacy Name",
+            "pharmacy_is_excluded",
+            "Unique Identifier",
+        ]
+        available_columns = [col for col in selected_columns if col in network_pivot.columns]
+        missing_columns = [col for col in selected_columns if col not in network_pivot.columns]
+        if missing_columns:
+            logger.warning(f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}")
+        network_pivot[available_columns].to_excel(writer, sheet_name="Network", index=False)
 
     # Reorder sheets so Summary follows Data
     sheets = writer.sheets  # This is a dict: {sheet_name: worksheet_object}
