@@ -12,7 +12,6 @@ from tkinter import messagebox, ttk
 import customtkinter as ctk
 import pandas as pd
 import pyperclip
-
 from config.config_loader import ConfigLoader
 
 sys.stderr = open(os.devnull, "w")
@@ -56,6 +55,7 @@ def display_drug_details(
     dosing=None,
     quantity=None,
     supply_duration=None,
+    group_by_strength=False,
 ):
     # Combine all search terms into a single regex for vectorized search
     search_terms = "|".join(
@@ -93,42 +93,67 @@ def display_drug_details(
             ]
         )
 
-    grouped = (
-        filtered.groupby(["drug_name", "quantity", "30/90", "strength"])
-        .agg(mean_cost=("gross_cost", "mean"), mode_cost=("gross_cost", mode_func))
-        .reset_index()
-    )
-
-    grouped["mean_cost"] = grouped["mean_cost"].apply(lambda x: f"${x:,.2f}")
-    grouped["mode_cost"] = grouped["mode_cost"].apply(
-        lambda x: f"${x:,.2f}" if x is not None else "N/A"
-    )
-
-    # Only keep the first match for each searched drug name
-    result = []
-    for name in drug_names:
-        name = name.strip().lower()
-        match = grouped[grouped["drug_name"].str.lower() == name]
-        if not match.empty:
-            result.append(match.iloc[0])
-    if result:
-        return pd.DataFrame(result)
-    else:
-        return pd.DataFrame(
-            columns=[
-                "drug_name",
-                "quantity",
-                "30/90",
-                "strength",
-                "mean_cost",
-                "mode_cost",
-            ]
+    if group_by_strength:
+        grouped = (
+            filtered.groupby(["drug_name", "quantity", "30/90", "strength"])
+            .agg(mean_cost=("gross_cost", "mean"), mode_cost=("gross_cost", mode_func))
+            .reset_index()
         )
+        grouped["mean_cost"] = grouped["mean_cost"].apply(lambda x: f"${x:,.2f}")
+        grouped["mode_cost"] = grouped["mode_cost"].apply(
+            lambda x: f"${x:,.2f}" if x is not None else "N/A"
+        )
+        result = pd.DataFrame(columns=["drug_name", "quantity", "30/90", "strength", "mean_cost", "mode_cost"])
+        for name in drug_names:
+            name = name.strip().lower()
+            matches = grouped[grouped["drug_name"].str.lower() == name]
+            if not matches.empty:
+                result = pd.concat([result, matches], ignore_index=True)
+        if not result.empty:
+            return result
+        else:
+            return pd.DataFrame(
+                columns=[
+                    "drug_name",
+                    "quantity",
+                    "30/90",
+                    "strength",
+                    "mean_cost",
+                    "mode_cost",
+                ]
+            )
+    else:
+        grouped = (
+            filtered.groupby(["drug_name", "quantity", "30/90"])
+            .agg(mean_cost=("gross_cost", "mean"), mode_cost=("gross_cost", mode_func))
+            .reset_index()
+        )
+        grouped["mean_cost"] = grouped["mean_cost"].apply(lambda x: f"${x:,.2f}")
+        grouped["mode_cost"] = grouped["mode_cost"].apply(
+            lambda x: f"${x:,.2f}" if x is not None else "N/A"
+        )
+        result = pd.DataFrame(columns=["drug_name", "quantity", "30/90", "mean_cost", "mode_cost"])
+        for name in drug_names:
+            name = name.strip().lower()
+            matches = grouped[grouped["drug_name"].str.lower() == name]
+            if not matches.empty:
+                result = pd.concat([result, matches], ignore_index=True)
+        if not result.empty:
+            return result
+        else:
+            return pd.DataFrame(
+                columns=[
+                    "drug_name",
+                    "quantity",
+                    "30/90",
+                    "mean_cost",
+                    "mode_cost",
+                ]
+            )
 
 
 def rebate_clicked():
     subprocess.Popen(["python", "rebate.py"])
-
 
 def on_search():
     drug_names = entry_drug.get()
@@ -153,7 +178,9 @@ def on_search():
         dosing,
         quantity,
         supply_duration,
+        group_by_strength=group_by_strength_var.get(),
     )
+    display_results(result_df)
     display_results(result_df)
 
 
@@ -234,7 +261,17 @@ frame1 = ctk.CTkFrame(root, fg_color="#333F48")
 frame1.pack(padx=10, pady=10)
 
 # Define columns for the treeview
+
 columns = ["drug_name", "quantity", "30/90", "strength", "mean_cost", "mode_cost"]
+# ...existing code...
+# After root and group_by_strength_var are created
+columns = ["drug_name", "quantity", "30/90", "strength", "mean_cost", "mode_cost"]
+# ...existing code...
+# After root and group_by_strength_var are created
+
+# Place this after root and group_by_strength_var initialization
+# ---
+# update_columns and toggle_group_button creation
 
 # Add a frame for the Treeview and scrollbar
 tree_frame = ctk.CTkFrame(root, fg_color="#333F48")
@@ -276,8 +313,6 @@ label_quantity = ctk.CTkLabel(
 )
 label_quantity.grid(row=4, column=1, padx=10, pady=10)
 entry_quantity = ctk.CTkEntry(frame1, width=75, font=(None, 16))
-entry_quantity.grid(row=5, column=1, padx=10, pady=10)
-
 strength_var = tk.BooleanVar(value=False)
 check_strength = ctk.CTkCheckBox(
     frame1, text="Show Dosing", variable=strength_var, font=("oswald", 16, "bold")
@@ -287,6 +322,14 @@ quantity_var = tk.BooleanVar(value=False)
 check_quantity = ctk.CTkCheckBox(
     frame1, text="Show Quantity", variable=quantity_var, font=("oswald", 16, "bold")
 )
+check_quantity.grid(row=3, column=1, padx=10, pady=10)
+
+# Add group_by_strength_var and checkbox
+group_by_strength_var = tk.BooleanVar(value=False)
+check_group_by_strength = ctk.CTkCheckBox(
+    frame1, text="Group by Strength", variable=group_by_strength_var, font=("oswald", 16, "bold")
+)
+check_group_by_strength.grid(row=3, column=6, padx=10, pady=10)
 check_quantity.grid(row=3, column=1, padx=10, pady=10)
 
 supply_var_30 = tk.BooleanVar(value=True)
