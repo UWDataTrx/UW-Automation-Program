@@ -135,43 +135,28 @@ def process_tier_data_pipeline(claims, reference_data, network):
     print(f"After merge with u: {df.shape}")
     df = df.merge(e.rename(columns={"Tier": "Exclusive Tier"}), on="NDC", how="left")
     print(f"After merge with e: {df.shape}")
-    # ------------------------------------------------------------------
-    # Precise network matching logic (NABP priority, then NPI)
-    # ------------------------------------------------------------------
-    # Clean network identifiers
-    network = network.copy()
-    for col in ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]:
-        if col in network.columns:
-            network[col] = network[col].astype(str).str.strip()
 
-    # Build lookup dictionaries
-    nabp_lookup = {row.pharmacy_nabp: row.pharmacy_is_excluded for row in network.itertuples() if row.pharmacy_nabp and row.pharmacy_nabp.lower() not in {"nan", "none", ""}}
-    npi_lookup = {row.pharmacy_npi: row.pharmacy_is_excluded for row in network.itertuples() if row.pharmacy_npi and row.pharmacy_npi.lower() not in {"nan", "none", ""}}
+    # Standardize NABP/NPI columns in both claims and network before exclusion resolution
+    from utils.utils import standardize_pharmacy_ids, standardize_network_ids
+    df = standardize_pharmacy_ids(df)
+    network = standardize_network_ids(network)
+    # Debug: Print sample NABP and PHARMACYNPI values and types from both DataFrames
+    print(f"Sample claims NABP: {df['NABP'].head(5).tolist()} | Types: {[type(x) for x in df['NABP'].head(5)]}")
+    print(f"Sample claims PHARMACYNPI: {df['PHARMACYNPI'].head(5).tolist()} | Types: {[type(x) for x in df['PHARMACYNPI'].head(5)]}")
+    print(f"Sample network NABP: {network['pharmacy_nabp'].head(5).tolist()} | Types: {[type(x) for x in network['pharmacy_nabp'].head(5)]}")
+    print(f"Sample network PHARMACYNPI: {network['pharmacy_npi'].head(5).tolist()} | Types: {[type(x) for x in network['pharmacy_npi'].head(5)]}")
 
-    def normalize_excluded(val):
-        if val is None:
-            return "REVIEW"
-        v = str(val).strip().lower()
-        if v == "":
-            return "REVIEW"
-        if v in {"yes", "y", "true", "1"}:
-            return True
-        if v in {"no", "n", "false", "0"}:
-            return False
-        # Unexpected values become REVIEW for manual follow-up
-        return "REVIEW"
-
-    def resolve_exclusion(row):
-        nabp = str(row.get("NABP", "")).strip()
-        npi = str(row.get("PHARMACYNPI", "")).strip()
-        # Priority: NABP if provided, else NPI
-        if nabp and nabp.upper() not in {"N/A"}:
-            raw = nabp_lookup.get(nabp)
-            return normalize_excluded(raw)
-        if npi and npi.upper() not in {"N/A"}:
-            raw = npi_lookup.get(npi)
-            return normalize_excluded(raw)
-        return "REVIEW"
+    print(f"DEBUG: About to call vectorized resolver with df shape {df.shape}")
+    print(f"DEBUG: df columns: {df.columns.tolist()}")
+    if 'NABP' in df.columns:
+        print(f"DEBUG: NABP column exists, non-null count: {df['NABP'].notna().sum()}")
+        print(f"DEBUG: First 5 NABP values: {df['NABP'].head().tolist()}")
+    else:
+        print("DEBUG: NABP column NOT FOUND!")
+    if 'PHARMACYNPI' in df.columns:
+        print(f"DEBUG: PHARMACYNPI column exists, non-null count: {df['PHARMACYNPI'].notna().sum()}")
+    else:
+        print("DEBUG: PHARMACYNPI column NOT FOUND!")
 
     df["pharmacy_is_excluded"] = vectorized_resolve_pharmacy_exclusion(df, network)
 

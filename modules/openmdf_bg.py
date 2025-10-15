@@ -16,6 +16,8 @@ from utils.utils import (  # noqa: E402
     filter_recent_date,
     write_audit_log,
     vectorized_resolve_pharmacy_exclusion,
+    standardize_pharmacy_ids,
+    standardize_network_ids,
 )
 from modules.audit_helper import (log_file_access,  # noqa: E402
                                   log_user_session_end, log_user_session_start,
@@ -142,38 +144,12 @@ def merge_data_files(claims, reference_data, network):
     df = df.merge(exclusive.rename(columns={"Tier": "Exclusive Tier"}), on="NDC", how="left")
     logger.info(f"After merge with exclusive: {df.shape}")
 
-    # ------------------------------------------------------------------
-    # Precise network matching logic (NABP priority, then NPI)
-    # ------------------------------------------------------------------
-    network = network.copy()
-    for col in ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]:
-        if col in network.columns:
-            network[col] = network[col].astype(str).str.strip()
+    # Standardize pharmacy IDs in claims and network data
+    df = standardize_pharmacy_ids(df)
+    network = standardize_network_ids(network)
+    logger.info("Standardized pharmacy IDs in claims and network data")
 
-    nabp_lookup = {row.pharmacy_nabp: row.pharmacy_is_excluded for row in network.itertuples() if row.pharmacy_nabp and row.pharmacy_nabp.lower() not in {"nan", "none", ""}}
-    npi_lookup = {row.pharmacy_npi: row.pharmacy_is_excluded for row in network.itertuples() if row.pharmacy_npi and row.pharmacy_npi.lower() not in {"nan", "none", ""}}
-
-    def normalize_excluded(val):
-        if val is None:
-            return "REVIEW"
-        v = str(val).strip().lower()
-        if v == "":
-            return "REVIEW"
-        if v in {"yes", "y", "true", "1"}:
-            return True
-        if v in {"no", "n", "false", "0"}:
-            return False
-        return "REVIEW"
-
-    def resolve_exclusion(row):
-        nabp = str(row.get("NABP", "")).strip()
-        npi = str(row.get("PHARMACYNPI", "")).strip()
-        if nabp and nabp.upper() not in {"N/A"}:
-            return normalize_excluded(nabp_lookup.get(nabp))
-        if npi and npi.upper() not in {"N/A"}:
-            return normalize_excluded(npi_lookup.get(npi))
-        return "REVIEW"
-
+    # Use centralized vectorized exclusion resolver
     df["pharmacy_is_excluded"] = vectorized_resolve_pharmacy_exclusion(df, network)
 
     review_count = (df["pharmacy_is_excluded"] == "REVIEW").sum()

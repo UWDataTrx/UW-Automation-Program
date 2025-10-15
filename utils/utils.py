@@ -129,6 +129,7 @@ def load_file_paths(json_file="file_paths.json"):
 def standardize_pharmacy_ids(df):
     """
     Pads 'PHARMACYNPI' to 10 digits and 'NABP' to 7 digits in the DataFrame.
+    Handles NaN values by replacing them with empty strings before conversion.
 
     Args:
         df (pd.DataFrame): Claims DataFrame.
@@ -136,16 +137,21 @@ def standardize_pharmacy_ids(df):
     Returns:
         pd.DataFrame: Updated DataFrame with padded ID columns.
     """
+    import numpy as np
     if "PHARMACYNPI" in df.columns:
-        df["PHARMACYNPI"] = df["PHARMACYNPI"].astype(str).str.zfill(10)
+        # Replace NaN values before converting to string to avoid 'nan' strings
+        df["PHARMACYNPI"] = df["PHARMACYNPI"].replace([np.nan, None], '').astype(str).str.replace('nan', '', regex=False).str.zfill(10)
     if "NABP" in df.columns:
-        df["NABP"] = df["NABP"].astype(str).str.zfill(7)
+        # Replace NaN values before converting to string to avoid 'nan' strings
+        df["NABP"] = df["NABP"].replace([np.nan, None], '').astype(str).str.replace('nan', '', regex=False).str.zfill(7)
     return df
 
 
 def standardize_network_ids(network):
     """
     Pads 'pharmacy_npi' to 10 digits and 'pharmacy_nabp' to 7 digits in the network DataFrame.
+    Handles NaN values by replacing them with 0 before conversion.
+    Converts floats to integers first to remove decimal points.
 
     Args:
         network (pd.DataFrame): Network DataFrame.
@@ -153,10 +159,13 @@ def standardize_network_ids(network):
     Returns:
         pd.DataFrame: Updated network DataFrame with padded ID columns.
     """
+    import numpy as np
     if "pharmacy_npi" in network.columns:
-        network["pharmacy_npi"] = network["pharmacy_npi"].astype(str).str.zfill(10)
+        # Replace NaN values with 0, convert to int (removes .0), then to string, then pad
+        network["pharmacy_npi"] = network["pharmacy_npi"].replace([np.nan, None], 0).astype(int).astype(str).str.zfill(10)
     if "pharmacy_nabp" in network.columns:
-        network["pharmacy_nabp"] = network["pharmacy_nabp"].astype(str).str.zfill(7)
+        # Replace NaN values with 0, convert to int (removes .0), then to string, then pad
+        network["pharmacy_nabp"] = network["pharmacy_nabp"].replace([np.nan, None], 0).astype(int).astype(str).str.zfill(7)
     return network
 
 
@@ -280,8 +289,10 @@ def vectorized_resolve_pharmacy_exclusion(df: pd.DataFrame, network: pd.DataFram
             net[col] = net[col].astype(str).str.strip()
 
     if cached_maps is None:
-        nabp_map = net.dropna(subset=["pharmacy_nabp"]).set_index("pharmacy_nabp")["pharmacy_is_excluded"].to_dict()
-        npi_map = net.dropna(subset=["pharmacy_npi"]).set_index("pharmacy_npi")["pharmacy_is_excluded"].to_dict()
+        # Clean and normalize network values before creating maps
+        net["pharmacy_is_excluded_clean"] = net["pharmacy_is_excluded"].astype(str).str.strip().str.lower()
+        nabp_map = net.dropna(subset=["pharmacy_nabp"]).set_index("pharmacy_nabp")["pharmacy_is_excluded_clean"].to_dict()
+        npi_map = net.dropna(subset=["pharmacy_npi"]).set_index("pharmacy_npi")["pharmacy_is_excluded_clean"].to_dict()
         if use_cache:
             _PHARMACY_EXCLUSION_CACHE[network_signature] = (nabp_map, npi_map)
             if persist:
@@ -294,7 +305,7 @@ def vectorized_resolve_pharmacy_exclusion(df: pd.DataFrame, network: pd.DataFram
     nabp_claim = df.get("NABP", pd.Series(index=df.index, dtype=object)).astype(str).str.strip().str.upper()
     npi_claim = df.get("PHARMACYNPI", pd.Series(index=df.index, dtype=object)).astype(str).str.strip().str.upper()
 
-    # Clean network keys for robust matching
+    # Clean network keys for robust matching (values are already lowercase from map creation)
     nabp_map_clean = {str(k).strip().upper(): v for k, v in nabp_map.items()}
     npi_map_clean = {str(k).strip().upper(): v for k, v in npi_map.items()}
 
@@ -305,17 +316,11 @@ def vectorized_resolve_pharmacy_exclusion(df: pd.DataFrame, network: pd.DataFram
     npi_subset = npi_claim[need_npi]
     npi_raw.loc[need_npi] = npi_subset.map(npi_map_clean)
 
-    # Combine preference: NABP if matched else NPI else REVIEW
+    # Combine preference: NABP if matched else NPI else None if unmatched
     combined = nabp_raw.where(~nabp_raw.isna(), npi_raw)
 
-    # Normalize
+    # Normalize: "yes"->True, "no"->False, blanks/unexpected->"REVIEW"
     resolved = combined.apply(normalize_pharmacy_is_excluded)
-
-    # If the original network value is 'no', always return False
-    resolved = resolved.where(~combined.isin(["no", "n", "false", "0"]), False)
-
-    # Only truly unmatched IDs get REVIEW
-    resolved = resolved.where(~(combined.isna() | (combined == "") | (combined == "N/A")), "REVIEW")
 
     # Stats logging convenience (optional: caller can log)
     try:
