@@ -7,7 +7,7 @@ import pandas as pd
 # converts from sql to BOB to run. Keep results naming convention and save in Python folder
 
 
-input_file = "Results.csv"
+input_file = "C:\\Users\\DamionMorrison\\OneDrive - True Rx Health Strategists\\True Community - Data Analyst\\UW Python Program\\UW-Automation-Program\\B.o.B\\templates\\Results 4.csv"
 output_file = "bob.parquet"
 
 dtype_dict = {
