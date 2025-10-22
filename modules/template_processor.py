@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 
 # Ensure project root is in sys.path before importing project_settings
 project_root = Path(__file__).resolve().parent.parent
@@ -125,20 +126,61 @@ class TemplateProcessor:
             return df
 
     def prepare_template_data(self, processed_file):
-        """Prepare data for template pasting, with robust logging."""
+        """Prepare data for template pasting, with robust logging.
+
+        This method now centralizes the Excel-specific cleaning and limits pasted
+        columns to the first 39 (A:AM) to match the template structure used by the
+        application. Returns a dict with keys: data, nrows, ncols.
+        """
         try:
-            logging.info(
-                f"[Repricing] Preparing template data from file: {processed_file}"
-            )
+            logging.info(f"[Repricing] Preparing template data from file: {processed_file}")
+
+            # Read input and apply standard formatting
             df = pd.read_excel(processed_file)
             df = self.format_dataframe(df)
+
+            # Clean specifically for Excel: truncate long strings, handle inf/nan, etc.
+            df = self.clean_data_for_excel(df)
+
+            # Limit to first 39 columns to match template (A:AM)
+            if df.shape[1] > 39:
+                df = df.iloc[:, :39]
+
             logging.info(f"[Repricing] Template data prepared. Shape: {df.shape}")
             return {"data": df.values, "nrows": df.shape[0], "ncols": df.shape[1]}
+
         except Exception as e:
             error_msg = f"[Repricing] Failed to prepare template data: {str(e)}"
             logging.error(error_msg)
             write_audit_log("TemplateProcessor", error_msg, "ERROR")
             raise
+
+    def clean_data_for_excel(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Clean a DataFrame to be safe for writing into Excel.
+
+        - Converts object columns to strings and truncates very long values
+        - Replaces None/'None' with empty string
+        - Replaces +/-inf with NaN and fills numeric NaNs with 0
+        """
+        df_clean = df.copy()
+        try:
+            for col in df_clean.columns:
+                if df_clean[col].dtype == "object":
+                    df_clean[col] = df_clean[col].fillna("")
+                    df_clean[col] = df_clean[col].astype(str)
+                    df_clean[col] = df_clean[col].replace("None", "")
+                    # Truncate to Excel cell limit (approx) to avoid errors
+                    df_clean[col] = df_clean[col].apply(
+                        lambda x: x[:32767] if len(str(x)) > 32767 else x
+                    )
+                elif pd.api.types.is_numeric_dtype(df_clean[col]):
+                    df_clean[col] = df_clean[col].replace([np.inf, -np.inf], np.nan)
+                    df_clean[col] = df_clean[col].fillna(0)
+            logging.info("[Repricing] Data cleaning for Excel completed successfully")
+        except Exception as e:
+            logging.warning(f"[Repricing] Error during data cleaning: {e}. Using original data.")
+            return df
+        return df_clean
 
     def prepare_excel_data(self, paste_data, formulas):
         """Prepare data for Excel, preserving formulas."""

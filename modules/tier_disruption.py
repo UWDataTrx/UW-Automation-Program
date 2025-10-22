@@ -18,7 +18,8 @@ from modules.audit_helper import (log_file_access,  # noqa: E402
 from utils.utils import (clean_logic_and_tier,  # noqa: E402
                          drop_duplicates_df, filter_logic_and_maintenance,
                          filter_products_and_alternative, filter_recent_date,
-                         write_audit_log, vectorized_resolve_pharmacy_exclusion)
+                         write_audit_log, vectorized_resolve_pharmacy_exclusion,
+                         normalize_pharmacy_is_excluded)
 
 # Set up logger
 logging.basicConfig(level=logging.INFO)
@@ -198,24 +199,14 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
     """Handle pharmacy exclusions for tier disruption."""
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
-        def map_excluded(val):
-            if pd.isna(val):
-                return None
-            v = str(val).strip().lower()
-            if v in {"yes", "y", "true", "1"}:
-                return True
-            elif v in {"no", "n", "false", "0"}:
-                return False
-            logger.warning(f"Unexpected pharmacy_is_excluded value encountered: {val}")
-            return None
-        df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(map_excluded)
+        # Use shared normalizer which returns True/False/'REVIEW'
+        df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(normalize_pharmacy_is_excluded)
         logger.info(
             f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts(dropna=False).to_dict()}"
         )
 
-
-        # Identify rows where pharmacy_is_excluded is NA or 'unknown'
-        unknown_mask = df["pharmacy_is_excluded"].isna() | (df["pharmacy_is_excluded"] == "unknown")
+        # Identify rows where pharmacy_is_excluded is NaN or 'REVIEW' (needs validation)
+        unknown_mask = df["pharmacy_is_excluded"].isna() | (df["pharmacy_is_excluded"] == "REVIEW")
         unknown_pharmacies = df[unknown_mask]
         logger.info(f"Unknown/NA pharmacies count: {unknown_pharmacies.shape[0]}")
 
@@ -252,7 +243,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                         backup_path = output_file_path_obj.with_suffix(f"{output_file_path_obj.suffix}.backup")
                         output_file_path_obj.rename(backup_path)
                         existing_df = pd.DataFrame()
-                    
+
                     logger.info(f"Existing log rows: {len(existing_df)}")
                     combined_df = pd.concat(
                         [existing_df, unknown_pharmacies_output], ignore_index=True
@@ -513,7 +504,6 @@ def write_excel_sheets(
     selected_columns = [
         "PHARMACYNPI",
         "NABP",
-        "MemberID",
         "Pharmacy Name",
         "pharmacy_is_excluded",
         "Unique Identifier",

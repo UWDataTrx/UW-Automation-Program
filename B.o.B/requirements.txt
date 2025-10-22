@@ -1,0 +1,24 @@
+# Requirements for the B.o.B package (B.o.B/modules)
+# Select one parquet backend: either pyarrow or fastparquet is required for pandas.read_parquet
+pandas>=1.5
+numpy>=1.23
+# Parquet engine (choose one):
+pyarrow>=8.0
+# fastparquet>=0.8   # alternative to pyarrow
+
+# GUI
+customtkinter>=6.0
+# tkinter is part of the standard library on most platforms (ensure tkinter is installed on Linux: python3-tk)
+
+# Clipboard helper
+pyperclip>=1.8
+
+# Excel support
+openpyxl>=3.0
+XlsxWriter>=3.0
+
+# Optional (used elsewhere in repo, useful to have available)
+# xlsxwriter is used by parts of the B.o.B toolkit; openpyxl used for reading/writing workbooks
+
+# If you want to run faster vectorized operations on large parquet datasets, consider
+# installing a conda environment and using pyarrow from conda-forge.

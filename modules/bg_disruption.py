@@ -16,7 +16,8 @@ from utils.utils import (clean_logic_and_tier,  # noqa: E402
                          drop_duplicates_df, filter_logic_and_maintenance,
                          filter_products_and_alternative, filter_recent_date,
                          write_audit_log, vectorized_resolve_pharmacy_exclusion,
-                         standardize_pharmacy_ids, standardize_network_ids)
+                         standardize_pharmacy_ids, standardize_network_ids,
+                         normalize_pharmacy_is_excluded)
 
 # Logging setup
 logging.basicConfig(
@@ -184,23 +185,14 @@ def handle_pharmacy_exclusions(df, file_paths):
 
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
-        def map_excluded(val):
-            if pd.isna(val):
-                return None
-            v = str(val).strip().lower()
-            if v in {"yes", "y", "true", "1"}:
-                return True
-            elif v in {"no", "n", "false", "0"}:
-                return False
-            logger.warning(f"Unexpected pharmacy_is_excluded value encountered: {val}")
-            return None
-        df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(map_excluded)
+        # Normalize using shared helper (returns True/False/'REVIEW')
+        df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(normalize_pharmacy_is_excluded)
         logger.info(
             f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts(dropna=False).to_dict()}"
         )
 
-        # Identify rows where pharmacy_is_excluded is NA or 'unknown'
-        unknown_mask = df["pharmacy_is_excluded"].isna() | (df["pharmacy_is_excluded"] == "unknown")
+        # Identify rows where pharmacy_is_excluded is NaN or 'REVIEW' (needs validation)
+        unknown_mask = df["pharmacy_is_excluded"].isna() | (df["pharmacy_is_excluded"] == "REVIEW")
         unknown_pharmacies = df[unknown_mask]
         logger.info(f"Unknown/NA pharmacies count: {unknown_pharmacies.shape[0]}")
 
@@ -434,7 +426,6 @@ def write_excel_report(report_data, output_filename):
         selected_columns = [
             "PHARMACYNPI",
             "NABP",
-            "MemberID",
             "Pharmacy Name",
             "pharmacy_is_excluded",
             "Unique Identifier",
@@ -443,11 +434,8 @@ def write_excel_report(report_data, output_filename):
         missing_columns = [col for col in selected_columns if col not in network_pivot.columns]
         if missing_columns:
             logger.warning(f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}")
-            network_pivot[available_columns].to_excel(writer, sheet_name="Network", index=False)
-        
-        # Log a warning if any expected columns are missing
-        if missing_columns:
-            logger.warning(f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}")
+        # Always write the available columns (may be a subset)
+        network_pivot[available_columns].to_excel(writer, sheet_name="Network", index=False)
 
     # Reorder sheets so Summary follows Data
     sheets = writer.sheets  # This is a dict: {sheet_name: worksheet_object}

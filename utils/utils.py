@@ -216,6 +216,10 @@ def normalize_pharmacy_is_excluded(val):
 
 _PHARMACY_CACHE_FILE = Path(__file__).resolve().parent.parent / 'build' / 'pharmacy_exclusion_cache.pkl'
 
+# In-memory cache for pharmacy exclusion maps. Declared here to satisfy static
+# type checkers and allow lazy loading/persistence functions to reference it.
+_PHARMACY_EXCLUSION_CACHE: dict = {}
+
 def _compute_network_signature(network: pd.DataFrame) -> str:
     """Compute a robust SHA256 signature for the network content used for exclusion lookups."""
     cols = ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]

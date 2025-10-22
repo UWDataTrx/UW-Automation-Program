@@ -437,7 +437,6 @@ def write_openmdf_excel_sheets(
         selected_columns = [
             "PHARMACYNPI",
             "NABP",
-            "MemberID",
             "Pharmacy Name",
             "pharmacy_is_excluded",
             "Unique Identifier",
@@ -583,7 +582,8 @@ def process_data():
         network_df, network_pivot = create_openmdf_network_analysis(df)
         total_pharmacies = df.shape[0]
         logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
-        excluded_count = df['pharmacy_is_excluded'].sum()
+        # Only sum boolean or numeric values, ignore strings like 'REVIEW'
+        excluded_count = df['pharmacy_is_excluded'][df['pharmacy_is_excluded'].isin([True, False, 0, 1])].sum()
         non_excluded_count = (~df['pharmacy_is_excluded'].astype(bool)).sum()
         logger.info(f"Total pharmacies in dataset: {total_pharmacies}")
         logger.info(f"Excluded pharmacies ('yes'): {excluded_count}")
@@ -604,15 +604,18 @@ def process_data():
         selected_columns = [
             "PHARMACYNPI",
             "NABP",
-            "MemberID",
             "Pharmacy Name",
             "pharmacy_is_excluded",
             "Unique Identifier",
         ]
         if network_df is not None:
-            network_df[selected_columns].to_excel(writer, sheet_name="Network", index=False)
+            available_columns = [col for col in selected_columns if col in network_df.columns]
+            missing_columns = [col for col in selected_columns if col not in network_df.columns]
+            if missing_columns:
+                logger.warning(f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}")
+            network_df[available_columns].to_excel(writer, sheet_name="Network", index=False)
             logger.info(
-                f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and selected columns"
+                f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and columns: {available_columns}"
             )
         else:
             logger.info("Network sheet not written: network_df is None.")

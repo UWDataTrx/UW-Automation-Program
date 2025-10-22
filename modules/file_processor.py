@@ -1,6 +1,7 @@
 import pathlib
 import sys
 from pathlib import Path
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -10,15 +11,30 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 from tkinter import messagebox  # noqa: E402
 
-try:
-    from config.app_config import AppConstants, ProcessingConfig
-    from utils.utils import write_audit_log
-except ImportError:
-    # Fallback if imports are not available
-    ProcessingConfig = None
-    AppConstants = None
+# Typed placeholders so static checkers know these names exist. We import
+# the concrete implementations under temporary names and assign them to
+# these placeholders when available.
+AppConstants: Optional[Any]
+ProcessingConfig: Optional[Any]
 
-    def write_audit_log(script_name, message, status="INFO"):
+def _noop_write_audit_log(*args: Any, **kwargs: Any) -> None:
+    # No-op fallback to ensure name exists at import time for type checkers
+    return None
+
+write_audit_log = _noop_write_audit_log
+
+try:
+    from config.app_config import AppConstants as _AppConstants, ProcessingConfig as _ProcessingConfig  # type: ignore
+    AppConstants = _AppConstants
+    ProcessingConfig = _ProcessingConfig
+    from utils.utils import write_audit_log as _write_audit_log  # type: ignore
+    write_audit_log = _write_audit_log
+except Exception:
+    # Fallback values when imports are not available at import time.
+    AppConstants = None
+    ProcessingConfig = None
+
+    def write_audit_log(script_name: Any, message: Any, status: Any = "INFO") -> Any:
         """Fallback logging function when utils.utils is not available"""
         print(f"[{status}] {script_name}: {message}")
 

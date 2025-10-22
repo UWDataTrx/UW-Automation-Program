@@ -16,6 +16,7 @@ from utils.utils import (  # noqa: E402
     filter_recent_date,
     write_audit_log,
     vectorized_resolve_pharmacy_exclusion,
+    normalize_pharmacy_is_excluded,
     standardize_pharmacy_ids,
     standardize_network_ids,
 )
@@ -164,22 +165,12 @@ def handle_pharmacy_exclusions(df, file_paths):
     if "pharmacy_is_excluded" in df.columns:
         logger.info(f"Unique values in pharmacy_is_excluded before mapping: {df['pharmacy_is_excluded'].unique()}")
 
-        def map_excluded(val):
-            if pd.isna(val) or str(val).strip() == "":
-                return "REVIEW"
-            v = str(val).strip().lower()
-            if v in {"yes", "y", "true", "1"}:
-                return True
-            elif v in {"no", "n", "false", "0"}:
-                return False
-            # Unexpected values map to REVIEW
-            logger.warning(f"Unexpected pharmacy_is_excluded value encountered: {val}")
-            return "REVIEW"
-
-        df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(map_excluded)
+        # Use centralized normalizer which returns True/False/'REVIEW'
+        df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(normalize_pharmacy_is_excluded)
         logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts(dropna=False).to_dict()}")
 
-        unknown_mask = df["pharmacy_is_excluded"].isna()
+        # Treat 'REVIEW' (and NaN) as unknown/needs-validation
+        unknown_mask = df["pharmacy_is_excluded"].isna() | (df["pharmacy_is_excluded"] == "REVIEW")
         unknown_pharmacies = df[unknown_mask]
         logger.info(f"Unknown/NA pharmacies count: {unknown_pharmacies.shape[0]}")
 
@@ -439,7 +430,6 @@ def write_excel_report(report_data, output_filename):
         selected_columns = [
             "PHARMACYNPI",
             "NABP",
-            "MemberID",
             "Pharmacy Name",
             "pharmacy_is_excluded",
             "Unique Identifier",
