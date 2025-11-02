@@ -12,14 +12,49 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 
-from modules.audit_helper import (log_file_access,  # noqa: E402
-                                  log_user_session_end, log_user_session_start,
-                                  make_audit_entry)
-from utils.utils import (clean_logic_and_tier,  # noqa: E402
-                         drop_duplicates_df, filter_logic_and_maintenance,
-                         filter_products_and_alternative, filter_recent_date,
-                         write_audit_log, vectorized_resolve_pharmacy_exclusion,
-                         normalize_pharmacy_is_excluded)
+from modules.audit_helper import (
+    log_file_access,  # noqa: E402
+    log_user_session_end,
+    log_user_session_start,
+    make_audit_entry,
+)
+from utils.utils import (
+    clean_logic_and_tier,  # noqa: E402
+    drop_duplicates_df,
+    filter_logic_and_maintenance,
+    filter_products_and_alternative,
+    filter_recent_date,
+    write_audit_log,
+    vectorized_resolve_pharmacy_exclusion,
+    normalize_pharmacy_is_excluded,
+)
+import re  # noqa: E402
+
+# Compile regex pattern once for better performance
+_FILTER_PHRASES_PATTERN = None
+
+
+def get_filter_phrases_pattern():
+    """Get compiled regex pattern for pharmacy filtering."""
+    global _FILTER_PHRASES_PATTERN
+    if _FILTER_PHRASES_PATTERN is None:
+        filter_phrases = [
+            "CVS",
+            "Walgreens",
+            "Kroger",
+            "Walmart",
+            "Rite Aid",
+            "Optum",
+            "Express Scripts",
+            "DMR",
+            "Williams Bro",
+            "Publix",
+        ]
+        filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
+        regex_pattern = "|".join([f"\\b{p}\\b" for p in filter_phrases_escaped])
+        _FILTER_PHRASES_PATTERN = re.compile(regex_pattern, flags=re.IGNORECASE)
+    return _FILTER_PHRASES_PATTERN
+
 
 # Set up logger
 logging.basicConfig(level=logging.INFO)
@@ -37,14 +72,11 @@ try:
     import importlib.util
 
     if importlib.util.find_spec("xlsxwriter") is None:
-        print(
-            "The 'xlsxwriter' module is not installed. Please install it using 'pip install xlsxwriter'."
-        )
+        print("The 'xlsxwriter' module is not installed. Please install it using 'pip install xlsxwriter'.")
         sys.exit(1)
 except Exception:
     print("Error checking for 'xlsxwriter' module.")
     sys.exit(1)
-
 
 
 # ---------------------------------------------------------------------------
@@ -78,32 +110,27 @@ def load_tier_disruption_data(file_paths):
         return None
 
     try:
-        claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table")
+        claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table", engine="openpyxl")
     except Exception as e:
         logger.error(f"Error loading claims: {e}")
-        make_audit_entry(
-            "tier_disruption.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
-        )
-        claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
+        make_audit_entry("tier_disruption.py", f"Claims Table fallback error: {e}", "FILE_ERROR")
+        claims = pd.read_excel(file_paths["reprice"], sheet_name=0, engine="openpyxl")
 
     print(f"claims shape: {claims.shape}")
     claims.info()
 
-    # Load reference tables
-    medi = pd.read_excel(
-        file_paths["medi_span"], usecols=["NDC", "Maint Drug?", "Product Name"]
-    )
+    # Load reference tables with explicit column selection
+    medi = pd.read_excel(file_paths["medi_span"], usecols=["NDC", "Maint Drug?", "Product Name"], engine="openpyxl")
     print(f"medi shape: {medi.shape}")
 
-    u = pd.read_excel(
-        file_paths["u_disrupt"], sheet_name="Universal NDC", usecols=["NDC", "Tier"]
-    )
+    u = pd.read_excel(file_paths["u_disrupt"], sheet_name="Universal NDC", usecols=["NDC", "Tier"], engine="openpyxl")
     print(f"u shape: {u.shape}")
 
     e = pd.read_excel(
         file_paths["e_disrupt"],
         sheet_name="Alternatives NDC",
         usecols=["NDC", "Tier", "Alternative"],
+        engine="openpyxl",
     )
     print(f"e shape: {e.shape}")
 
@@ -111,11 +138,13 @@ def load_tier_disruption_data(file_paths):
         network = pd.read_csv(
             file_paths["n_disrupt"],
             usecols=["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"],
+            dtype={"pharmacy_nabp": str, "pharmacy_npi": str, "pharmacy_is_excluded": str},
         )
     else:
         network = pd.read_excel(
             file_paths["n_disrupt"],
             usecols=["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"],
+            engine="openpyxl",
         )
     print(f"network shape: {network.shape}")
     print(f"Raw network['pharmacy_nabp'] sample: {network['pharmacy_nabp'].head(10).tolist()}")
@@ -139,22 +168,29 @@ def process_tier_data_pipeline(claims, reference_data, network):
 
     # Standardize NABP/NPI columns in both claims and network before exclusion resolution
     from utils.utils import standardize_pharmacy_ids, standardize_network_ids
+
     df = standardize_pharmacy_ids(df)
     network = standardize_network_ids(network)
     # Debug: Print sample NABP and PHARMACYNPI values and types from both DataFrames
     print(f"Sample claims NABP: {df['NABP'].head(5).tolist()} | Types: {[type(x) for x in df['NABP'].head(5)]}")
-    print(f"Sample claims PHARMACYNPI: {df['PHARMACYNPI'].head(5).tolist()} | Types: {[type(x) for x in df['PHARMACYNPI'].head(5)]}")
-    print(f"Sample network NABP: {network['pharmacy_nabp'].head(5).tolist()} | Types: {[type(x) for x in network['pharmacy_nabp'].head(5)]}")
-    print(f"Sample network PHARMACYNPI: {network['pharmacy_npi'].head(5).tolist()} | Types: {[type(x) for x in network['pharmacy_npi'].head(5)]}")
+    print(
+        f"Sample claims PHARMACYNPI: {df['PHARMACYNPI'].head(5).tolist()} | Types: {[type(x) for x in df['PHARMACYNPI'].head(5)]}"
+    )
+    print(
+        f"Sample network NABP: {network['pharmacy_nabp'].head(5).tolist()} | Types: {[type(x) for x in network['pharmacy_nabp'].head(5)]}"
+    )
+    print(
+        f"Sample network PHARMACYNPI: {network['pharmacy_npi'].head(5).tolist()} | Types: {[type(x) for x in network['pharmacy_npi'].head(5)]}"
+    )
 
     print(f"DEBUG: About to call vectorized resolver with df shape {df.shape}")
     print(f"DEBUG: df columns: {df.columns.tolist()}")
-    if 'NABP' in df.columns:
+    if "NABP" in df.columns:
         print(f"DEBUG: NABP column exists, non-null count: {df['NABP'].notna().sum()}")
         print(f"DEBUG: First 5 NABP values: {df['NABP'].head().tolist()}")
     else:
         print("DEBUG: NABP column NOT FOUND!")
-    if 'PHARMACYNPI' in df.columns:
+    if "PHARMACYNPI" in df.columns:
         print(f"DEBUG: PHARMACYNPI column exists, non-null count: {df['PHARMACYNPI'].notna().sum()}")
     else:
         print("DEBUG: PHARMACYNPI column NOT FOUND!")
@@ -167,11 +203,11 @@ def process_tier_data_pipeline(claims, reference_data, network):
     true_count = df["pharmacy_is_excluded"].apply(lambda v: v is True).sum()
     false_count = df["pharmacy_is_excluded"].apply(lambda v: v is False).sum()
     print(f"Vector resolve -> True: {true_count}, False: {false_count}, REVIEW: {review_count}")
-    # Fill missing IDs
+
+    # Fill missing IDs - vectorized operation
     import numpy as np
-    df["PHARMACYNPI"] = df["PHARMACYNPI"].replace([np.nan, '', float('nan')], "N/A")
-    import numpy as np
-    df["NABP"] = df["NABP"].fillna("N/A").replace(['', float('nan')], "N/A")
+
+    df[["PHARMACYNPI", "NABP"]] = df[["PHARMACYNPI", "NABP"]].fillna("N/A").replace(["", float("nan")], "N/A")
 
     # Date parsing, deduplication, type cleaning, and filters
     df["DATEFILLED"] = pd.to_datetime(df["DATEFILLED"], errors="coerce")
@@ -212,9 +248,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
 
         if not unknown_pharmacies.empty:
             output_file_path = file_paths["pharmacy_validation"]
-            logger.info(
-                f"Preparing to write unknown/NA pharmacies to pharmacy validation log: {output_file_path}"
-            )
+            logger.info(f"Preparing to write unknown/NA pharmacies to pharmacy validation log: {output_file_path}")
             unknown_pharmacies_output = unknown_pharmacies[["PHARMACYNPI", "NABP"]].fillna("N/A")
             unknown_pharmacies_output["Result"] = unknown_pharmacies["pharmacy_is_excluded"].fillna("NA")
             logger.info(f"Rows to write: {len(unknown_pharmacies_output)}")
@@ -222,18 +256,16 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
             try:
                 output_file_path_obj = Path(output_file_path)
                 if output_file_path_obj.exists():
-                    logger.info(
-                        f"Existing pharmacy validation log found at: {output_file_path}"
-                    )
+                    logger.info(f"Existing pharmacy validation log found at: {output_file_path}")
                     # Handle both CSV and Excel files with proper encoding
                     try:
-                        if str(output_file_path_obj).lower().endswith('.csv'):
+                        if str(output_file_path_obj).lower().endswith(".csv"):
                             # Try different encodings for CSV files
                             try:
-                                existing_df = pd.read_csv(output_file_path_obj, encoding='utf-8')
+                                existing_df = pd.read_csv(output_file_path_obj, encoding="utf-8")
                             except UnicodeDecodeError:
                                 logger.warning("UTF-8 failed, trying latin-1 encoding...")
-                                existing_df = pd.read_csv(output_file_path_obj, encoding='latin-1')
+                                existing_df = pd.read_csv(output_file_path_obj, encoding="latin-1")
                         else:
                             # Handle Excel files
                             existing_df = pd.read_excel(output_file_path_obj)
@@ -245,22 +277,16 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                         existing_df = pd.DataFrame()
 
                     logger.info(f"Existing log rows: {len(existing_df)}")
-                    combined_df = pd.concat(
-                        [existing_df, unknown_pharmacies_output], ignore_index=True
-                    )
+                    combined_df = pd.concat([existing_df, unknown_pharmacies_output], ignore_index=True)
                     combined_df = combined_df.drop_duplicates()
-                    logger.info(
-                        f"Combined log rows after append and deduplication: {len(combined_df)}"
-                    )
+                    logger.info(f"Combined log rows after append and deduplication: {len(combined_df)}")
                 else:
-                    logger.info(
-                        f"No existing pharmacy validation log found. Creating new file at: {output_file_path}"
-                    )
+                    logger.info(f"No existing pharmacy validation log found. Creating new file at: {output_file_path}")
                     combined_df = unknown_pharmacies_output
 
                 # Save based on file extension
-                if str(output_file_path_obj).lower().endswith('.csv'):
-                    combined_df.to_csv(output_file_path_obj, index=False, encoding='utf-8')
+                if str(output_file_path_obj).lower().endswith(".csv"):
+                    combined_df.to_csv(output_file_path_obj, index=False, encoding="utf-8")
                 else:
                     combined_df.to_excel(output_file_path_obj, index=False)
                 logger.info(
@@ -268,9 +294,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                 )
 
             except Exception as e:
-                logger.error(
-                    f"Error updating pharmacy validation file '{output_file_path}': {e}"
-                )
+                logger.error(f"Error updating pharmacy validation file '{output_file_path}': {e}")
                 make_audit_entry(
                     "tier_disruption.py",
                     f"Pharmacy validation file update error: {e}",
@@ -283,9 +307,7 @@ def handle_tier_pharmacy_exclusions(df, file_paths):
                         f"Fallback: Wrote {len(unknown_pharmacies_output)} unknown/NA pharmacy rows to '{output_file_path}'."
                     )
                 except Exception as fallback_e:
-                    logger.error(
-                        f"Fallback error writing to '{output_file_path}': {fallback_e}"
-                    )
+                    logger.error(f"Fallback error writing to '{output_file_path}': {fallback_e}")
 
     return df
 
@@ -426,33 +448,24 @@ def create_summary_dataframe(tab_members, tab_rxs, total_claims, total_members):
 def create_network_analysis(df):
     """Create network analysis for excluded pharmacies."""
     # Ensure any blanks in pharmacy_is_excluded are marked as 'REVIEW' before filtering
-    df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].replace([None, '', pd.NA], "REVIEW")
+    df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].replace([None, "", pd.NA], "REVIEW")
     # Only include rows where pharmacy_is_excluded is True or REVIEW
-    network_df = df[df["pharmacy_is_excluded"].isin([True, "REVIEW"])]
-    filter_phrases = [
-        "CVS",
-        "Walgreens",
-        "Kroger",
-        "Walmart",
-        "Rite Aid",
-        "Optum",
-        "Express Scripts",
-        "DMR",
-        "Williams Bro",
-        "Publix",
-    ]
-    filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
-    regex_pattern = "|".join([f"\b{p}\b" for p in filter_phrases_escaped])
-    network_df = network_df[
-        ~network_df["Pharmacy Name"]
-        .str.lower()
-        .str.contains(regex_pattern, case=False, regex=True, na=False)
-    ]
+    network_df = df[df["pharmacy_is_excluded"].isin([True, "REVIEW"])].copy()
+
+    # Use precompiled regex pattern for better performance
+    pattern = get_filter_phrases_pattern()
+    network_df = network_df[~network_df["Pharmacy Name"].str.lower().str.contains(pattern, regex=True, na=False)]
+
     # Build network sheet as a DataFrame with required columns
-    if {"PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"}.issubset(network_df.columns):
-        network_df["PHARMACYNPI"] = network_df["PHARMACYNPI"].replace([None, '', pd.NA, float('nan')], "N/A")
-        network_df["NABP"] = network_df["NABP"].replace([None, '', pd.NA, float('nan')], "N/A")
-        network_sheet = network_df[["PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"]].copy()
+    required_cols = {"PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"}
+    if required_cols.issubset(network_df.columns):
+        # Fill missing IDs with 'N/A' - vectorized operation
+        network_df[["PHARMACYNPI", "NABP"]] = (
+            network_df[["PHARMACYNPI", "NABP"]].fillna("N/A").replace([None, "", pd.NA, float("nan")], "N/A")
+        )
+        # Select columns directly from set
+        cols = ["PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"]
+        network_sheet = network_df[cols].copy()
         network_sheet = network_sheet.rename(columns={"MemberID": "Unique Members", "Rxs": "Total Rxs"})
         # Drop duplicates so each pharmacy only appears once
         network_sheet = network_sheet.drop_duplicates(subset=["PHARMACYNPI", "NABP", "Pharmacy Name"])
@@ -461,9 +474,7 @@ def create_network_analysis(df):
         return None, None
 
 
-def write_excel_sheets(
-    writer, df, summary_df, tier_pivots, ex_pt, exc_members, network_df, network_pivot
-):
+def write_excel_sheets(writer, df, summary_df, tier_pivots, ex_pt, exc_members, network_df, network_pivot):
     """Write all sheets to the Excel file."""
     from utils.utils import write_audit_log
 
@@ -471,9 +482,7 @@ def write_excel_sheets(
     output_path = getattr(writer, "path", None)
     if not output_path or not str(output_path).strip():
         output_path = "Unknown_Tier_Disruption_Report.xlsx"
-        logger.warning(
-            "Output filename was empty or invalid. Defaulting to 'Unknown_Tier_Disruption_Report.xlsx'."
-        )
+        logger.warning("Output filename was empty or invalid. Defaulting to 'Unknown_Tier_Disruption_Report.xlsx'.")
         write_audit_log(
             "tier_disruption.py",
             "Output filename was empty or invalid. Defaulting to 'Unknown_Tier_Disruption_Report.xlsx'.",
@@ -512,14 +521,14 @@ def write_excel_sheets(
         available_columns = [col for col in selected_columns if col in network_df.columns]
         missing_columns = [col for col in selected_columns if col not in network_df.columns]
         if missing_columns:
-            logger.warning(f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}")
+            logger.warning(
+                f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}"
+            )
         network_df[available_columns].to_excel(writer, sheet_name="Network", index=False)
         logger.info(
             f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and columns: {available_columns}"
         )
-    write_audit_log(
-        "tier_disruption.py", f"Excel report written to: {output_path}", "INFO"
-    )
+    write_audit_log("tier_disruption.py", f"Excel report written to: {output_path}", "INFO")
 
 
 def reorder_excel_sheets(writer):
@@ -562,9 +571,7 @@ def process_data():
     username = os.environ.get("USERNAME") or os.environ.get("USER") or "UnknownUser"
     logger.info(f"Session started for user: {username}")
     log_user_session_start("tier_disruption.py")
-    write_audit_log(
-        "tier_disruption.py", f"Processing started by user: {username}", "INFO"
-    )
+    write_audit_log("tier_disruption.py", f"Processing started by user: {username}", "INFO")
     logger.info("Loading data files...")
 
     # Always use 'LBL for Disruption.xlsx' in the current working directory
@@ -582,16 +589,12 @@ def process_data():
         result = load_tier_disruption_data(file_paths)
         if result is None:
             logger.error("Claims loading failed - early exit")
-            make_audit_entry(
-                "tier_disruption.py", "Claims loading failed - early exit", "DATA_ERROR"
-            )
+            make_audit_entry("tier_disruption.py", "Claims loading failed - early exit", "DATA_ERROR")
             return  # Early exit if claims loading failed
         claims, medi, u, e, network = result
     except Exception as e:
         logger.error(f"Error loading configuration or data files: {e}")
-        make_audit_entry(
-            "tier_disruption.py", f"Error loading configuration or data files: {e}", "CONFIG_ERROR"
-        )
+        make_audit_entry("tier_disruption.py", f"Error loading configuration or data files: {e}", "CONFIG_ERROR")
         return
 
     logger.info(f"Claims loaded: {claims.shape}")
@@ -601,9 +604,7 @@ def process_data():
     logger.info(f"Network loaded: {network.shape}")
 
     # Log file access
-    log_file_access(
-        "tier_disruption.py", file_paths.get("reprice", "unknown"), "LOADING"
-    )
+    log_file_access("tier_disruption.py", file_paths.get("reprice", "unknown"), "LOADING")
     write_audit_log(
         "tier_disruption.py",
         f"User {username} loaded file: {file_paths.get('reprice', 'unknown')}",
@@ -652,9 +653,7 @@ def process_data():
 
     # Write the 'Summary' sheet second
     logger.info("Writing Summary sheet...")
-    summary_df = create_summary_dataframe(
-        tab_members, tab_rxs, total_claims, total_members
-    )
+    summary_df = create_summary_dataframe(tab_members, tab_rxs, total_claims, total_members)
     summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
     # Write tier pivots and Exclusions after Summary
@@ -673,7 +672,7 @@ def process_data():
     total_pharmacies = df.shape[0]
     logger.info(f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts().to_dict()}")
     # Ensure pharmacy_is_excluded is boolean for correct inversion
-    excluded_mask = df['pharmacy_is_excluded'].fillna(False).astype(bool)
+    excluded_mask = df["pharmacy_is_excluded"].fillna(False).astype(bool)
     excluded_count = excluded_mask.sum()
     non_excluded_count = (~excluded_mask.astype(bool)).sum()
     logger.info(f"Total pharmacies in dataset: {total_pharmacies}")
@@ -683,7 +682,9 @@ def process_data():
     if network_df is not None:
         logger.info(f"Network sheet will show {network_df.shape[0]} excluded pharmacy records (minus major chains)")
     else:
-        logger.info("Network sheet will show 0 excluded pharmacy records (minus major chains) because network_df is None")
+        logger.info(
+            "Network sheet will show 0 excluded pharmacy records (minus major chains) because network_df is None"
+        )
 
     # Write Network sheet
     if network_pivot is not None:
@@ -704,7 +705,9 @@ def process_data():
         available_columns = [col for col in selected_columns if col in network_df.columns]
         missing_columns = [col for col in selected_columns if col not in network_df.columns]
         if missing_columns:
-            logger.warning(f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}")
+            logger.warning(
+                f"Network DataFrame missing columns: {missing_columns}. Only writing available columns: {available_columns}"
+            )
         network_df[available_columns].to_excel(writer, sheet_name="Network", index=False)
         logger.info(
             f"Network sheet updated with {network_df.shape[0]} excluded pharmacy records (minus major chains) and columns: {available_columns}"
@@ -731,6 +734,7 @@ def process_data():
     try:
         import tkinter as tk
         from tkinter import messagebox
+
         root = tk.Tk()
         root.withdraw()
         messagebox.showinfo("Processing Complete", "Processing complete")
