@@ -175,3 +175,6 @@ mover.py
 diagnostic_report.txt
 unmatched_reversals.txt
 EMAIL_TEMPLATE.txt
+
+# Streamlit
+.streamlit/secrets.toml
