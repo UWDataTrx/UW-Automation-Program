@@ -207,7 +207,7 @@ def process_tier_data_pipeline(claims, reference_data, network):
     # Fill missing IDs - vectorized operation
     import numpy as np
 
-    df[["PHARMACYNPI", "NABP"]] = df[["PHARMACYNPI", "NABP"]].fillna("N/A").replace([np.nan, "", float("nan")], "N/A")
+    df[["PHARMACYNPI", "NABP"]] = df[["PHARMACYNPI", "NABP"]].fillna("N/A").replace(["", float("nan")], "N/A")
 
     # Date parsing, deduplication, type cleaning, and filters
     df["DATEFILLED"] = pd.to_datetime(df["DATEFILLED"], errors="coerce")
@@ -463,7 +463,9 @@ def create_network_analysis(df):
         network_df[["PHARMACYNPI", "NABP"]] = (
             network_df[["PHARMACYNPI", "NABP"]].fillna("N/A").replace([None, "", pd.NA, float("nan")], "N/A")
         )
-        network_sheet = network_df[list(required_cols)].copy()
+        # Select columns directly from set
+        cols = ["PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"]
+        network_sheet = network_df[cols].copy()
         network_sheet = network_sheet.rename(columns={"MemberID": "Unique Members", "Rxs": "Total Rxs"})
         # Drop duplicates so each pharmacy only appears once
         network_sheet = network_sheet.drop_duplicates(subset=["PHARMACYNPI", "NABP", "Pharmacy Name"])

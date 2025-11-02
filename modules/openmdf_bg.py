@@ -379,7 +379,9 @@ def create_network_data(df):
             network_df[["PHARMACYNPI", "NABP"]].fillna("N/A").replace(["", pd.NA, float("nan")], "N/A")
         )
         # Build the network sheet row-by-row, no grouping
-        network_sheet = network_df[list(required_cols)].copy()
+        # Select columns directly from set
+        cols = ["PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"]
+        network_sheet = network_df[cols].copy()
         network_sheet = network_sheet.rename(columns={"MemberID": "Unique Members", "Rxs": "Total Rxs"})
         # Drop duplicates so each pharmacy only appears once
         network_sheet = network_sheet.drop_duplicates(subset=["PHARMACYNPI", "NABP", "Pharmacy Name"])
