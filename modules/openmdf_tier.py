@@ -19,7 +19,25 @@ from utils.utils import (clean_logic_and_tier,  # noqa: E402
                          drop_duplicates_df, filter_logic_and_maintenance,
                          filter_products_and_alternative, filter_recent_date,
                          write_audit_log, vectorized_resolve_pharmacy_exclusion,
-                         standardize_pharmacy_ids, standardize_network_ids)
+                         standardize_pharmacy_ids, standardize_network_ids,
+                         normalize_pharmacy_is_excluded)
+import re  # noqa: E402
+
+# Compile regex pattern once for better performance
+_FILTER_PHRASES_PATTERN = None
+
+def get_filter_phrases_pattern():
+    """Get compiled regex pattern for pharmacy filtering."""
+    global _FILTER_PHRASES_PATTERN
+    if _FILTER_PHRASES_PATTERN is None:
+        filter_phrases = [
+            "CVS", "Walgreens", "Kroger", "Walmart", "Rite Aid",
+            "Optum", "Express Scripts", "DMR", "Williams Bro", "Publix",
+        ]
+        filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
+        regex_pattern = "|".join([f"\\b{p}\\b" for p in filter_phrases_escaped])
+        _FILTER_PHRASES_PATTERN = re.compile(regex_pattern, flags=re.IGNORECASE)
+    return _FILTER_PHRASES_PATTERN
 
 # Logging setup
 logging.basicConfig(
@@ -36,20 +54,6 @@ console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
 logger.addHandler(console_handler)
-
-# Common helper for mapping exclusion values
-def normalize_pharmacy_excluded(val):
-    if val is None:
-        return "REVIEW"
-    v = str(val).strip().lower()
-    if v == "":
-        return "REVIEW"
-    if v in {"yes", "y", "true", "1"}:
-        return True
-    if v in {"no", "n", "false", "0"}:
-        return False
-    return "REVIEW"
-
 
 
 # ---------------------------------------------------------------------------
@@ -68,22 +72,22 @@ def load_openmdf_tier_data(file_paths):
         return None
 
     try:
-        claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table")
+        claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table", engine="openpyxl")
     except Exception as e:
         logger.error(f"Error loading claims: {e}")
         make_audit_entry(
             "openmdf_tier.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
         )
-        claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
+        claims = pd.read_excel(file_paths["reprice"], sheet_name=0, engine="openpyxl")
 
     print(f"claims shape: {claims.shape}")
     claims.info()
 
-    # Load reference tables
+    # Load reference tables with explicit column selection
     try:
-        medi = pd.read_excel(file_paths["medi_span"])[
-            ["NDC", "Maint Drug?", "Product Name"]
-        ]
+        medi = pd.read_excel(file_paths["medi_span"],
+                           usecols=["NDC", "Maint Drug?", "Product Name"],
+                           engine="openpyxl")
         print(f"medi shape: {medi.shape}")
     except Exception as e:
         logger.error(f"Failed to read medi_span file: {file_paths['medi_span']} | {e}")
@@ -95,9 +99,8 @@ def load_openmdf_tier_data(file_paths):
         return None
 
     try:
-        mdf = pd.read_excel(file_paths["mdf_disrupt"], sheet_name="Open MDF NDC")[
-            ["NDC", "Tier"]
-        ]
+        mdf = pd.read_excel(file_paths["mdf_disrupt"], sheet_name="Open MDF NDC",
+                          usecols=["NDC", "Tier"], engine="openpyxl")
         print(f"mdf shape: {mdf.shape}")
     except Exception as e:
         logger.error(
@@ -112,8 +115,9 @@ def load_openmdf_tier_data(file_paths):
 
     try:
         exclusive = pd.read_excel(
-            file_paths["e_disrupt"], sheet_name="Alternatives NDC"
-        )[["NDC", "Tier", "Alternative"]]
+            file_paths["e_disrupt"], sheet_name="Alternatives NDC",
+            usecols=["NDC", "Tier", "Alternative"], engine="openpyxl"
+        )
     except Exception as e:
         logger.error(f"Failed to read e_disrupt file: {file_paths['e_disrupt']} | {e}")
         write_audit_log(
@@ -125,13 +129,13 @@ def load_openmdf_tier_data(file_paths):
 
     try:
         if file_paths["n_disrupt"].lower().endswith(".csv"):
-            network = pd.read_csv(file_paths["n_disrupt"])[
-                ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]
-            ]
+            network = pd.read_csv(file_paths["n_disrupt"],
+                                usecols=["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"],
+                                dtype={"pharmacy_nabp": str, "pharmacy_npi": str, "pharmacy_is_excluded": str})
         else:
-            network = pd.read_excel(file_paths["n_disrupt"])[
-                ["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"]
-            ]
+            network = pd.read_excel(file_paths["n_disrupt"],
+                                  usecols=["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"],
+                                  engine="openpyxl")
         print(f"network shape: {network.shape}")
         print(f"Raw network['pharmacy_nabp'] sample: {network['pharmacy_nabp'].head(10).tolist()}")
         print(f"Raw network['pharmacy_npi'] sample: {network['pharmacy_npi'].head(10).tolist()}")
@@ -172,10 +176,10 @@ def process_openmdf_data_pipeline(claims, reference_data, network):
     true_count = df["pharmacy_is_excluded"].apply(lambda v: v is True).sum()
     false_count = df["pharmacy_is_excluded"].apply(lambda v: v is False).sum()
     print(f"Vector resolve -> True: {true_count}, False: {false_count}, REVIEW: {review_count}")
-    # Fill missing IDs
+    
+    # Fill missing IDs - vectorized operation
     import numpy as np
-    df["PHARMACYNPI"] = df["PHARMACYNPI"].replace([np.nan, '', float('nan')], "N/A").fillna("N/A")
-    df["NABP"] = df["NABP"].replace(['', float('nan')], "N/A").fillna("N/A")
+    df[["PHARMACYNPI", "NABP"]] = df[["PHARMACYNPI", "NABP"]].fillna("N/A").replace([np.nan, '', float('nan')], "N/A")
 
     # Date parsing, deduplication, type cleaning, and filters
     df["DATEFILLED"] = pd.to_datetime(df["DATEFILLED"], errors="coerce")
@@ -203,23 +207,14 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
     """Handle pharmacy exclusions for Open MDF tier disruption."""
     # Ensure 'pharmacy_is_excluded' column contains actual boolean values with type inference
     if "pharmacy_is_excluded" in df.columns:
-        def map_excluded(val):
-            if pd.isna(val):
-                return None
-            v = str(val).strip().lower()
-            if v in {"yes", "y", "true", "1"}:
-                return True
-            elif v in {"no", "n", "false", "0"}:
-                return False
-            logger.warning(f"Unexpected pharmacy_is_excluded value encountered: {val}")
-            return None
-        df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(map_excluded)
+        # Use shared normalizer which returns True/False/'REVIEW'
+        df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].apply(normalize_pharmacy_is_excluded)
         logger.info(
             f"pharmacy_is_excluded value counts: {df['pharmacy_is_excluded'].value_counts(dropna=False).to_dict()}"
         )
 
-        # Identify rows where pharmacy_is_excluded is NA or 'unknown'
-        unknown_mask = df["pharmacy_is_excluded"].isna() | (df["pharmacy_is_excluded"] == "unknown")
+        # Identify rows where pharmacy_is_excluded is NA or 'REVIEW'
+        unknown_mask = df["pharmacy_is_excluded"].isna() | (df["pharmacy_is_excluded"] == "REVIEW")
         unknown_pharmacies = df[unknown_mask]
         logger.info(f"Unknown/NA pharmacies count: {unknown_pharmacies.shape[0]}")
 
@@ -229,25 +224,25 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
             unknown_pharmacies_output["Result"] = unknown_pharmacies["pharmacy_is_excluded"].fillna("NA")
 
             try:
-                output_file_path_obj = Path(output_file_path)
-                if output_file_path_obj.exists():
+                output_path = Path(output_file_path)
+                if output_path.exists():
                     # Handle both CSV and Excel files with proper encoding
                     try:
-                        if str(output_file_path_obj).lower().endswith('.csv'):
+                        if str(output_path).lower().endswith('.csv'):
                             # Try different encodings for CSV files
                             try:
-                                existing_df = pd.read_csv(output_file_path_obj, encoding='utf-8')
+                                existing_df = pd.read_csv(output_path, encoding='utf-8')
                             except UnicodeDecodeError:
                                 logger.warning("UTF-8 failed, trying latin-1 encoding...")
-                                existing_df = pd.read_csv(output_file_path_obj, encoding='latin-1')
+                                existing_df = pd.read_csv(output_path, encoding='latin-1')
                         else:
                             # Handle Excel files
-                            existing_df = pd.read_excel(output_file_path_obj)
+                            existing_df = pd.read_excel(output_path)
                     except Exception as read_error:
                         logger.error(f"Failed to read existing file: {read_error}")
                         logger.info("Creating backup and starting fresh...")
-                        backup_path = output_file_path_obj.with_suffix(f"{output_file_path_obj.suffix}.backup")
-                        output_file_path_obj.rename(backup_path)
+                        backup_path = output_path.with_suffix(f"{output_path.suffix}.backup")
+                        output_path.rename(backup_path)
                         existing_df = pd.DataFrame()
                     
                     combined_df = pd.concat(
@@ -258,12 +253,12 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
                     combined_df = unknown_pharmacies_output
 
                 # Save based on file extension
-                if str(output_file_path_obj).lower().endswith('.csv'):
-                    combined_df.to_csv(output_file_path_obj, index=False, encoding='utf-8')
+                if str(output_path).lower().endswith('.csv'):
+                    combined_df.to_csv(output_path, index=False, encoding='utf-8')
                 else:
-                    combined_df.to_excel(output_file_path_obj, index=False)
+                    combined_df.to_excel(output_path, index=False)
                 logger.info(
-                    f"Unknown/NA pharmacies written to '{output_file_path_obj}' with Result column."
+                    f"Unknown/NA pharmacies written to '{output_path}' with Result column."
                 )
 
             except Exception as e:
@@ -272,15 +267,6 @@ def handle_openmdf_pharmacy_exclusions(df, file_paths):
                 unknown_pharmacies_output.to_excel(output_file_path, index=False)
                 logger.info(
                     f"Unknown/NA pharmacies written to '{output_file_path}' (fallback mode)."
-                )
-                # Fallback to original method
-                writer = pd.ExcelWriter(output_file_path, engine="openpyxl")
-                unknown_pharmacies_output.to_excel(
-                    writer, sheet_name="Validations", index=False, engine="openpyxl"
-                )
-                writer.close()
-                logger.info(
-                    f"NA pharmacies written to '{output_file_path}' sheet (fallback)."
                 )
 
     return df
@@ -382,32 +368,22 @@ def create_openmdf_network_analysis(df):
     # Ensure any blanks in pharmacy_is_excluded are marked as 'REVIEW' before filtering
     df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].replace([None, '', pd.NA], "REVIEW")
     # Only include rows where pharmacy_is_excluded is True or REVIEW
-    network_df = df[df["pharmacy_is_excluded"].isin([True, "REVIEW"])]
-    import re
-    filter_phrases = [
-        "CVS",
-        "Walgreens",
-        "Kroger",
-        "Walmart",
-        "Rite Aid",
-        "Optum",
-        "Express Scripts",
-        "DMR",
-        "Williams Bro",
-        "Publix",
-    ]
-    filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
-    regex_pattern = "|".join([f"\b{p}\b" for p in filter_phrases_escaped])
+    network_df = df[df["pharmacy_is_excluded"].isin([True, "REVIEW"])].copy()
+    
+    # Use precompiled regex pattern for better performance
+    pattern = get_filter_phrases_pattern()
     network_df = network_df[
         ~network_df["Pharmacy Name"]
         .str.lower()
-        .str.contains(regex_pattern, case=False, regex=True, na=False)
+        .str.contains(pattern, case=False, regex=True, na=False)
     ]
+    
     # Build network sheet as a DataFrame with required columns
-    if {"PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"}.issubset(network_df.columns):
-        network_df["PHARMACYNPI"] = network_df["PHARMACYNPI"].replace([None, '', pd.NA, float('nan')], "N/A")
-        network_df["NABP"] = network_df["NABP"].replace([None, '', pd.NA, float('nan')], "N/A")
-        network_sheet = network_df[["PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"]].copy()
+    required_cols = {"PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"}
+    if required_cols.issubset(network_df.columns):
+        # Fill missing IDs with 'N/A' - vectorized operation
+        network_df[["PHARMACYNPI", "NABP"]] = network_df[["PHARMACYNPI", "NABP"]].fillna("N/A").replace([None, '', pd.NA, float('nan')], "N/A")
+        network_sheet = network_df[list(required_cols)].copy()
         network_sheet = network_sheet.rename(columns={"MemberID": "Unique Members", "Rxs": "Total Rxs"})
         # Drop duplicates so each pharmacy only appears once
         network_sheet = network_sheet.drop_duplicates(subset=["PHARMACYNPI", "NABP", "Pharmacy Name"])

@@ -20,6 +20,23 @@ from utils.utils import (clean_logic_and_tier,  # noqa: E402
                          filter_products_and_alternative, filter_recent_date,
                          write_audit_log, vectorized_resolve_pharmacy_exclusion,
                          normalize_pharmacy_is_excluded)
+import re  # noqa: E402
+
+# Compile regex pattern once for better performance
+_FILTER_PHRASES_PATTERN = None
+
+def get_filter_phrases_pattern():
+    """Get compiled regex pattern for pharmacy filtering."""
+    global _FILTER_PHRASES_PATTERN
+    if _FILTER_PHRASES_PATTERN is None:
+        filter_phrases = [
+            "CVS", "Walgreens", "Kroger", "Walmart", "Rite Aid",
+            "Optum", "Express Scripts", "DMR", "Williams Bro", "Publix",
+        ]
+        filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
+        regex_pattern = "|".join([f"\\b{p}\\b" for p in filter_phrases_escaped])
+        _FILTER_PHRASES_PATTERN = re.compile(regex_pattern, flags=re.IGNORECASE)
+    return _FILTER_PHRASES_PATTERN
 
 # Set up logger
 logging.basicConfig(level=logging.INFO)
@@ -78,25 +95,27 @@ def load_tier_disruption_data(file_paths):
         return None
 
     try:
-        claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table")
+        claims = pd.read_excel(file_paths["reprice"], sheet_name="Claims Table", engine="openpyxl")
     except Exception as e:
         logger.error(f"Error loading claims: {e}")
         make_audit_entry(
             "tier_disruption.py", f"Claims Table fallback error: {e}", "FILE_ERROR"
         )
-        claims = pd.read_excel(file_paths["reprice"], sheet_name=0)
+        claims = pd.read_excel(file_paths["reprice"], sheet_name=0, engine="openpyxl")
 
     print(f"claims shape: {claims.shape}")
     claims.info()
 
-    # Load reference tables
+    # Load reference tables with explicit column selection
     medi = pd.read_excel(
-        file_paths["medi_span"], usecols=["NDC", "Maint Drug?", "Product Name"]
+        file_paths["medi_span"], usecols=["NDC", "Maint Drug?", "Product Name"],
+        engine="openpyxl"
     )
     print(f"medi shape: {medi.shape}")
 
     u = pd.read_excel(
-        file_paths["u_disrupt"], sheet_name="Universal NDC", usecols=["NDC", "Tier"]
+        file_paths["u_disrupt"], sheet_name="Universal NDC", usecols=["NDC", "Tier"],
+        engine="openpyxl"
     )
     print(f"u shape: {u.shape}")
 
@@ -104,6 +123,7 @@ def load_tier_disruption_data(file_paths):
         file_paths["e_disrupt"],
         sheet_name="Alternatives NDC",
         usecols=["NDC", "Tier", "Alternative"],
+        engine="openpyxl"
     )
     print(f"e shape: {e.shape}")
 
@@ -111,11 +131,13 @@ def load_tier_disruption_data(file_paths):
         network = pd.read_csv(
             file_paths["n_disrupt"],
             usecols=["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"],
+            dtype={"pharmacy_nabp": str, "pharmacy_npi": str, "pharmacy_is_excluded": str}
         )
     else:
         network = pd.read_excel(
             file_paths["n_disrupt"],
             usecols=["pharmacy_nabp", "pharmacy_npi", "pharmacy_is_excluded"],
+            engine="openpyxl"
         )
     print(f"network shape: {network.shape}")
     print(f"Raw network['pharmacy_nabp'] sample: {network['pharmacy_nabp'].head(10).tolist()}")
@@ -167,11 +189,10 @@ def process_tier_data_pipeline(claims, reference_data, network):
     true_count = df["pharmacy_is_excluded"].apply(lambda v: v is True).sum()
     false_count = df["pharmacy_is_excluded"].apply(lambda v: v is False).sum()
     print(f"Vector resolve -> True: {true_count}, False: {false_count}, REVIEW: {review_count}")
-    # Fill missing IDs
+    
+    # Fill missing IDs - vectorized operation
     import numpy as np
-    df["PHARMACYNPI"] = df["PHARMACYNPI"].replace([np.nan, '', float('nan')], "N/A")
-    import numpy as np
-    df["NABP"] = df["NABP"].fillna("N/A").replace(['', float('nan')], "N/A")
+    df[["PHARMACYNPI", "NABP"]] = df[["PHARMACYNPI", "NABP"]].fillna("N/A").replace([np.nan, '', float('nan')], "N/A")
 
     # Date parsing, deduplication, type cleaning, and filters
     df["DATEFILLED"] = pd.to_datetime(df["DATEFILLED"], errors="coerce")
@@ -428,31 +449,22 @@ def create_network_analysis(df):
     # Ensure any blanks in pharmacy_is_excluded are marked as 'REVIEW' before filtering
     df["pharmacy_is_excluded"] = df["pharmacy_is_excluded"].replace([None, '', pd.NA], "REVIEW")
     # Only include rows where pharmacy_is_excluded is True or REVIEW
-    network_df = df[df["pharmacy_is_excluded"].isin([True, "REVIEW"])]
-    filter_phrases = [
-        "CVS",
-        "Walgreens",
-        "Kroger",
-        "Walmart",
-        "Rite Aid",
-        "Optum",
-        "Express Scripts",
-        "DMR",
-        "Williams Bro",
-        "Publix",
-    ]
-    filter_phrases_escaped = [re.escape(phrase.lower()) for phrase in filter_phrases]
-    regex_pattern = "|".join([f"\b{p}\b" for p in filter_phrases_escaped])
+    network_df = df[df["pharmacy_is_excluded"].isin([True, "REVIEW"])].copy()
+    
+    # Use precompiled regex pattern for better performance
+    pattern = get_filter_phrases_pattern()
     network_df = network_df[
         ~network_df["Pharmacy Name"]
         .str.lower()
-        .str.contains(regex_pattern, case=False, regex=True, na=False)
+        .str.contains(pattern, case=False, regex=True, na=False)
     ]
+    
     # Build network sheet as a DataFrame with required columns
-    if {"PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"}.issubset(network_df.columns):
-        network_df["PHARMACYNPI"] = network_df["PHARMACYNPI"].replace([None, '', pd.NA, float('nan')], "N/A")
-        network_df["NABP"] = network_df["NABP"].replace([None, '', pd.NA, float('nan')], "N/A")
-        network_sheet = network_df[["PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"]].copy()
+    required_cols = {"PHARMACYNPI", "NABP", "Pharmacy Name", "MemberID", "Rxs", "pharmacy_is_excluded"}
+    if required_cols.issubset(network_df.columns):
+        # Fill missing IDs with 'N/A' - vectorized operation
+        network_df[["PHARMACYNPI", "NABP"]] = network_df[["PHARMACYNPI", "NABP"]].fillna("N/A").replace([None, '', pd.NA, float('nan')], "N/A")
+        network_sheet = network_df[list(required_cols)].copy()
         network_sheet = network_sheet.rename(columns={"MemberID": "Unique Members", "Rxs": "Total Rxs"})
         # Drop duplicates so each pharmacy only appears once
         network_sheet = network_sheet.drop_duplicates(subset=["PHARMACYNPI", "NABP", "Pharmacy Name"])
