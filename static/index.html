@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UW Pharmacy Repricing Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .upload-section {
+            background: #f8f9fa;
+            border: 2px dashed #0066cc;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .file-input-group {
+            margin: 20px 0;
+        }
+        
+        .file-input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+            text-align: left;
+        }
+        
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="file"]:hover {
+            border-color: #0066cc;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 102, 204, 0.3);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status-section {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0f8ff;
+            border-radius: 10px;
+            border-left: 4px solid #0066cc;
+        }
+        
+        .status-section.show {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0066cc 0%, #00cc66 100%);
+            width: 0%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .status-message {
+            font-size: 16px;
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .download-section {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .download-section.show {
+            display: block;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #00cc66 0%, #00994d 100%);
+            margin: 10px 5px;
+            display: inline-block;
+        }
+        
+        .error-message {
+            background: #ffe6e6;
+            border-left: 4px solid #ff4444;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+        }
+        
+        .info-box {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        
+        .info-box h3 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        
+        .info-box ul {
+            list-style-position: inside;
+            color: #555;
+        }
+        
+        .info-box li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 UW Pharmacy Repricing Tool</h1>
+            <p>Automated Claims Processing & Analysis</p>
+        </div>
+        
+        <div class="content">
+            <div class="upload-section">
+                <h2>📁 Upload Files</h2>
+                <p style="margin-bottom: 20px; color: #666;">Upload your claim files to begin processing</p>
+                
+                <div class="file-input-group">
+                    <label for="file1">File 1 (Uploaded to Tool):</label>
+                    <input type="file" id="file1" accept=".xlsx,.csv">
+                </div>
+                
+                <div class="file-input-group">
+                    <label for="file2">File 2 (From Tool):</label>
+                    <input type="file" id="file2" accept=".xlsx,.csv">
+                </div>
+                
+                <div class="file-input-group">
+                    <label for="template">Template (Optional):</label>
+                    <input type="file" id="template" accept=".xlsx">
+                </div>
+                
+                <button class="btn" id="uploadBtn" onclick="uploadFiles()">
+                    🚀 Start Processing
+                </button>
+            </div>
+            
+            <div class="status-section" id="statusSection">
+                <h3>Processing Status</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+                <p class="status-message" id="statusMessage">Initializing...</p>
+                
+                <div class="download-section" id="downloadSection">
+                    <h3>📥 Download Results</h3>
+                    <button class="btn download-btn" id="downloadMerged" style="display: none;">
+                        Download Merged File (Excel)
+                    </button>
+                    <button class="btn download-btn" id="downloadCsv" style="display: none;">
+                        Download Claim Detail (CSV)
+                    </button>
+                </div>
+            </div>
+            
+            <div class="error-message" id="errorMessage"></div>
+            
+            <div class="info-box">
+                <h3>ℹ️ Instructions</h3>
+                <ul>
+                    <li>Select File 1: The file you uploaded to the tool</li>
+                    <li>Select File 2: The file you received from the tool</li>
+                    <li>Template file is optional for custom formatting</li>
+                    <li>Click "Start Processing" to begin</li>
+                    <li>Download results when processing completes</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentJobId = null;
+        let statusCheckInterval = null;
+        
+        async function uploadFiles() {
+            const file1 = document.getElementById('file1').files[0];
+            const file2 = document.getElementById('file2').files[0];
+            const template = document.getElementById('template').files[0];
+            
+            if (!file1 || !file2) {
+                showError('Please select both File 1 and File 2');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file1', file1);
+            formData.append('file2', file2);
+            if (template) {
+                formData.append('template', template);
+            }
+            
+            document.getElementById('uploadBtn').disabled = true;
+            document.getElementById('statusSection').classList.add('show');
+            document.getElementById('errorMessage').classList.remove('show');
+            
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const contentType = response.headers.get("content-type");
+                    let errorMessage = 'Upload failed';
+                    
+                    if (contentType && contentType.includes("application/json")) {
+                        const errorData = await response.json();
+                        errorMessage = errorData.detail || errorMessage;
+                    } else {
+                        const errorText = await response.text();
+                        errorMessage = errorText || errorMessage;
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+                
+                const data = await response.json();
+                currentJobId = data.job_id;
+                
+                // Start checking status
+                statusCheckInterval = setInterval(checkStatus, 2000);
+                
+            } catch (error) {
+                showError('Upload failed: ' + error.message);
+                document.getElementById('uploadBtn').disabled = false;
+                document.getElementById('statusSection').classList.remove('show');
+            }
+        }
+        
+        async function checkStatus() {
+            if (!currentJobId) return;
+            
+            try {
+                const response = await fetch(`/api/status/${currentJobId}`);
+                
+                if (!response.ok) {
+                    const contentType = response.headers.get("content-type");
+                    let errorMessage = 'Status check failed';
+                    
+                    if (contentType && contentType.includes("application/json")) {
+                        const errorData = await response.json();
+                        errorMessage = errorData.detail || errorMessage;
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+                
+                const data = await response.json();
+                updateProgress(data.progress * 100, data.message);
+                
+                if (data.status === 'completed') {
+                    clearInterval(statusCheckInterval);
+                    showDownloadButtons(data.output_files);
+                    document.getElementById('uploadBtn').disabled = false;
+                } else if (data.status === 'failed') {
+                    clearInterval(statusCheckInterval);
+                    showError('Processing failed: ' + data.message);
+                    document.getElementById('uploadBtn').disabled = false;
+                }
+                
+            } catch (error) {
+                console.error('Status check error:', error);
+            }
+        }
+        
+        function updateProgress(percent, message) {
+            const progressFill = document.getElementById('progressFill');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            progressFill.style.width = percent + '%';
+            progressFill.textContent = Math.round(percent) + '%';
+            statusMessage.textContent = message;
+        }
+        
+        function showDownloadButtons(outputFiles) {
+            const downloadSection = document.getElementById('downloadSection');
+            const downloadMerged = document.getElementById('downloadMerged');
+            const downloadCsv = document.getElementById('downloadCsv');
+            
+            downloadSection.classList.add('show');
+            
+            if (outputFiles.merged) {
+                downloadMerged.style.display = 'inline-block';
+                downloadMerged.onclick = () => downloadFile('merged');
+            }
+            
+            if (outputFiles.csv) {
+                downloadCsv.style.display = 'inline-block';
+                downloadCsv.onclick = () => downloadFile('csv');
+            }
+        }
+        
+        function downloadFile(fileType) {
+            window.location.href = `/api/download/${currentJobId}/${fileType}`;
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = '❌ ' + message;
+            errorDiv.classList.add('show');
+        }
+    </script>
+</body>
+</html>

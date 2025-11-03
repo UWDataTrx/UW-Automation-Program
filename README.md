@@ -1,6 +1,16 @@
 # Repricing Automation Tool
 
-A Python-based application designed to automate pharmacy claims repricing, generate disruption analysis (Tier, B/G, Open MDF), and produce formatted outputs including SHARx and EPLS LBL files. Built with a GUI interface using `customtkinter` for ease of use across different user roles.
+A Python-based application designed to automate pharmacy claims repricing, generate disruption analysis (Tier, B/G, Open MDF), and produce formatted outputs including SHARx and EPLS LBL files.
+
+## 🎯 Available Interfaces
+
+This application provides multiple interfaces:
+
+- **Desktop GUI** (`app.py`) - Built with `customtkinter` for local Windows environments
+- **Web API** (`fastapi_app.py`) - RESTful API with web interface using FastAPI
+- **Legacy Web** (`streamlit_app.py`) - Streamlit-based web application (deprecated, use FastAPI instead)
+
+**Recommended:** Use the FastAPI web application for modern deployments. See [README_FASTAPI.md](README_FASTAPI.md) for details.
 
 ---
 
@@ -22,19 +32,27 @@ A Python-based application designed to automate pharmacy claims repricing, gener
 
 ```
 .
-├── app.py                     # Main GUI entry point
-├── merge.py                  # Claim file merger logic
-├── bg_disruption.py          # Brand/Generic disruption script
-├── tier_disruption.py        # Tier-based disruption logic
-├── openmdf_bg.py             # Open MDF B/G disruption
-├── openmdf_tier.py           # Open MDF Tier disruption
-├── sharx_lbl.py              # SHARx LBL generator
-├── epls_lbl.py               # EPLS LBL generator
-├── utils.py                  # Shared utility functions
+├── app.py                     # Desktop GUI entry point (customtkinter)
+├── fastapi_app.py             # FastAPI web application (recommended)
+├── streamlit_app.py           # Streamlit web app (deprecated, use FastAPI)
+├── client_code/               # Core business logic modules
+│   ├── merge.py              # Claim file merger logic
+│   ├── bg_disruption.py      # Brand/Generic disruption script
+│   ├── tier_disruption.py    # Tier-based disruption logic
+│   ├── audit_helper.py       # Audit logging utilities
+│   └── ...
+├── modules/                   # Legacy module imports (compatibility layer)
+├── utils/                     # Shared utility functions
+├── config/                    # Configuration files
+├── static/                    # Static web assets (HTML, CSS, JS)
 ├── file_paths.json           # Excel file paths configuration
 ├── config.json               # App state configuration
+├── requirements.txt          # Core dependencies
+├── requirements-fastapi.txt  # FastAPI-specific dependencies
+├── pyproject.toml            # Poetry project configuration
 ├── .gitignore                # Ignored files and folders
-└── README.md                 # Project documentation
+├── README.md                 # This file
+└── README_FASTAPI.md         # FastAPI documentation
 ```
 
 ---
@@ -59,7 +77,9 @@ pip install pandas openpyxl customtkinter plyer xlsxwriter
 
 ## 🖥️ Usage
 
-1. Launch the app:
+### Desktop GUI
+
+1. Launch the desktop app:
    ```bash
    python app.py
    ```
@@ -73,6 +93,24 @@ pip install pandas openpyxl customtkinter plyer xlsxwriter
 3. Use the **SHARx LBL** or **EPLS LBL** buttons to generate line-by-line outputs.
 
 4. Check `LBL for Disruption.xlsx` and `*_Claim Detail.csv` for results.
+
+### Web API (FastAPI)
+
+1. Launch the web application:
+   ```bash
+   python fastapi_app.py
+   ```
+   
+   Or with uvicorn:
+   ```bash
+   uvicorn fastapi_app:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+2. Open browser to `http://localhost:8000`
+
+3. Upload files through the web interface or use the REST API
+
+4. See [README_FASTAPI.md](README_FASTAPI.md) for complete API documentation
 
 ---
 

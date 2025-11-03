@@ -128,7 +128,11 @@ dependencies = [
     "xlsxwriter (==3.2.5)",
     "xlwings (==0.33.15)",
     "zopfli (==0.2.3.post1)",
-    "zstandard (==0.23.0)"
+    "zstandard (==0.23.0)",
+    "fastapi (>=0.104.0)",
+    "uvicorn[standard] (>=0.24.0)",
+    "python-multipart (>=0.0.6)",
+    "pydantic (>=2.0.0)"
 ]
 
 
