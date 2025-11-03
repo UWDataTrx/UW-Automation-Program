@@ -220,6 +220,7 @@ async def process_files(job_id: str):
                 processing_status[job_id]["progress"] = 1.0
                 processing_status[job_id]["message"] = "Processing complete!"
                 processing_status[job_id]["output_files"] = output_files
+                processing_status[job_id]["output_dir"] = str(output_dir)  # Store for cleanup
                 
                 make_audit_entry("FastAPIApp", f"Job {job_id} completed successfully", "SUCCESS")
             else:
@@ -324,29 +325,21 @@ async def cleanup_job(job_id: str):
     if job_id not in processing_status:
         raise HTTPException(status_code=404, detail="Job not found")
     
-    # Validate job_id to prevent path traversal attacks
-    # Only allow alphanumeric, dash, and underscore characters
-    if not job_id.replace('_', '').replace('-', '').isalnum():
-        raise HTTPException(status_code=400, detail="Invalid job ID format")
-    
     try:
         status = processing_status[job_id]
         
-        # Remove temp directory (use stored path from status, not user input)
+        # Remove temp directory (use stored path from status - safe from path injection)
         job_temp_dir = Path(status["job_temp_dir"])
         # Additional security: ensure temp dir is actually in temp directory
         if job_temp_dir.exists() and str(job_temp_dir).startswith(tempfile.gettempdir()):
             shutil.rmtree(job_temp_dir)
         
-        # Remove output directory - validate it's in expected location
-        output_dir = Path("outputs") / job_id
-        # Resolve to absolute path and ensure it's within outputs directory
-        output_dir_abs = output_dir.resolve()
-        outputs_base = Path("outputs").resolve()
-        
-        # Check that output_dir is actually within outputs directory (prevent path traversal)
-        if output_dir_abs.is_relative_to(outputs_base) and output_dir_abs.exists():
-            shutil.rmtree(output_dir_abs)
+        # Remove output directory (use stored path from status - safe from path injection)
+        if "output_dir" in status:
+            output_dir = Path(status["output_dir"])
+            # Verify it's in the outputs directory before deletion
+            if output_dir.exists() and "outputs" in str(output_dir):
+                shutil.rmtree(output_dir)
         
         # Remove from status tracking
         del processing_status[job_id]
