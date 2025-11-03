@@ -1,6 +1,21 @@
 """
-UW Automation Program - Streamlit Web Application
+UW Automation Program - Streamlit Web Application (DEPRECATED)
 Pharmacy Claims Repricing and Disruption Analysis Tool
+
+⚠️ DEPRECATION NOTICE:
+This Streamlit application is deprecated and will be removed in a future release.
+Please use the FastAPI application (fastapi_app.py) instead.
+
+For migration instructions and FastAPI documentation, see:
+- README_FASTAPI.md
+- https://fastapi.tiangolo.com/
+
+The FastAPI application provides:
+- Better performance and scalability
+- RESTful API endpoints
+- Modern web interface
+- Background task processing
+- Improved error handling
 """
 
 import streamlit as st
@@ -79,7 +94,26 @@ st.markdown("""
         border: 1px solid #ffeaa7;
         color: #856404;
     }
+    .deprecation-box {
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        background-color: #ffe6e6;
+        border: 2px solid #ff4444;
+        color: #cc0000;
+        margin: 1rem 0;
+        font-weight: bold;
+    }
     </style>
+""", unsafe_allow_html=True)
+
+# Display deprecation warning
+st.markdown("""
+<div class="deprecation-box">
+    ⚠️ <strong>DEPRECATION NOTICE</strong><br>
+    This Streamlit interface is deprecated. Please use the FastAPI application instead:<br>
+    <code>python fastapi_app.py</code> or <code>uvicorn fastapi_app:app --reload</code><br>
+    See <a href="https://github.com/UWDataTrx/UW-Automation-Program/blob/main/README_FASTAPI.md" style="color: #cc0000; text-decoration: underline;">README_FASTAPI.md</a> for details.
+</div>
 """, unsafe_allow_html=True)
 
 # Initialize session state
