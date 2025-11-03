@@ -295,7 +295,18 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error('Upload failed');
+                    const contentType = response.headers.get("content-type");
+                    let errorMessage = 'Upload failed';
+                    
+                    if (contentType && contentType.includes("application/json")) {
+                        const errorData = await response.json();
+                        errorMessage = errorData.detail || errorMessage;
+                    } else {
+                        const errorText = await response.text();
+                        errorMessage = errorText || errorMessage;
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
                 
                 const data = await response.json();
@@ -316,8 +327,17 @@
             
             try {
                 const response = await fetch(`/api/status/${currentJobId}`);
+                
                 if (!response.ok) {
-                    throw new Error('Status check failed');
+                    const contentType = response.headers.get("content-type");
+                    let errorMessage = 'Status check failed';
+                    
+                    if (contentType && contentType.includes("application/json")) {
+                        const errorData = await response.json();
+                        errorMessage = errorData.detail || errorMessage;
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
                 
                 const data = await response.json();

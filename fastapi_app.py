@@ -17,7 +17,6 @@ from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import pandas as pd
 
 # Add project root to path
 project_root = Path(__file__).resolve().parent
@@ -27,7 +26,6 @@ if str(project_root) not in sys.path:
 # Import modules
 from client_code.merge import merge_files
 from client_code.audit_helper import log_file_access, make_audit_entry
-from utils.utils import write_audit_log
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -41,9 +39,11 @@ app = FastAPI(
 )
 
 # Add CORS middleware
+# TODO: For production, configure allow_origins with specific domains
+# Example: allow_origins=["https://yourdomain.com"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["*"],  # Configure appropriately for production - see DEPLOYMENT_GUIDE.md
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -231,8 +231,9 @@ async def process_files(job_id: str):
             # Change back to original directory
             os.chdir(original_dir)
             
-            # Clean up temp files after a delay
-            # In production, you might want to use a cleanup job
+            # Schedule cleanup of temp files after 24 hours
+            # In production, use a scheduled job (cron, celery, etc.) for cleanup
+            # See DEPLOYMENT_GUIDE.md for cleanup strategies
             
     except Exception as e:
         logger.error(f"Error processing job {job_id}: {str(e)}")
@@ -295,6 +296,8 @@ async def download_file(job_id: str, file_type: str):
 async def get_audit_logs(limit: int = 50):
     """Get recent audit log entries"""
     try:
+        import pandas as pd  # Import locally to avoid startup overhead
+        
         audit_file = Path("audit_log.csv")
         
         if not audit_file.exists():
