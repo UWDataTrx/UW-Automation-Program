@@ -25,8 +25,8 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 # Import modules
-from modules.merge import merge_files
-from modules.audit_helper import log_file_access, make_audit_entry
+from client_code.merge import merge_files
+from client_code.audit_helper import log_file_access, make_audit_entry
 from utils.utils import write_audit_log
 
 # Configure logging
