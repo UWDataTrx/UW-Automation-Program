@@ -18,9 +18,25 @@ from datetime import datetime  # noqa: E402
 
 # Load the audit log path from config using pathlib
 config_path = Path(__file__).parent.parent / "config" / "file_paths.json"
-with config_path.open("r") as f:
-    file_paths = json.load(f)
-audit_log_path = Path(os.path.expandvars(file_paths["audit_log"]))
+file_paths = {}
+audit_log_path = Path.cwd() / "audit_log.csv"
+try:
+    if config_path.exists():
+        with config_path.open("r", encoding="utf-8") as f:
+            file_paths = json.load(f)
+            # Resolve audit_log path if present
+            if "audit_log" in file_paths:
+                try:
+                    audit_log_path = Path(os.path.expandvars(file_paths["audit_log"]))
+                except Exception:
+                    # Keep default if resolving fails
+                    pass
+    else:
+        # Config missing: leave file_paths empty and use default audit_log_path
+        pass
+except Exception:
+    # If any error occurs while reading config, fall back to a local audit log
+    audit_log_path = Path.cwd() / "audit_log.csv"
 
 
 @dataclass
